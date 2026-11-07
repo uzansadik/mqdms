@@ -1,6 +1,7 @@
 "use client";
 
 import { authClient } from "@mqdms/auth/client";
+import { useI18n } from "@mqdms/i18n";
 import { Button } from "@mqdms/ui/components/button";
 import {
   Card,
@@ -25,6 +26,7 @@ type RegisterFormProps = {
 
 export function RegisterForm({ next }: RegisterFormProps) {
   const router = useRouter();
+  const { t } = useI18n();
 
   const form = useForm<RegisterValues>({
     resolver: zodResolver(registerSchema),
@@ -48,7 +50,7 @@ export function RegisterForm({ next }: RegisterFormProps) {
 
     if (error) {
       form.setError("root", {
-        message: error.message ?? "Unable to create your account.",
+        message: error.message ?? t("auth.register.error"),
       });
 
       return;
@@ -69,9 +71,9 @@ export function RegisterForm({ next }: RegisterFormProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Create account</CardTitle>
+        <CardTitle>{t("auth.register.title")}</CardTitle>
 
-        <CardDescription>Create your account to get started.</CardDescription>
+        <CardDescription>{t("auth.register.description")}</CardDescription>
       </CardHeader>
 
       <CardContent>
@@ -84,13 +86,12 @@ export function RegisterForm({ next }: RegisterFormProps) {
               name="name"
               render={({ field, fieldState }) => (
                 <Field data-invalid={fieldState.invalid}>
-                  <FieldLabel htmlFor={field.name}>Name</FieldLabel>
+                  <FieldLabel htmlFor={field.name}>{t("auth.register.name")}</FieldLabel>
 
                   <Input
                     {...field}
                     id={field.name}
                     autoComplete="name"
-                    placeholder="John Doe"
                     aria-invalid={fieldState.invalid}
                   />
 
@@ -104,7 +105,7 @@ export function RegisterForm({ next }: RegisterFormProps) {
               name="email"
               render={({ field, fieldState }) => (
                 <Field data-invalid={fieldState.invalid}>
-                  <FieldLabel htmlFor={field.name}>Email</FieldLabel>
+                  <FieldLabel htmlFor={field.name}>{t("auth.register.email")}</FieldLabel>
 
                   <Input
                     {...field}
@@ -125,7 +126,7 @@ export function RegisterForm({ next }: RegisterFormProps) {
               name="password"
               render={({ field, fieldState }) => (
                 <Field data-invalid={fieldState.invalid}>
-                  <FieldLabel htmlFor={field.name}>Password</FieldLabel>
+                  <FieldLabel htmlFor={field.name}>{t("auth.register.password")}</FieldLabel>
 
                   <Input
                     {...field}
@@ -145,7 +146,7 @@ export function RegisterForm({ next }: RegisterFormProps) {
               name="confirmPassword"
               render={({ field, fieldState }) => (
                 <Field data-invalid={fieldState.invalid}>
-                  <FieldLabel htmlFor={field.name}>Confirm password</FieldLabel>
+                  <FieldLabel htmlFor={field.name}>{t("auth.register.confirmPassword")}</FieldLabel>
 
                   <Input
                     {...field}
@@ -161,7 +162,9 @@ export function RegisterForm({ next }: RegisterFormProps) {
             />
 
             <Button type="submit" disabled={form.formState.isSubmitting}>
-              {form.formState.isSubmitting ? "Creating account..." : "Create account"}
+              {form.formState.isSubmitting
+                ? t("auth.register.submitting")
+                : t("auth.register.submit")}
             </Button>
           </FieldGroup>
         </form>
@@ -169,10 +172,10 @@ export function RegisterForm({ next }: RegisterFormProps) {
 
       <CardFooter className="justify-center">
         <div className="flex items-center gap-1 text-sm text-muted-foreground">
-          <span>Already have an account?</span>
+          <span>{t("auth.register.hasAccount")}</span>
 
           <Button asChild variant="link" size="sm">
-            <Link href={`/login?${loginParams.toString()}`}>Sign in</Link>
+            <Link href={`/login?${loginParams.toString()}`}>{t("auth.login.title")}</Link>
           </Button>
         </div>
       </CardFooter>

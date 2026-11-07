@@ -31,18 +31,24 @@ export const en = {
   "auth.login.submit": "Sign in",
   "auth.login.submitting": "Signing in...",
   "auth.login.error": "Unable to sign in. Please try again.",
-  "auth.login.noAccount": "Don't have an account? Ask your administrator.",
+  "auth.login.noAccount": "Don't have an account?",
+  "auth.login.signUp": "Sign up",
 
   "auth.layout.headline": "Build and manage your work in one place.",
   "auth.layout.description":
     "A modern SaaS application starter kit. Built with Next.js, TypeScript, Tailwind CSS, and shadcn/ui.",
   "auth.layout.copyright": "© {year} {name}",
 
-  "auth.register.title": "Registration closed",
-  "auth.register.warningTitle": "Registration is not allowed by the system",
-  "auth.register.warningDescription":
-    "User accounts are opened by the organization administrator, registration forms are closed. If you don't have an account, contact your administrator.",
-  "auth.register.backToLogin": "Back to sign in",
+  "auth.register.title": "Create account",
+  "auth.register.description": "Create your account to get started.",
+  "auth.register.name": "Name",
+  "auth.register.email": "Email",
+  "auth.register.password": "Password",
+  "auth.register.confirmPassword": "Confirm password",
+  "auth.register.submit": "Create account",
+  "auth.register.submitting": "Creating account...",
+  "auth.register.error": "Unable to create your account. Please try again.",
+  "auth.register.hasAccount": "Already have an account?",
 } as const;
 
 export type MessageKey = keyof typeof en;
