@@ -1,6 +1,6 @@
-# Alpin
+# MQDMS
 
-Alpin is a reusable SaaS starter built for creating new applications without rebuilding authentication, organizations, storage, email, and common account management features.
+MQDMS is a reusable SaaS starter built for creating new applications without rebuilding authentication, organizations, storage, email, and common account management features.
 
 ## Stack
 
@@ -22,7 +22,7 @@ Alpin is a reusable SaaS starter built for creating new applications without reb
 
 ```text
 apps/
-  qms/
+  auth/
   worker/
 
 packages/
@@ -40,16 +40,16 @@ packages/
   ui/
 ```
 
-Application-specific features live inside `apps/qms/features`.
+Application-specific features live inside `apps/auth/features`.
 
 Infrastructure packages should remain framework-independent where possible.
 
 For example:
 
 ```text
-apps/qms
+apps/auth
     ↓
-@alpin/storage
+@mqdms/storage
     ↓
 S3-compatible provider
 ```
@@ -57,9 +57,9 @@ S3-compatible provider
 and:
 
 ```text
-apps/qms
+apps/auth
     ↓
-@alpin/auth
+@mqdms/auth
     ↓
 Better Auth
 ```
@@ -111,10 +111,10 @@ to:
 
 The root `.env` file is the canonical environment file.
 
-Alpin synchronizes it to:
+MQDMS synchronizes it to:
 
 ```text
-apps/qms/.env
+apps/auth/.env
 ```
 
 when development starts.
@@ -130,7 +130,7 @@ Create a local PostgreSQL database.
 Example:
 
 ```text
-Database: alpin
+Database: mqdms
 Host: localhost
 Port: 5432
 ```
@@ -138,7 +138,7 @@ Port: 5432
 Then configure:
 
 ```env
-DATABASE_URL=postgresql://postgres:postgres@localhost:5432/alpin
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/mqdms
 ```
 
 Run the repository's Drizzle database initialization/migration command before starting the application.
@@ -178,19 +178,19 @@ docker compose up --build
 This starts:
 
 ```text
-postgres   → localhost:5432 (database: alpin)
+postgres   → localhost:5432 (database: mqdms)
 redis      → localhost:6379
 migrate    → runs Drizzle migrations once, then exits
-qms        → http://localhost:3000
+auth        → http://localhost:3000
 worker     → queue worker (default,email)
 ```
 
-`migrate` runs before `qms` starts, so the schema is always up to date.
+`migrate` runs before `auth` starts, so the schema is always up to date.
 
 Useful commands:
 
 ```bash
-docker compose logs -f qms      # Uygulama logları
+docker compose logs -f auth      # Uygulama logları
 docker compose logs -f worker   # Worker logları
 docker compose ps               # Servis durumu
 docker compose down             # Servisleri durdur
@@ -201,7 +201,7 @@ docker compose run --rm migrate # Migration'ları yeniden çalıştır
 The images are built from:
 
 ```text
-docker/qms.Dockerfile      → Next.js standalone sunucusu
+docker/auth.Dockerfile      → Next.js standalone sunucusu
 docker/worker.Dockerfile   → BullMQ worker
 docker/migrate.Dockerfile  → Drizzle migration çalıştırıcı
 ```
@@ -239,9 +239,9 @@ Workflow:
 Images:
 
 ```text
-ghcr.io/uzansadik/alpin/qms
-ghcr.io/uzansadik/alpin/worker
-ghcr.io/uzansadik/alpin/migrate
+ghcr.io/uzansadik/mqdms/auth
+ghcr.io/uzansadik/mqdms/worker
+ghcr.io/uzansadik/mqdms/migrate
 ```
 
 Tags produced for every build:
@@ -284,7 +284,7 @@ There are three separate places, and mixing them up is the usual source of
 
 ### Build time (GitHub)
 
-`next build` evaluates route handlers, and `@alpin/env` validates the
+`next build` evaluates route handlers, and `@mqdms/env` validates the
 environment when those modules are imported. The workflow therefore passes
 build-only placeholders for every variable that is not defined, so a missing
 secret never breaks the build.
@@ -360,7 +360,7 @@ or change the package visibility to public in the package settings.
 
 ## Deployment
 
-`docker-compose.prod.yml` overrides `migrate`, `qms` and `worker` to use the
+`docker-compose.prod.yml` overrides `migrate`, `auth` and `worker` to use the
 published images instead of building locally:
 
 ```bash
@@ -395,7 +395,7 @@ Included flows:
 * Sign out
 * Organization invitations
 
-The `@alpin/auth` package must not depend on Next.js APIs such as:
+The `@mqdms/auth` package must not depend on Next.js APIs such as:
 
 ```text
 next/headers
@@ -406,7 +406,7 @@ redirect()
 Next.js-specific authentication helpers belong in:
 
 ```text
-apps/qms/features/auth
+apps/auth/features/auth
 ```
 
 ---
@@ -463,7 +463,7 @@ when the resource belongs to a workspace.
 
 # Storage
 
-Storage is exposed through `@alpin/storage`.
+Storage is exposed through `@mqdms/storage`.
 
 The web application does not depend directly on AWS SDK or Cloudflare R2.
 
@@ -508,7 +508,7 @@ The server verifies uploaded objects before they are persisted to application re
 
 # Email
 
-Email is exposed through `@alpin/email`.
+Email is exposed through `@mqdms/email`.
 
 Current provider:
 
@@ -546,7 +546,7 @@ Profile images are uploaded through the same verified storage pipeline used by o
 Use the existing shadcn components from:
 
 ```text
-@alpin/ui/components/*
+@mqdms/ui/components/*
 ```
 
 Do not recreate Button, Input, Field, or other shared UI components inside the web application.
@@ -628,20 +628,20 @@ Application code should not know unnecessary provider details.
 Examples:
 
 ```text
-apps/qms
-→ @alpin/storage
+apps/auth
+→ @mqdms/storage
 → S3-compatible provider
 ```
 
 ```text
-apps/qms
-→ @alpin/email
+apps/auth
+→ @mqdms/email
 → Resend
 ```
 
 ```text
-apps/qms
-→ @alpin/auth
+apps/auth
+→ @mqdms/auth
 → Better Auth
 ```
 
@@ -651,7 +651,7 @@ Do not rebuild features that Better Auth, PostgreSQL, R2, or another provider al
 
 ## Keep business rules application-specific
 
-Alpin may provide examples such as:
+MQDMS may provide examples such as:
 
 ```text
 storage limits
@@ -676,7 +676,7 @@ Protect sensitive functionality on the server, including:
 
 # Current starter scope
 
-Alpin currently provides a working reference for:
+MQDMS currently provides a working reference for:
 
 ```text
 Authentication

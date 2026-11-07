@@ -1,5 +1,5 @@
 {
-  "name": "alpin",
+  "name": "mqdms",
   "version": "0.0.1",
   "private": true,
   "scripts": {
@@ -10,18 +10,18 @@
     "format": "biome format --write .",
     "check": "biome check --write .",
     "typecheck": "turbo typecheck",
-    "dev:qms": "turbo dev --filter=qms",
+    "dev:auth": "turbo dev --filter=auth",
     "auth:generate": "dotenv -e .env -- pnpm dlx auth@latest generate --config ./packages/auth/src/server.ts --output ./packages/db/src/schema/auth.ts --yes",
-    "db:generate": "dotenv -e .env -- pnpm --filter @alpin/db db:generate",
-    "db:migrate": "dotenv -e .env -- pnpm --filter @alpin/db db:migrate",
-    "db:push": "dotenv -e .env -- pnpm --filter @alpin/db db:push",
-    "db:studio": "dotenv -e .env -- pnpm --filter @alpin/db db:studio",
+    "db:generate": "dotenv -e .env -- pnpm --filter @mqdms/db db:generate",
+    "db:migrate": "dotenv -e .env -- pnpm --filter @mqdms/db db:migrate",
+    "db:push": "dotenv -e .env -- pnpm --filter @mqdms/db db:push",
+    "db:studio": "dotenv -e .env -- pnpm --filter @mqdms/db db:studio",
     "db:reset": "dotenv -e .env -- node ./packages/db/scripts/reset.mjs && pnpm db:migrate",
     "db:reset:hard": "dotenv -e .env -- node ./packages/db/scripts/reset.mjs && dotenv -e .env -- node ./packages/db/scripts/reset-migrations.mjs && pnpm db:generate && pnpm db:migrate"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.9",
-    "@alpin/typescript-config": "workspace:*",
+    "@mqdms/typescript-config": "workspace:*",
     "dotenv-cli": "^11.0.0",
     "turbo": "^2.9.18",
     "typescript": "^5"

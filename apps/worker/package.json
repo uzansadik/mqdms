@@ -1,5 +1,5 @@
 {
-  "name": "@alpin/worker",
+  "name": "@mqdms/worker",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -9,14 +9,14 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@alpin/email": "workspace:*",
-    "@alpin/env": "workspace:*",
-    "@alpin/queue": "workspace:*",
-    "@alpin/redis": "workspace:*",
+    "@mqdms/email": "workspace:*",
+    "@mqdms/env": "workspace:*",
+    "@mqdms/queue": "workspace:*",
+    "@mqdms/redis": "workspace:*",
     "bullmq": "^6.3.2"
   },
   "devDependencies": {
-    "@alpin/typescript-config": "workspace:*",
+    "@mqdms/typescript-config": "workspace:*",
     "tsx": "^4.20.0",
     "typescript": "^5"
   }

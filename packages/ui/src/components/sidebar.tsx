@@ -1,19 +1,19 @@
 "use client";
 
-import { Button } from "@alpin/ui/components/button";
-import { Input } from "@alpin/ui/components/input";
-import { Separator } from "@alpin/ui/components/separator";
+import { Button } from "@mqdms/ui/components/button";
+import { Input } from "@mqdms/ui/components/input";
+import { Separator } from "@mqdms/ui/components/separator";
 import {
   Sheet,
   SheetContent,
   SheetDescription,
   SheetHeader,
   SheetTitle,
-} from "@alpin/ui/components/sheet";
-import { Skeleton } from "@alpin/ui/components/skeleton";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@alpin/ui/components/tooltip";
-import { useIsMobile } from "@alpin/ui/hooks/use-mobile";
-import { cn } from "@alpin/ui/lib/utils";
+} from "@mqdms/ui/components/sheet";
+import { Skeleton } from "@mqdms/ui/components/skeleton";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@mqdms/ui/components/tooltip";
+import { useIsMobile } from "@mqdms/ui/hooks/use-mobile";
+import { cn } from "@mqdms/ui/lib/utils";
 import { cva, type VariantProps } from "class-variance-authority";
 import { PanelLeftIcon } from "lucide-react";
 import { Slot } from "radix-ui";

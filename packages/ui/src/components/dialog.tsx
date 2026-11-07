@@ -1,7 +1,7 @@
 "use client";
 
-import { Button } from "@alpin/ui/components/button";
-import { cn } from "@alpin/ui/lib/utils";
+import { Button } from "@mqdms/ui/components/button";
+import { cn } from "@mqdms/ui/lib/utils";
 import { XIcon } from "lucide-react";
 import { Dialog as DialogPrimitive } from "radix-ui";
 import type * as React from "react";

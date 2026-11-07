@@ -1,5 +1,5 @@
 {
-  "name": "@alpin/ui",
+  "name": "@mqdms/ui",
   "version": "0.0.0",
   "type": "module",
   "private": true,
@@ -38,7 +38,7 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "@alpin/typescript-config": "workspace:*",
+    "@mqdms/typescript-config": "workspace:*",
     "tailwindcss": "^4",
     "typescript": "^5"
   },

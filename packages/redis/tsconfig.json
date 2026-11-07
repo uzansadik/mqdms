@@ -1,5 +1,5 @@
 {
-  "extends": "@alpin/typescript-config/base.json",
+  "extends": "@mqdms/typescript-config/base.json",
   "include": ["src/**/*.ts"],
   "exclude": ["node_modules"]
 }

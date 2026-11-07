@@ -1,7 +1,7 @@
 "use client";
 
-import { toggleVariants } from "@alpin/ui/components/toggle";
-import { cn } from "@alpin/ui/lib/utils";
+import { toggleVariants } from "@mqdms/ui/components/toggle";
+import { cn } from "@mqdms/ui/lib/utils";
 import type { VariantProps } from "class-variance-authority";
 import { ToggleGroup as ToggleGroupPrimitive } from "radix-ui";
 import * as React from "react";

@@ -1,4 +1,4 @@
-import { cn } from "@alpin/ui/lib/utils";
+import { cn } from "@mqdms/ui/lib/utils";
 
 function Kbd({ className, ...props }: React.ComponentProps<"kbd">) {
   return (

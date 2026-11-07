@@ -1,7 +1,7 @@
 "use client";
 
-import { Button } from "@alpin/ui/components/button";
-import { cn } from "@alpin/ui/lib/utils";
+import { Button } from "@mqdms/ui/components/button";
+import { cn } from "@mqdms/ui/lib/utils";
 import useEmblaCarousel, { type UseEmblaCarouselType } from "embla-carousel-react";
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 import * as React from "react";

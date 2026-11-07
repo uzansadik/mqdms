@@ -1,5 +1,5 @@
 {
-  "name": "@alpin/config",
+  "name": "@mqdms/config",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -16,7 +16,7 @@
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
-    "@alpin/typescript-config": "workspace:*",
+    "@mqdms/typescript-config": "workspace:*",
     "typescript": "^5"
   },
   "license": "MIT"

@@ -18,14 +18,14 @@ WORKDIR /app
 FROM base AS deps
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
-COPY apps/qms/package.json ./apps/qms/package.json
+COPY apps/auth/package.json ./apps/auth/package.json
 COPY apps/worker/package.json ./apps/worker/package.json
 
 COPY packages ./packages
 
 # Sadece worker'ın bağımlılıkları kuruluyor; web uygulamasının bağımlılıkları
 # (Next.js, React, ...) image'a girmiyor.
-RUN pnpm install --frozen-lockfile --filter @alpin/worker...
+RUN pnpm install --frozen-lockfile --filter @mqdms/worker...
 
 
 # Runner, `deps` katmanından DEĞİL `base` katmanından türetiliyor. pnpm'in
@@ -52,4 +52,4 @@ USER node
 # `verify-deps-before-run=false`: `node_modules` build sırasında kopyalandığı
 # için pnpm'in "bağımlılıklar güncel mi?" kontrolü yanlışlıkla kurulum
 # tetikliyordu; image içinde kurulum yapılmamalı.
-CMD ["pnpm", "--config.verify-deps-before-run=false", "--filter", "@alpin/worker", "start"]
+CMD ["pnpm", "--config.verify-deps-before-run=false", "--filter", "@mqdms/worker", "start"]

@@ -8,17 +8,17 @@
 # gerekmez.
 services:
   migrate:
-    image: ghcr.io/uzansadik/alpin/migrate:${APP_TAG:-latest}
+    image: ghcr.io/uzansadik/mqdms/migrate:${APP_TAG:-latest}
     pull_policy: always
     # Base dosyadaki `build` tanımını kaldır; sunucu image'ı çekip çalıştırır.
     build: !reset null
 
-  qms:
-    image: ghcr.io/uzansadik/alpin/qms:${APP_TAG:-latest}
+  auth:
+    image: ghcr.io/uzansadik/mqdms/auth:${APP_TAG:-latest}
     pull_policy: always
     build: !reset null
 
   worker:
-    image: ghcr.io/uzansadik/alpin/worker:${APP_TAG:-latest}
+    image: ghcr.io/uzansadik/mqdms/worker:${APP_TAG:-latest}
     pull_policy: always
     build: !reset null

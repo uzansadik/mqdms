@@ -1,7 +1,7 @@
 "use client";
 
-import { type Button, buttonVariants } from "@alpin/ui/components/button";
-import { cn } from "@alpin/ui/lib/utils";
+import { type Button, buttonVariants } from "@mqdms/ui/components/button";
+import { cn } from "@mqdms/ui/lib/utils";
 import { Questionnaire as QuestionnairePrimitive } from "@shadcn/react/questionnaire";
 import { CheckIcon } from "lucide-react";
 import type * as React from "react";

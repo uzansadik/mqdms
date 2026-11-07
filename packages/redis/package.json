@@ -1,5 +1,5 @@
 {
-  "name": "@alpin/redis",
+  "name": "@mqdms/redis",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -12,11 +12,11 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@alpin/env": "workspace:*",
+    "@mqdms/env": "workspace:*",
     "ioredis": "^5.11.1"
   },
   "devDependencies": {
-    "@alpin/typescript-config": "workspace:*",
+    "@mqdms/typescript-config": "workspace:*",
     "typescript": "^5"
   }
 }

@@ -1,5 +1,5 @@
-import { passwordResetEmail, sendEmail } from "@alpin/email";
-import type { JobPayloads } from "@alpin/queue";
+import { passwordResetEmail, sendEmail } from "@mqdms/email";
+import type { JobPayloads } from "@mqdms/queue";
 import type { Job } from "bullmq";
 
 type PasswordResetJob = JobPayloads["email.password-reset"];

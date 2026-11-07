@@ -1,11 +1,11 @@
-name: alpin
+name: mqdms
 
-# Build sırasında `@alpin/env` şeması doğrulanıyor; bu değerler image'a
+# Build sırasında `@mqdms/env` şeması doğrulanıyor; bu değerler image'a
 # gömülmez, sadece build ortamına verilir.
 x-build-args: &build-args
-  DATABASE_URL: postgres://postgres:root@postgres:5432/alpin
+  DATABASE_URL: postgres://postgres:root@postgres:5432/mqdms
   REDIS_URL: redis://redis:6379
-  QUEUE_PREFIX: ${QUEUE_PREFIX:-alpin}
+  QUEUE_PREFIX: ${QUEUE_PREFIX:-mqdms}
   NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
   BETTER_AUTH_URL: ${BETTER_AUTH_URL:-http://localhost:3000}
   BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?BETTER_AUTH_SECRET is required}
@@ -21,36 +21,36 @@ x-build-args: &build-args
 services:
   postgres:
     image: postgres:17
-    container_name: alpin-postgres
+    container_name: mqdms-postgres
     restart: unless-stopped
 
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: root
-      POSTGRES_DB: alpin
+      POSTGRES_DB: mqdms
 
     ports:
       - "5432:5432"
 
     volumes:
-      - alpin_postgres_data:/var/lib/postgresql/data
+      - mqdms_postgres_data:/var/lib/postgresql/data
 
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d alpin"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d mqdms"]
       interval: 5s
       timeout: 5s
       retries: 10
 
   redis:
     image: redis:7.4-alpine
-    container_name: alpin-redis
+    container_name: mqdms-redis
     restart: unless-stopped
 
     ports:
       - "6379:6379"
 
     volumes:
-      - alpin_redis_data:/data
+      - mqdms_redis_data:/data
 
     command:
       [
@@ -69,7 +69,7 @@ services:
       timeout: 3s
       retries: 5
 
-  # Şema kurulumu. `qms` bu servisin başarıyla bitmesini bekler.
+  # Şema kurulumu. `auth` bu servisin başarıyla bitmesini bekler.
   #
   # Bu servis kendi (ince) image'ını kullanıyor; build sırasında env
   # doğrulaması yapılmadığı için build argümanına ihtiyaç duymuyor.
@@ -83,9 +83,9 @@ services:
       - .env
 
     environment:
-      DATABASE_URL: postgres://postgres:root@postgres:5432/alpin
+      DATABASE_URL: postgres://postgres:root@postgres:5432/mqdms
       REDIS_URL: redis://redis:6379
-      QUEUE_PREFIX: ${QUEUE_PREFIX:-alpin}
+      QUEUE_PREFIX: ${QUEUE_PREFIX:-mqdms}
       NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
       BETTER_AUTH_URL: ${BETTER_AUTH_URL:-http://localhost:3000}
 
@@ -95,10 +95,10 @@ services:
 
     restart: "no"
 
-  qms:
+  auth:
     build:
       context: .
-      dockerfile: docker/qms.Dockerfile
+      dockerfile: docker/auth.Dockerfile
 
       args: *build-args
 
@@ -108,9 +108,9 @@ services:
     environment:
       NODE_ENV: production
       APP_ENV: ${APP_ENV:-local}
-      DATABASE_URL: postgres://postgres:root@postgres:5432/alpin
+      DATABASE_URL: postgres://postgres:root@postgres:5432/mqdms
       REDIS_URL: redis://redis:6379
-      QUEUE_PREFIX: ${QUEUE_PREFIX:-alpin}
+      QUEUE_PREFIX: ${QUEUE_PREFIX:-mqdms}
       NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
       BETTER_AUTH_URL: ${BETTER_AUTH_URL:-http://localhost:3000}
 
@@ -138,9 +138,9 @@ services:
     environment:
       NODE_ENV: production
       APP_ENV: ${APP_ENV:-local}
-      DATABASE_URL: postgres://postgres:root@postgres:5432/alpin
+      DATABASE_URL: postgres://postgres:root@postgres:5432/mqdms
       REDIS_URL: redis://redis:6379
-      QUEUE_PREFIX: ${QUEUE_PREFIX:-alpin}
+      QUEUE_PREFIX: ${QUEUE_PREFIX:-mqdms}
       WORKER_QUEUES: default,email
       NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
       BETTER_AUTH_URL: ${BETTER_AUTH_URL:-http://localhost:3000}
@@ -154,5 +154,5 @@ services:
     restart: unless-stopped
 
 volumes:
-  alpin_postgres_data:
-  alpin_redis_data:
+  mqdms_postgres_data:
+  mqdms_redis_data:

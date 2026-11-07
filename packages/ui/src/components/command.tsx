@@ -6,10 +6,10 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "@alpin/ui/components/dialog";
-import { InputGroup, InputGroupAddon } from "@alpin/ui/components/input-group";
+} from "@mqdms/ui/components/dialog";
+import { InputGroup, InputGroupAddon } from "@mqdms/ui/components/input-group";
 
-import { cn } from "@alpin/ui/lib/utils";
+import { cn } from "@mqdms/ui/lib/utils";
 import { Command as CommandPrimitive } from "cmdk";
 import { CheckIcon, SearchIcon } from "lucide-react";
 import type * as React from "react";

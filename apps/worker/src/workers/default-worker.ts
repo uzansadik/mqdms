@@ -1,5 +1,5 @@
-import { queueConfig } from "@alpin/queue";
-import { createRedisWorkerConnection } from "@alpin/redis/worker";
+import { queueConfig } from "@mqdms/queue";
+import { createRedisWorkerConnection } from "@mqdms/redis/worker";
 import { Worker } from "bullmq";
 
 import { processSystemPing } from "../jobs/system-ping";

@@ -4,7 +4,7 @@
 
 @custom-variant dark (&:is(.dark *));
 @source "../../../../apps/**/*.{ts,tsx}";
-@source "../../../../apps/qms/components/**/*.{ts,tsx}";
+@source "../../../../apps/auth/components/**/*.{ts,tsx}";
 @source "../**/*.{ts,tsx}"; /* packages/ui/src/** kapsıyor */
 
 @theme inline {

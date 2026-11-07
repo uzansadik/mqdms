@@ -11,11 +11,11 @@
   },
   "iconLibrary": "lucide",
   "aliases": {
-    "components": "@alpin/ui/components",
-    "utils": "@alpin/ui/lib/utils",
-    "hooks": "@alpin/ui/hooks",
-    "lib": "@alpin/ui/lib",
-    "ui": "@alpin/ui/components"
+    "components": "@mqdms/ui/components",
+    "utils": "@mqdms/ui/lib/utils",
+    "hooks": "@mqdms/ui/hooks",
+    "lib": "@mqdms/ui/lib",
+    "ui": "@mqdms/ui/components"
   },
   "rtl": false,
   "menuColor": "default",

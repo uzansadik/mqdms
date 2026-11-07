@@ -1,5 +1,5 @@
-import { sendEmail } from "@alpin/email";
-import type { JobPayloads } from "@alpin/queue";
+import { sendEmail } from "@mqdms/email";
+import type { JobPayloads } from "@mqdms/queue";
 import type { Job } from "bullmq";
 
 type EmailSendData = JobPayloads["email.send"];

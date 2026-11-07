@@ -1,4 +1,4 @@
-import { cn } from "@alpin/ui/lib/utils";
+import { cn } from "@mqdms/ui/lib/utils";
 import { ChevronDownIcon } from "lucide-react";
 import type * as React from "react";
 

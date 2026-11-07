@@ -1,6 +1,6 @@
-import { Button } from "@alpin/ui/components/button";
+import { Button } from "@mqdms/ui/components/button";
 
-import { cn } from "@alpin/ui/lib/utils";
+import { cn } from "@mqdms/ui/lib/utils";
 import { ChevronLeftIcon, ChevronRightIcon, MoreHorizontalIcon } from "lucide-react";
 import type * as React from "react";
 

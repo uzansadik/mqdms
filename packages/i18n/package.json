@@ -1,5 +1,5 @@
 {
-  "name": "@alpin/i18n",
+  "name": "@mqdms/i18n",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -16,7 +16,7 @@
     "react": "^19.0.0"
   },
   "devDependencies": {
-    "@alpin/typescript-config": "workspace:*",
+    "@mqdms/typescript-config": "workspace:*",
     "@types/react": "^19.0.0",
     "next": "^16.2.6",
     "react": "^19.0.0",

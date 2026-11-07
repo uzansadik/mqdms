@@ -1,8 +1,8 @@
 {
-  "extends": "@alpin/typescript-config/react-library.json",
+  "extends": "@mqdms/typescript-config/react-library.json",
   "compilerOptions": {
     "paths": {
-      "@alpin/ui/*": ["./src/*"]
+      "@mqdms/ui/*": ["./src/*"]
     }
   },
   "include": ["."],

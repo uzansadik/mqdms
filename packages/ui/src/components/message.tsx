@@ -1,4 +1,4 @@
-import { cn } from "@alpin/ui/lib/utils";
+import { cn } from "@mqdms/ui/lib/utils";
 import type * as React from "react";
 
 function MessageGroup({ className, ...props }: React.ComponentProps<"div">) {

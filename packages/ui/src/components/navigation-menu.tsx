@@ -1,4 +1,4 @@
-import { cn } from "@alpin/ui/lib/utils";
+import { cn } from "@mqdms/ui/lib/utils";
 import { cva } from "class-variance-authority";
 import { ChevronDownIcon } from "lucide-react";
 import { NavigationMenu as NavigationMenuPrimitive } from "radix-ui";

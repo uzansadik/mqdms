@@ -1,9 +1,9 @@
 "use client";
 
-import { Button } from "@alpin/ui/components/button";
-import { Input } from "@alpin/ui/components/input";
-import { Textarea } from "@alpin/ui/components/textarea";
-import { cn } from "@alpin/ui/lib/utils";
+import { Button } from "@mqdms/ui/components/button";
+import { Input } from "@mqdms/ui/components/input";
+import { Textarea } from "@mqdms/ui/components/textarea";
+import { cn } from "@mqdms/ui/lib/utils";
 import { cva, type VariantProps } from "class-variance-authority";
 import type * as React from "react";
 

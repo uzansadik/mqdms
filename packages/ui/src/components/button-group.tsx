@@ -1,5 +1,5 @@
-import { Separator } from "@alpin/ui/components/separator";
-import { cn } from "@alpin/ui/lib/utils";
+import { Separator } from "@mqdms/ui/components/separator";
+import { cn } from "@mqdms/ui/lib/utils";
 import { cva, type VariantProps } from "class-variance-authority";
 import { Slot } from "radix-ui";
 

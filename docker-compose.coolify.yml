@@ -1,5 +1,5 @@
-# Alpin production stack, deploy via Coolify Git-based Docker Compose Application.
-# GH Actions builds qms/worker/migrate and pushes them to GHCR.
+# MQDMS production stack, deploy via Coolify Git-based Docker Compose Application.
+# GH Actions builds auth/worker/migrate and pushes them to GHCR.
 # This Compose file only PULLS the application images.
 
 x-runtime-env: &runtime-env
@@ -7,7 +7,7 @@ x-runtime-env: &runtime-env
   APP_ENV: production
   DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
   REDIS_URL: redis://redis:6379
-  QUEUE_PREFIX: ${QUEUE_PREFIX:-alpin}
+  QUEUE_PREFIX: ${QUEUE_PREFIX:-mqdms}
   NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:?NEXT_PUBLIC_APP_URL is required}
   BETTER_AUTH_URL: ${BETTER_AUTH_URL:?BETTER_AUTH_URL is required}
   BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?BETTER_AUTH_SECRET is required}
@@ -27,11 +27,11 @@ services:
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
-      POSTGRES_DB: alpin
+      POSTGRES_DB: mqdms
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d alpin"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d mqdms"]
       interval: 5s
       timeout: 5s
       retries: 12
@@ -50,7 +50,7 @@ services:
       retries: 10
 
   migrate:
-    image: ghcr.io/uzansadik/alpin/migrate:${APP_TAG:-latest}
+    image: ghcr.io/uzansadik/mqdms/migrate:${APP_TAG:-latest}
     pull_policy: always
     restart: "no"
     exclude_from_hc: true # Coolify-specific: completed job is not unhealthy.
@@ -59,8 +59,8 @@ services:
       postgres:
         condition: service_healthy
 
-  qms:
-    image: ghcr.io/uzansadik/alpin/qms:${APP_TAG:-latest}
+  auth:
+    image: ghcr.io/uzansadik/mqdms/auth:${APP_TAG:-latest}
     pull_policy: always
     restart: unless-stopped
     environment: *runtime-env
@@ -81,7 +81,7 @@ services:
         condition: service_completed_successfully
 
   worker:
-    image: ghcr.io/uzansadik/alpin/worker:${APP_TAG:-latest}
+    image: ghcr.io/uzansadik/mqdms/worker:${APP_TAG:-latest}
     pull_policy: always
     restart: unless-stopped
     environment:

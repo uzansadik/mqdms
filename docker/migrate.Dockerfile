@@ -18,14 +18,14 @@ WORKDIR /app
 FROM base AS deps
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
-COPY apps/qms/package.json ./apps/qms/package.json
+COPY apps/auth/package.json ./apps/auth/package.json
 COPY apps/worker/package.json ./apps/worker/package.json
 
 COPY packages ./packages
 
-# Sadece `@alpin/db` ve bağımlılıkları kuruluyor. `drizzle-kit` ve `dotenv`
+# Sadece `@mqdms/db` ve bağımlılıkları kuruluyor. `drizzle-kit` ve `dotenv`
 # dev dependency; prod install kullanılırsa migration çalıştırılamaz.
-RUN pnpm install --frozen-lockfile --filter @alpin/db...
+RUN pnpm install --frozen-lockfile --filter @mqdms/db...
 
 
 # Runner, `deps` katmanından DEĞİL `base` katmanından türetiliyor. pnpm'in
@@ -52,4 +52,4 @@ USER node
 # `verify-deps-before-run=false`: `node_modules` build sırasında kopyalandığı
 # için pnpm'in "bağımlılıklar güncel mi?" kontrolü yanlışlıkla kurulum
 # tetikliyordu; image içinde kurulum yapılmamalı.
-CMD ["pnpm", "--config.verify-deps-before-run=false", "--filter", "@alpin/db", "db:migrate"]
+CMD ["pnpm", "--config.verify-deps-before-run=false", "--filter", "@mqdms/db", "db:migrate"]

@@ -1,4 +1,4 @@
-import { appConfig } from "@alpin/config";
+import { appConfig } from "@mqdms/config";
 
 import { sendEmail } from "./send";
 

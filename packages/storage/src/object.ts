@@ -1,4 +1,4 @@
-import { env } from "@alpin/env/server";
+import { env } from "@mqdms/env/server";
 import { DeleteObjectCommand, HeadObjectCommand } from "@aws-sdk/client-s3";
 
 import { storageClient } from "./client";

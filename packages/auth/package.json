@@ -1,5 +1,5 @@
 {
-  "name": "@alpin/auth",
+  "name": "@mqdms/auth",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -10,11 +10,11 @@
   },
   "dependencies": {
     "@better-auth/api-key": "^1.7.1",
-    "@alpin/config": "workspace:*",
-    "@alpin/db": "workspace:*",
-    "@alpin/email": "workspace:*",
-    "@alpin/queue": "workspace:*",
-    "@alpin/env": "workspace:*",
+    "@mqdms/config": "workspace:*",
+    "@mqdms/db": "workspace:*",
+    "@mqdms/email": "workspace:*",
+    "@mqdms/queue": "workspace:*",
+    "@mqdms/env": "workspace:*",
     "better-auth": "^1.6.24"
   }
 }

@@ -73,10 +73,10 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - id: meta-qms
+      - id: meta-auth
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/alpin/qms
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/mqdms/auth
           tags: |
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
             type=ref,event=branch
@@ -85,7 +85,7 @@ jobs:
       - id: meta-worker
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/alpin/worker
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/mqdms/worker
           tags: |
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
             type=ref,event=branch
@@ -94,7 +94,7 @@ jobs:
       - id: meta-migrate
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/alpin/migrate
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/mqdms/migrate
           tags: |
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
             type=ref,event=branch
@@ -114,24 +114,24 @@ jobs:
           cache-from: type=gha,scope=migrate
           cache-to: type=gha,scope=migrate,mode=max
 
-      # `next build` route handler'larını yüklerken `@alpin/env` şemasını
+      # `next build` route handler'larını yüklerken `@mqdms/env` şemasını
       # doğruladığı için build sırasında da env gerekiyor. Gerçek sırlar
       # image'a gömülmez; secret yoksa build-only placeholder kullanılır.
       # NEXT_PUBLIC_APP_URL istisnadır: client bundle'a işlendiği için repo
       # variable'ı tanımlanmalı (Settings -> Variables).
-      - name: qms imajı
+      - name: auth imajı
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: docker/qms.Dockerfile
+          file: docker/auth.Dockerfile
           push: ${{ github.ref == 'refs/heads/main' && github.event_name != 'pull_request' }}
-          tags: ${{ steps.meta-qms.outputs.tags }}
-          labels: ${{ steps.meta-qms.outputs.labels }}
+          tags: ${{ steps.meta-auth.outputs.tags }}
+          labels: ${{ steps.meta-auth.outputs.labels }}
           provenance: false
           build-args: |
-            DATABASE_URL=postgresql://postgres:postgres@localhost:5432/alpin
+            DATABASE_URL=postgresql://postgres:postgres@localhost:5432/mqdms
             REDIS_URL=redis://localhost:6379
-            QUEUE_PREFIX=alpin
+            QUEUE_PREFIX=mqdms
             NEXT_PUBLIC_APP_URL=${{ vars.NEXT_PUBLIC_APP_URL || 'http://localhost:3000' }}
             BETTER_AUTH_URL=${{ vars.BETTER_AUTH_URL || 'http://localhost:3000' }}
             BETTER_AUTH_SECRET=${{ secrets.BETTER_AUTH_SECRET || 'ci-build-placeholder-secret-000000000000' }}
@@ -143,8 +143,8 @@ jobs:
             STORAGE_SECRET_ACCESS_KEY=${{ secrets.STORAGE_SECRET_ACCESS_KEY || 'build' }}
             STORAGE_ENDPOINT=${{ vars.STORAGE_ENDPOINT || 'http://localhost:3000' }}
             STORAGE_PUBLIC_URL=${{ vars.STORAGE_PUBLIC_URL || 'http://localhost:3000' }}
-          cache-from: type=gha,scope=qms
-          cache-to: type=gha,scope=qms,mode=max
+          cache-from: type=gha,scope=auth
+          cache-to: type=gha,scope=auth,mode=max
 
       - name: worker imajı
         uses: docker/build-push-action@v6
@@ -163,7 +163,7 @@ jobs:
           echo "### Derlenen image'lar" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"
-          echo "${{ steps.meta-qms.outputs.tags }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "${{ steps.meta-auth.outputs.tags }}" >> "$GITHUB_STEP_SUMMARY"
           echo "${{ steps.meta-worker.outputs.tags }}" >> "$GITHUB_STEP_SUMMARY"
           echo "${{ steps.meta-migrate.outputs.tags }}" >> "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"

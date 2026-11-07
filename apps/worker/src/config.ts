@@ -1,5 +1,5 @@
-import { workerEnv } from "@alpin/env/worker";
-import { type QueueName, queueNames } from "@alpin/queue";
+import { workerEnv } from "@mqdms/env/worker";
+import { type QueueName, queueNames } from "@mqdms/queue";
 
 const availableQueues = new Set<string>(queueNames);
 

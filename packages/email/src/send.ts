@@ -1,4 +1,4 @@
-import { emailEnv } from "@alpin/env/email";
+import { emailEnv } from "@mqdms/env/email";
 import { resend } from "./client";
 
 type SendEmailInput = {

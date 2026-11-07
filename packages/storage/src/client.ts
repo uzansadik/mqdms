@@ -1,4 +1,4 @@
-import { env } from "@alpin/env/server";
+import { env } from "@mqdms/env/server";
 import { S3Client } from "@aws-sdk/client-s3";
 
 export const storageClient = new S3Client({

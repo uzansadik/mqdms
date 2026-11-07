@@ -1,9 +1,9 @@
 "use client";
 
-import { Label } from "@alpin/ui/components/label";
-import { Separator } from "@alpin/ui/components/separator";
+import { Label } from "@mqdms/ui/components/label";
+import { Separator } from "@mqdms/ui/components/separator";
 
-import { cn } from "@alpin/ui/lib/utils";
+import { cn } from "@mqdms/ui/lib/utils";
 import { cva, type VariantProps } from "class-variance-authority";
 import { useMemo } from "react";
 

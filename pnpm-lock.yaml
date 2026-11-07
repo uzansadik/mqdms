@@ -8,12 +8,12 @@ importers:
 
   .:
     devDependencies:
-      '@alpin/typescript-config':
-        specifier: workspace:*
-        version: link:packages/typescript-config
       '@biomejs/biome':
         specifier: ^2.5.9
         version: 2.5.9
+      '@mqdms/typescript-config':
+        specifier: workspace:*
+        version: link:packages/typescript-config
       dotenv-cli:
         specifier: ^11.0.0
         version: 11.0.0
@@ -24,41 +24,41 @@ importers:
         specifier: ^5
         version: 5.9.3
 
-  apps/qms:
+  apps/auth:
     dependencies:
-      '@alpin/audit':
-        specifier: workspace:*
-        version: link:../../packages/audit
-      '@alpin/auth':
-        specifier: workspace:*
-        version: link:../../packages/auth
-      '@alpin/config':
-        specifier: workspace:*
-        version: link:../../packages/config
-      '@alpin/db':
-        specifier: workspace:*
-        version: link:../../packages/db
-      '@alpin/env':
-        specifier: workspace:*
-        version: link:../../packages/env
-      '@alpin/i18n':
-        specifier: workspace:*
-        version: link:../../packages/i18n
-      '@alpin/queue':
-        specifier: workspace:*
-        version: link:../../packages/queue
-      '@alpin/storage':
-        specifier: workspace:*
-        version: link:../../packages/storage
-      '@alpin/ui':
-        specifier: workspace:*
-        version: link:../../packages/ui
       '@base-ui/react':
         specifier: ^1.7.0
         version: 1.7.0(@date-fns/tz@1.5.0)(@types/react@19.2.15)(date-fns@4.4.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       '@hookform/resolvers':
         specifier: ^5.9.1
         version: 5.9.1(@standard-schema/spec@1.1.0)(ajv-formats@2.1.1(ajv@8.20.0))(ajv@8.20.0)(react-hook-form@7.86.0(react@19.2.4))(zod@4.4.3)
+      '@mqdms/audit':
+        specifier: workspace:*
+        version: link:../../packages/audit
+      '@mqdms/auth':
+        specifier: workspace:*
+        version: link:../../packages/auth
+      '@mqdms/config':
+        specifier: workspace:*
+        version: link:../../packages/config
+      '@mqdms/db':
+        specifier: workspace:*
+        version: link:../../packages/db
+      '@mqdms/env':
+        specifier: workspace:*
+        version: link:../../packages/env
+      '@mqdms/i18n':
+        specifier: workspace:*
+        version: link:../../packages/i18n
+      '@mqdms/queue':
+        specifier: workspace:*
+        version: link:../../packages/queue
+      '@mqdms/storage':
+        specifier: workspace:*
+        version: link:../../packages/storage
+      '@mqdms/ui':
+        specifier: workspace:*
+        version: link:../../packages/ui
       '@shadcn/react':
         specifier: ^0.3.0
         version: 0.3.0(@types/react@19.2.15)(react@19.2.4)
@@ -114,7 +114,7 @@ importers:
         specifier: ^4.0.0
         version: 4.4.3
     devDependencies:
-      '@alpin/typescript-config':
+      '@mqdms/typescript-config':
         specifier: workspace:*
         version: link:../../packages/typescript-config
       '@tailwindcss/postcss':
@@ -135,23 +135,23 @@ importers:
 
   apps/worker:
     dependencies:
-      '@alpin/email':
+      '@mqdms/email':
         specifier: workspace:*
         version: link:../../packages/email
-      '@alpin/env':
+      '@mqdms/env':
         specifier: workspace:*
         version: link:../../packages/env
-      '@alpin/queue':
+      '@mqdms/queue':
         specifier: workspace:*
         version: link:../../packages/queue
-      '@alpin/redis':
+      '@mqdms/redis':
         specifier: workspace:*
         version: link:../../packages/redis
       bullmq:
         specifier: ^6.3.2
         version: 6.3.2(ioredis@5.11.1)(pg@8.23.0)
     devDependencies:
-      '@alpin/typescript-config':
+      '@mqdms/typescript-config':
         specifier: workspace:*
         version: link:../../packages/typescript-config
       tsx:
@@ -163,37 +163,37 @@ importers:
 
   packages/audit:
     dependencies:
-      '@alpin/db':
+      '@mqdms/db':
         specifier: workspace:*
         version: link:../db
 
   packages/auth:
     dependencies:
-      '@alpin/config':
-        specifier: workspace:*
-        version: link:../config
-      '@alpin/db':
-        specifier: workspace:*
-        version: link:../db
-      '@alpin/email':
-        specifier: workspace:*
-        version: link:../email
-      '@alpin/env':
-        specifier: workspace:*
-        version: link:../env
-      '@alpin/queue':
-        specifier: workspace:*
-        version: link:../queue
       '@better-auth/api-key':
         specifier: ^1.7.1
         version: 1.7.1(@better-auth/core@1.7.1(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.1)(better-call@1.4.0(zod@4.4.3))(jose@6.2.9)(kysely@0.29.5)(nanostores@1.5.2))(@better-auth/utils@0.4.2)(better-auth@1.7.1(drizzle-kit@0.31.10)(drizzle-orm@0.45.2(@types/pg@8.23.1)(kysely@0.29.5)(pg@8.23.0))(next@16.2.6(@babel/core@7.29.7)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(pg@8.23.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(better-call@1.4.0(zod@4.4.3))
+      '@mqdms/config':
+        specifier: workspace:*
+        version: link:../config
+      '@mqdms/db':
+        specifier: workspace:*
+        version: link:../db
+      '@mqdms/email':
+        specifier: workspace:*
+        version: link:../email
+      '@mqdms/env':
+        specifier: workspace:*
+        version: link:../env
+      '@mqdms/queue':
+        specifier: workspace:*
+        version: link:../queue
       better-auth:
         specifier: ^1.6.24
         version: 1.7.1(drizzle-kit@0.31.10)(drizzle-orm@0.45.2(@types/pg@8.23.1)(kysely@0.29.5)(pg@8.23.0))(next@16.2.6(@babel/core@7.29.7)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(pg@8.23.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
 
   packages/config:
     devDependencies:
-      '@alpin/typescript-config':
+      '@mqdms/typescript-config':
         specifier: workspace:*
         version: link:../typescript-config
       typescript:
@@ -202,7 +202,7 @@ importers:
 
   packages/db:
     dependencies:
-      '@alpin/env':
+      '@mqdms/env':
         specifier: workspace:*
         version: link:../env
       drizzle-orm:
@@ -224,10 +224,10 @@ importers:
 
   packages/email:
     dependencies:
-      '@alpin/config':
+      '@mqdms/config':
         specifier: workspace:*
         version: link:../config
-      '@alpin/env':
+      '@mqdms/env':
         specifier: workspace:*
         version: link:../env
       resend:
@@ -242,7 +242,7 @@ importers:
 
   packages/i18n:
     devDependencies:
-      '@alpin/typescript-config':
+      '@mqdms/typescript-config':
         specifier: workspace:*
         version: link:../typescript-config
       '@types/react':
@@ -260,17 +260,17 @@ importers:
 
   packages/queue:
     dependencies:
-      '@alpin/env':
+      '@mqdms/env':
         specifier: workspace:*
         version: link:../env
-      '@alpin/redis':
+      '@mqdms/redis':
         specifier: workspace:*
         version: link:../redis
       bullmq:
         specifier: ^6.3.2
         version: 6.3.2(ioredis@5.11.1)(pg@8.23.0)
     devDependencies:
-      '@alpin/typescript-config':
+      '@mqdms/typescript-config':
         specifier: workspace:*
         version: link:../typescript-config
       typescript:
@@ -279,14 +279,14 @@ importers:
 
   packages/redis:
     dependencies:
-      '@alpin/env':
+      '@mqdms/env':
         specifier: workspace:*
         version: link:../env
       ioredis:
         specifier: ^5.11.1
         version: 5.11.1
     devDependencies:
-      '@alpin/typescript-config':
+      '@mqdms/typescript-config':
         specifier: workspace:*
         version: link:../typescript-config
       typescript:
@@ -295,15 +295,15 @@ importers:
 
   packages/storage:
     dependencies:
-      '@alpin/env':
-        specifier: workspace:*
-        version: link:../env
       '@aws-sdk/client-s3':
         specifier: ^3.0.0
         version: 3.1116.0
       '@aws-sdk/s3-request-presigner':
         specifier: ^3.0.0
         version: 3.1116.0
+      '@mqdms/env':
+        specifier: workspace:*
+        version: link:../env
 
   packages/typescript-config: {}
 
@@ -373,7 +373,7 @@ importers:
         specifier: ^4.4.3
         version: 4.4.3
     devDependencies:
-      '@alpin/typescript-config':
+      '@mqdms/typescript-config':
         specifier: workspace:*
         version: link:../typescript-config
       '@tailwindcss/postcss':

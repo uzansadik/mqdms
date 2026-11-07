@@ -1,6 +1,6 @@
 "use client";
 
-import { cn } from "@alpin/ui/lib/utils";
+import { cn } from "@mqdms/ui/lib/utils";
 import { RadioGroup as RadioGroupPrimitive } from "radix-ui";
 import type * as React from "react";
 

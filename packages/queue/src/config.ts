@@ -1,4 +1,4 @@
-import { queueEnv } from "@alpin/env/queue";
+import { queueEnv } from "@mqdms/env/queue";
 
 export const queueConfig = {
   prefix: queueEnv.QUEUE_PREFIX,

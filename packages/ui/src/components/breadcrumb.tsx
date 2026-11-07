@@ -1,4 +1,4 @@
-import { cn } from "@alpin/ui/lib/utils";
+import { cn } from "@mqdms/ui/lib/utils";
 import { ChevronRightIcon, MoreHorizontalIcon } from "lucide-react";
 import { Slot } from "radix-ui";
 import type * as React from "react";

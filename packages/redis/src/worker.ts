@@ -1,4 +1,4 @@
-import { env } from "@alpin/env/server";
+import { env } from "@mqdms/env/server";
 import IORedis from "ioredis";
 
 export function createRedisWorkerConnection() {
