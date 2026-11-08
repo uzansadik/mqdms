@@ -1,14 +1,8 @@
-
 import { createAccessControl } from "better-auth/plugins/access";
 
-import {
-  defaultStatements,
-  adminAc,
-} from "better-auth/plugins/admin/access";
+import { defaultStatements, adminAc } from "better-auth/plugins/admin/access";
 
-export const platformAc = createAccessControl(
-  defaultStatements
-);
+export const platformAc = createAccessControl(defaultStatements);
 
 export const platformRoles = {
   user: platformAc.newRole({}),
@@ -22,5 +16,4 @@ export const platformRoles = {
   }),
 };
 
-export type PlatformRole =
-  keyof typeof platformRoles;
+export type PlatformRole = keyof typeof platformRoles;
