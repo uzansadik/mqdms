@@ -7,6 +7,7 @@ import { apiKey } from "@better-auth/api-key";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { admin, organization } from "better-auth/plugins";
+import { platformAc, platformRoles } from "./permissions/platform";
 
 export const auth = betterAuth({
   appName: appConfig.name,
@@ -44,6 +45,7 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
     requireEmailVerification: true,
+    disableSignUp: true,
 
     customSyntheticUser: ({ coreFields, additionalFields, id }) => ({
       ...coreFields,
@@ -68,9 +70,14 @@ export const auth = betterAuth({
   },
 
   plugins: [
-    admin(),
+    admin({
+      defaultRole: "user",
+      ac: platformAc,
+      roles: platformRoles,
+    }),
 
     organization({
+      allowUserToCreateOrganization: false,
       requireEmailVerificationOnInvitation: true,
 
       async sendInvitationEmail(data) {
