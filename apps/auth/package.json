@@ -12,20 +12,19 @@
     "check": "biome check --write .",
     "typecheck": "tsc --noEmit"
   },
-
   "dependencies": {
     "@base-ui/react": "^1.7.0",
     "@hookform/resolvers": "^5.9.1",
-    "@shadcn/react": "^0.3.0",
-    "@mqdms/auth": "workspace:*",
-    "@mqdms/i18n": "workspace:*",
     "@mqdms/audit": "workspace:*",
+    "@mqdms/auth": "workspace:*",
     "@mqdms/config": "workspace:*",
     "@mqdms/db": "workspace:*",
     "@mqdms/env": "workspace:*",
+    "@mqdms/i18n": "workspace:*",
+    "@mqdms/queue": "workspace:*",
     "@mqdms/storage": "workspace:*",
     "@mqdms/ui": "workspace:*",
-    "@mqdms/queue": "workspace:*",
+    "@shadcn/react": "^0.3.0",
     "cmdk": "^1.1.1",
     "date-fns": "^4.4.0",
     "drizzle-orm": "^0.45.2",
@@ -40,16 +39,17 @@
     "react-hook-form": "^7.86.0",
     "react-resizable-panels": "^4.12.3",
     "recharts": "3.8.0",
+    "server-only": "^0.0.1",
     "sonner": "^2.0.8",
     "vaul": "^1.1.2",
     "zod": "^4.0.0"
   },
   "devDependencies": {
+    "@mqdms/typescript-config": "workspace:*",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "@mqdms/typescript-config": "workspace:*",
     "typescript": "^5"
   }
 }
