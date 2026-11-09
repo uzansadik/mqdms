@@ -1,9 +1,9 @@
+import { apiKey } from "@better-auth/api-key";
 import { appConfig } from "@mqdms/config";
 import { db } from "@mqdms/db";
 import * as schema from "@mqdms/db/schema";
 import { env } from "@mqdms/env/server";
 import { addJob } from "@mqdms/queue";
-import { apiKey } from "@better-auth/api-key";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { admin, organization } from "better-auth/plugins";

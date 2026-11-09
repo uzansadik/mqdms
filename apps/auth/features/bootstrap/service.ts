@@ -21,7 +21,11 @@ export async function isBootstrapAvailable() {
     return false;
   }
 
-  const existingUsers = await db.select({ id: user.id }).from(user).limit(1);
+  const existingUsers = await db
+    .select({ id: user.id })
+    .from(user)
+    .where(sql`${user.role} = 'superadmin'`)
+    .limit(1);
 
   return existingUsers.length === 0;
 }
@@ -55,7 +59,11 @@ export async function createSuperadmin(input: BootstrapValues) {
     await tx.execute(sql`SELECT pg_advisory_xact_lock(${BOOTSTRAP_LOCK_ID})`);
 
     // This check MUST happen after acquiring the lock.
-    const existingUsers = await tx.select({ id: user.id }).from(user).limit(1);
+    const existingUsers = await tx
+      .select({ id: user.id })
+      .from(user)
+      .where(sql`${user.role} = 'superadmin'`)
+      .limit(1);
 
     if (existingUsers.length > 0) {
       throw new Error("Bootstrap already completed");

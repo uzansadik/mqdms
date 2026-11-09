@@ -26,6 +26,8 @@ const serverEnvSchema = z.object({
   STORAGE_PUBLIC_URL: optionalUrl,
   NEXT_PUBLIC_APP_URL: z.url().min(1, "NEXT_PUBLIC_APP_URL is required"),
   REDIS_URL: z.string().min(1, "REDIS_URL is required"),
+  SUPERADMIN_BOOTSTRAP_ENABLED: z.boolean().default(true),
+  SUPERADMIN_BOOTSTRAP_KEY: z.string().min(32).optional(),
 });
 
 export const env = serverEnvSchema.parse({
