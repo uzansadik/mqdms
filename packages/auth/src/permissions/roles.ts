@@ -54,10 +54,15 @@ export type OrganizationRoleStatements = {
   readonly [K in BetterAuthStatementResource]: readonly string[];
 };
 
+/**
+ * Bir rolün davranışsal tanımı.
+ *
+ * Katalog yalnızca *politikayı* taşır: hangi statement'lara, capability'lere ve
+ * kaynak yetkilerine sahip olduğu. Kullanıcıya gösterilen metin (rol adı,
+ * açıklaması) burada değil, uygulamanın i18n katmanında tutulur; böylece
+ * katalog sunum dilinden bağımsız kalır.
+ */
 export type RoleDefinition = {
-  label: string;
-  description: string;
-
   /** better-auth organization plugin statement'ları. */
   organizationStatements: OrganizationRoleStatements;
 
@@ -117,24 +122,18 @@ const memberStatements = {
  */
 export const roleDefinitions = {
   owner: {
-    label: "Owner",
-    description: "Workspace'in tam sahibi. Organizasyonu silebilir, üye ve yetki yönetebilir.",
     organizationStatements: ownerStatements,
     capabilities: ["managePermissions"],
     permissions: allResourceActions(),
   },
 
   admin: {
-    label: "Admin",
-    description: "Üye, davet ve yetki yönetebilir. Organizasyonu silemez.",
     organizationStatements: adminStatements,
     capabilities: ["managePermissions"],
     permissions: allResourceActions(),
   },
 
   member: {
-    label: "Member",
-    description: "Workspace'e erişir, kaynakları yalnızca görüntüler.",
     organizationStatements: memberStatements,
     capabilities: [],
     permissions: {
@@ -143,8 +142,6 @@ export const roleDefinitions = {
   },
 
   "project-engineer": {
-    label: "Project Engineer",
-    description: "FMEA oluşturur, düzenler ve kaydeder. Onaylama yetkisi yoktur.",
     organizationStatements: memberStatements,
     capabilities: [],
     permissions: {
@@ -153,8 +150,6 @@ export const roleDefinitions = {
   },
 
   "quality-engineer": {
-    label: "Quality Engineer",
-    description: "FMEA'yı inceler ve onaylar. FMEA oluşturma yetkisi yoktur.",
     organizationStatements: memberStatements,
     capabilities: [],
     permissions: {

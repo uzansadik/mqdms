@@ -1,4 +1,4 @@
-import { roleDefinitions } from "@mqdms/auth/permissions";
+import { roleIds } from "@mqdms/auth/permissions";
 import { getTranslations } from "@mqdms/i18n/server";
 import { Badge } from "@mqdms/ui/components/badge";
 import {
@@ -48,11 +48,13 @@ export default async function OrganizationDetailPage({ params }: OrganizationDet
         <h1 className="text-2xl font-semibold tracking-tight">{organization.name}</h1>
 
         <p className="mt-1 text-muted-foreground">
-          {organization.slug} · created{" "}
-          {organization.createdAt.toLocaleDateString("en-US", {
-            month: "short",
-            day: "numeric",
-            year: "numeric",
+          {organization.slug} ·{" "}
+          {t("admin.organization.created", {
+            date: organization.createdAt.toLocaleDateString("en-US", {
+              month: "short",
+              day: "numeric",
+              year: "numeric",
+            }),
           })}
         </p>
       </div>
@@ -144,12 +146,14 @@ export default async function OrganizationDetailPage({ params }: OrganizationDet
 
         <CardContent>
           <div className="divide-y rounded-md border">
-            {Object.entries(roleDefinitions).map(([roleId, definition]) => (
+            {roleIds.map((roleId) => (
               <div className="flex items-center gap-4 p-4" key={roleId}>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate font-medium">{definition.label}</p>
+                  <p className="truncate font-medium">{t(`roles.${roleId}.label`)}</p>
 
-                  <p className="truncate text-sm text-muted-foreground">{definition.description}</p>
+                  <p className="truncate text-sm text-muted-foreground">
+                    {t(`roles.${roleId}.description`)}
+                  </p>
                 </div>
 
                 <Badge className="capitalize" variant="secondary">

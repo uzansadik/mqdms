@@ -1,5 +1,6 @@
 "use client";
 
+import { useI18n } from "@mqdms/i18n";
 import {
   Sidebar,
   SidebarContent,
@@ -26,26 +27,27 @@ type AdminSidebarProps = {
   };
 };
 
-const navigation = [
-  {
-    title: "Overview",
-    href: "/admin",
-    icon: LayoutDashboard,
-  },
-  {
-    title: "Organizations",
-    href: "/admin/organizations",
-    icon: Building2,
-  },
-  {
-    title: "Users",
-    href: "/admin/users",
-    icon: Users,
-  },
-];
-
 export function AdminSidebar({ user }: AdminSidebarProps) {
   const pathname = usePathname();
+  const { t } = useI18n();
+
+  const navigation = [
+    {
+      title: t("admin.nav.overview"),
+      href: "/admin",
+      icon: LayoutDashboard,
+    },
+    {
+      title: t("admin.nav.organizations"),
+      href: "/admin/organizations",
+      icon: Building2,
+    },
+    {
+      title: t("admin.nav.users"),
+      href: "/admin/users",
+      icon: Users,
+    },
+  ];
 
   return (
     <Sidebar collapsible="icon">
@@ -55,13 +57,13 @@ export function AdminSidebar({ user }: AdminSidebarProps) {
             <span className="text-xs font-semibold">P</span>
           </div>
 
-          <span className="text-sm font-semibold">Platform</span>
+          <span className="text-sm font-semibold">{t("admin.nav.platform")}</span>
         </div>
       </SidebarHeader>
 
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Management</SidebarGroupLabel>
+          <SidebarGroupLabel>{t("admin.nav.management")}</SidebarGroupLabel>
 
           <SidebarGroupContent>
             <SidebarMenu>

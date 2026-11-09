@@ -1,36 +1,9 @@
 "use client";
 
+import { useI18n } from "@mqdms/i18n";
 import { cn } from "@mqdms/ui/lib/utils";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-
-const items = [
-  {
-    title: "General",
-    href: "/settings",
-  },
-  {
-    title: "Members",
-    href: "/settings/members",
-  },
-  {
-    title: "Permissions",
-    href: "/settings/permissions",
-    requiresPermissionManagement: true,
-  },
-  {
-    title: "Profile",
-    href: "/settings/profile",
-  },
-  {
-    title: "Activity",
-    href: "/settings/activity",
-  },
-  {
-    title: "API Keys",
-    href: "/settings/api-keys",
-  },
-];
 
 type SettingsNavProps = {
   canManagePermissions: boolean;
@@ -38,6 +11,35 @@ type SettingsNavProps = {
 
 export function SettingsNav({ canManagePermissions }: SettingsNavProps) {
   const pathname = usePathname();
+  const { t } = useI18n();
+
+  const items = [
+    {
+      title: t("settings.nav.general"),
+      href: "/settings",
+    },
+    {
+      title: t("settings.nav.members"),
+      href: "/settings/members",
+    },
+    {
+      title: t("settings.nav.permissions"),
+      href: "/settings/permissions",
+      requiresPermissionManagement: true,
+    },
+    {
+      title: t("settings.nav.profile"),
+      href: "/settings/profile",
+    },
+    {
+      title: t("settings.nav.activity"),
+      href: "/settings/activity",
+    },
+    {
+      title: t("settings.nav.apiKeys"),
+      href: "/settings/api-keys",
+    },
+  ];
 
   const visibleItems = items.filter(
     (item) => !item.requiresPermissionManagement || canManagePermissions,

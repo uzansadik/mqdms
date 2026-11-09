@@ -1,5 +1,6 @@
 "use client";
 
+import { useI18n } from "@mqdms/i18n";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,6 +26,7 @@ type DeleteOrganizationButtonProps = {
 
 export function DeleteOrganizationButton({ organizationId, name }: DeleteOrganizationButtonProps) {
   const router = useRouter();
+  const { t } = useI18n();
 
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
@@ -53,26 +55,31 @@ export function DeleteOrganizationButton({ organizationId, name }: DeleteOrganiz
     <div className="flex flex-col items-end gap-1">
       <AlertDialog onOpenChange={setOpen} open={open}>
         <AlertDialogTrigger asChild>
-          <Button aria-label={`Delete ${name}`} size="icon" variant="ghost">
+          <Button
+            aria-label={t("admin.organization.delete.aria", { name })}
+            size="icon"
+            variant="ghost"
+          >
             <Trash2 className="size-4" />
           </Button>
         </AlertDialogTrigger>
 
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete {name}?</AlertDialogTitle>
+            <AlertDialogTitle>{t("admin.organization.delete.title", { name })}</AlertDialogTitle>
 
             <AlertDialogDescription>
-              This removes the organization together with its members, invitations and permission
-              grants. This action cannot be undone.
+              {t("admin.organization.delete.description")}
             </AlertDialogDescription>
           </AlertDialogHeader>
 
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={pending}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={pending}>{t("common.cancel")}</AlertDialogCancel>
 
             <AlertDialogAction disabled={pending} onClick={handleDelete}>
-              {pending ? "Deleting..." : "Delete organization"}
+              {pending
+                ? t("admin.organization.delete.deleting")
+                : t("admin.organization.delete.confirm")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -1,6 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useI18n } from "@mqdms/i18n";
 import { Button } from "@mqdms/ui/components/button";
 import {
   Card,
@@ -35,6 +36,7 @@ import { type CreateOrganizationByAdminValues, createOrganizationByAdminSchema }
 
 export function CreateOrganizationForm() {
   const router = useRouter();
+  const { t } = useI18n();
   const slugEdited = useRef(false);
 
   const form = useForm<CreateOrganizationByAdminValues>({
@@ -70,12 +72,9 @@ export function CreateOrganizationForm() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Create an organization</CardTitle>
+        <CardTitle>{t("admin.organizationForm.title")}</CardTitle>
 
-        <CardDescription>
-          The organization owner receives an email to set their password. Superadmin stays outside
-          the organization and manages it from this panel.
-        </CardDescription>
+        <CardDescription>{t("admin.organizationForm.description")}</CardDescription>
       </CardHeader>
 
       <CardContent>
@@ -88,13 +87,13 @@ export function CreateOrganizationForm() {
               name="name"
               render={({ field, fieldState }) => (
                 <Field data-invalid={fieldState.invalid}>
-                  <FieldLabel htmlFor={field.name}>Organization name</FieldLabel>
+                  <FieldLabel htmlFor={field.name}>{t("admin.organizationForm.name")}</FieldLabel>
 
                   <Input
                     {...field}
                     aria-invalid={fieldState.invalid}
                     id={field.name}
-                    placeholder="Acme Inc."
+                    placeholder={t("admin.organizationForm.namePlaceholder")}
                     onChange={(event) => {
                       field.onChange(event);
 
@@ -116,7 +115,7 @@ export function CreateOrganizationForm() {
               name="slug"
               render={({ field, fieldState }) => (
                 <Field data-invalid={fieldState.invalid}>
-                  <FieldLabel htmlFor={field.name}>Workspace slug</FieldLabel>
+                  <FieldLabel htmlFor={field.name}>{t("admin.organizationForm.slug")}</FieldLabel>
 
                   <Input
                     {...field}
@@ -124,7 +123,7 @@ export function CreateOrganizationForm() {
                     autoCapitalize="none"
                     autoCorrect="off"
                     id={field.name}
-                    placeholder="acme"
+                    placeholder={t("admin.organizationForm.slugPlaceholder")}
                     onChange={(event) => {
                       slugEdited.current = true;
 
@@ -132,9 +131,7 @@ export function CreateOrganizationForm() {
                     }}
                   />
 
-                  <FieldDescription>
-                    Used as the unique identifier of this workspace.
-                  </FieldDescription>
+                  <FieldDescription>{t("admin.organizationForm.slugDescription")}</FieldDescription>
 
                   {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
                 </Field>
@@ -147,14 +144,16 @@ export function CreateOrganizationForm() {
                 name="owner.email"
                 render={({ field, fieldState }) => (
                   <Field data-invalid={fieldState.invalid}>
-                    <FieldLabel htmlFor={field.name}>Owner email</FieldLabel>
+                    <FieldLabel htmlFor={field.name}>
+                      {t("admin.organizationForm.ownerEmail")}
+                    </FieldLabel>
 
                     <Input
                       {...field}
                       aria-invalid={fieldState.invalid}
                       autoComplete="off"
                       id={field.name}
-                      placeholder="owner@example.com"
+                      placeholder={t("admin.organizationForm.ownerEmailPlaceholder")}
                       type="email"
                     />
 
@@ -168,13 +167,15 @@ export function CreateOrganizationForm() {
                 name="owner.name"
                 render={({ field, fieldState }) => (
                   <Field data-invalid={fieldState.invalid}>
-                    <FieldLabel htmlFor={field.name}>Owner name</FieldLabel>
+                    <FieldLabel htmlFor={field.name}>
+                      {t("admin.organizationForm.ownerName")}
+                    </FieldLabel>
 
                     <Input
                       {...field}
                       aria-invalid={fieldState.invalid}
                       id={field.name}
-                      placeholder="Full name"
+                      placeholder={t("admin.organizationForm.ownerNamePlaceholder")}
                     />
 
                     {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
@@ -188,7 +189,7 @@ export function CreateOrganizationForm() {
               name="owner.role"
               render={({ field, fieldState }) => (
                 <Field data-invalid={fieldState.invalid}>
-                  <FieldLabel>Owner role</FieldLabel>
+                  <FieldLabel>{t("admin.organizationForm.ownerRole")}</FieldLabel>
 
                   <Select onValueChange={field.onChange} value={field.value}>
                     <SelectTrigger aria-invalid={fieldState.invalid}>
@@ -196,13 +197,13 @@ export function CreateOrganizationForm() {
                     </SelectTrigger>
 
                     <SelectContent>
-                      <SelectItem value="owner">Owner</SelectItem>
-                      <SelectItem value="admin">Admin</SelectItem>
+                      <SelectItem value="owner">{t("roles.owner.label")}</SelectItem>
+                      <SelectItem value="admin">{t("roles.admin.label")}</SelectItem>
                     </SelectContent>
                   </Select>
 
                   <FieldDescription>
-                    The owner manages members and permissions of this organization.
+                    {t("admin.organizationForm.ownerRoleDescription")}
                   </FieldDescription>
 
                   {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
@@ -211,7 +212,9 @@ export function CreateOrganizationForm() {
             />
 
             <Button disabled={form.formState.isSubmitting} type="submit">
-              {form.formState.isSubmitting ? "Creating..." : "Create organization"}
+              {form.formState.isSubmitting
+                ? t("admin.organizationForm.submitting")
+                : t("admin.organizationForm.submit")}
             </Button>
           </FieldGroup>
         </form>

@@ -1,4 +1,5 @@
 import { hasOrganizationStatement } from "@mqdms/auth/permissions";
+import { getTranslations } from "@mqdms/i18n/server";
 import { Badge } from "@mqdms/ui/components/badge";
 import {
   Card,
@@ -19,6 +20,7 @@ import {
 } from "@/features/organization/server";
 
 export default async function MembersPage() {
+  const t = await getTranslations();
   const session = await requireSession();
   const organization = await requireOrganization();
 
@@ -44,9 +46,11 @@ export default async function MembersPage() {
       {canManageMembers && (
         <Card>
           <CardHeader>
-            <CardTitle>Invite member</CardTitle>
+            <CardTitle>{t("organization.members.invite.title")}</CardTitle>
 
-            <CardDescription>Invite someone to join {organization.name}.</CardDescription>
+            <CardDescription>
+              {t("organization.members.invite.description", { name: organization.name })}
+            </CardDescription>
           </CardHeader>
 
           <CardContent>
@@ -57,18 +61,18 @@ export default async function MembersPage() {
       {canManageMembers && (
         <Card>
           <CardHeader>
-            <CardTitle>Pending invitations</CardTitle>
+            <CardTitle>{t("organization.members.invitations.title")}</CardTitle>
 
-            <CardDescription>Invitations waiting to be accepted.</CardDescription>
+            <CardDescription>{t("organization.members.invitations.description")}</CardDescription>
           </CardHeader>
 
           <CardContent>
             {pendingInvitations.length === 0 ? (
               <div className="rounded-md border border-dashed p-6 text-center">
-                <p className="text-sm font-medium">No pending invitations</p>
+                <p className="text-sm font-medium">{t("organization.members.invitations.empty")}</p>
 
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Invitations you send will appear here.
+                  {t("organization.members.invitations.emptyDescription")}
                 </p>
               </div>
             ) : (
@@ -83,7 +87,9 @@ export default async function MembersPage() {
                       <p className="truncate font-medium">{invitation.email}</p>
 
                       <p className="text-sm text-muted-foreground">
-                        Expires {new Date(invitation.expiresAt).toLocaleDateString()}
+                        {t("organization.members.invitations.expires", {
+                          date: new Date(invitation.expiresAt).toLocaleDateString(),
+                        })}
                       </p>
                     </div>
 
@@ -91,7 +97,9 @@ export default async function MembersPage() {
                       {invitation.role}
                     </Badge>
 
-                    <Badge variant="secondary">Pending</Badge>
+                    <Badge variant="secondary">
+                      {t("organization.members.invitations.pending")}
+                    </Badge>
 
                     <CancelInvitationButton email={invitation.email} invitationId={invitation.id} />
                   </div>
@@ -104,10 +112,15 @@ export default async function MembersPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Members</CardTitle>
+          <CardTitle>{t("organization.members.title")}</CardTitle>
 
           <CardDescription>
-            {details.members.length} workspace {details.members.length === 1 ? "member" : "members"}
+            {t(
+              details.members.length === 1
+                ? "organization.members.countOne"
+                : "organization.members.countOther",
+              { count: details.members.length },
+            )}
           </CardDescription>
         </CardHeader>
 
@@ -132,7 +145,11 @@ export default async function MembersPage() {
                     <div className="flex items-center gap-2">
                       <p className="truncate font-medium">{member.user.name}</p>
 
-                      {isCurrentUser && <span className="text-xs text-muted-foreground">You</span>}
+                      {isCurrentUser && (
+                        <span className="text-xs text-muted-foreground">
+                          {t("organization.members.you")}
+                        </span>
+                      )}
                     </div>
 
                     <p className="truncate text-sm text-muted-foreground">{member.user.email}</p>

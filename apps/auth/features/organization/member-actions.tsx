@@ -1,6 +1,7 @@
 "use client";
 
-import { assignableRoleIds, roleDefinitions } from "@mqdms/auth/permissions";
+import { assignableRoleIds } from "@mqdms/auth/permissions";
+import { useI18n } from "@mqdms/i18n";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -38,6 +39,7 @@ type MemberActionsProps = {
 
 export function MemberActions({ memberId, memberName, organizationId, role }: MemberActionsProps) {
   const router = useRouter();
+  const { t } = useI18n();
 
   const [isPending, setIsPending] = useState(false);
   const [removeOpen, setRemoveOpen] = useState(false);
@@ -98,7 +100,7 @@ export function MemberActions({ memberId, memberName, organizationId, role }: Me
             <Button disabled={isPending} size="icon" variant="ghost">
               <MoreHorizontal className="size-4" />
 
-              <span className="sr-only">Member actions</span>
+              <span className="sr-only">{t("organization.members.actions")}</span>
             </Button>
           </DropdownMenuTrigger>
 
@@ -107,20 +109,20 @@ export function MemberActions({ memberId, memberName, organizationId, role }: Me
               <DropdownMenuSub>
                 <DropdownMenuSubTrigger>
                   <ShieldCheck />
-                  Change role
+                  {t("organization.members.changeRole")}
                 </DropdownMenuSubTrigger>
 
                 <DropdownMenuSubContent>
                   {availableRoles.map((roleId) => (
                     <DropdownMenuItem key={roleId} onClick={() => updateRole(roleId)}>
                       <UserRound />
-                      {roleDefinitions[roleId].label}
+                      {t(`roles.${roleId}.label`)}
                     </DropdownMenuItem>
                   ))}
                 </DropdownMenuSubContent>
               </DropdownMenuSub>
             ) : (
-              <DropdownMenuLabel>All roles assigned</DropdownMenuLabel>
+              <DropdownMenuLabel>{t("organization.members.allRolesAssigned")}</DropdownMenuLabel>
             )}
 
             <DropdownMenuSeparator />
@@ -130,7 +132,7 @@ export function MemberActions({ memberId, memberName, organizationId, role }: Me
               onSelect={() => setRemoveOpen(true)}
             >
               <UserX />
-              Remove member
+              {t("organization.members.remove")}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -141,18 +143,22 @@ export function MemberActions({ memberId, memberName, organizationId, role }: Me
       <AlertDialog onOpenChange={setRemoveOpen} open={removeOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Remove {memberName}?</AlertDialogTitle>
+            <AlertDialogTitle>
+              {t("organization.members.removeTitle", { name: memberName })}
+            </AlertDialogTitle>
 
             <AlertDialogDescription>
-              This member will lose access to the organization and its resources.
+              {t("organization.members.removeDescription")}
             </AlertDialogDescription>
           </AlertDialogHeader>
 
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={isPending}>{t("common.cancel")}</AlertDialogCancel>
 
             <AlertDialogAction disabled={isPending} onClick={removeMember}>
-              {isPending ? "Removing..." : "Remove member"}
+              {isPending
+                ? t("organization.members.removing")
+                : t("organization.members.removeConfirm")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

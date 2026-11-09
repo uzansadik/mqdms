@@ -1,5 +1,6 @@
 "use client";
 
+import { useI18n } from "@mqdms/i18n";
 import {
   Sidebar,
   SidebarContent,
@@ -48,6 +49,7 @@ const navigation = [
 
 export function AppSidebar({ organization, user, isSuperadmin }: AppSidebarProps) {
   const pathname = usePathname();
+  const { t } = useI18n();
 
   return (
     <Sidebar collapsible="icon">
@@ -85,7 +87,7 @@ export function AppSidebar({ organization, user, isSuperadmin }: AppSidebarProps
 
         {isSuperadmin && (
           <SidebarGroup>
-            <SidebarGroupLabel>Platform</SidebarGroupLabel>
+            <SidebarGroupLabel>{t("admin.nav.platform")}</SidebarGroupLabel>
 
             <SidebarGroupContent>
               <SidebarMenu>
@@ -93,11 +95,11 @@ export function AppSidebar({ organization, user, isSuperadmin }: AppSidebarProps
                   <SidebarMenuButton
                     asChild
                     isActive={pathname === "/admin" || pathname.startsWith("/admin/")}
-                    tooltip="Platform"
+                    tooltip={t("admin.nav.platform")}
                   >
                     <Link href="/admin">
                       <Shield />
-                      <span>Platform</span>
+                      <span>{t("admin.nav.platform")}</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

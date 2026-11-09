@@ -1,5 +1,6 @@
 "use client";
 
+import { useI18n } from "@mqdms/i18n";
 import { Button } from "@mqdms/ui/components/button";
 import {
   DropdownMenu,
@@ -23,6 +24,7 @@ type UserRowActionsProps = {
 
 export function UserRowActions({ userId, role, banned }: UserRowActionsProps) {
   const router = useRouter();
+  const { t } = useI18n();
 
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -37,7 +39,7 @@ export function UserRowActions({ userId, role, banned }: UserRowActionsProps) {
     const result = await action();
 
     if (!result.success) {
-      setError(result.error ?? "The operation failed.");
+      setError(result.error ?? t("admin.users.actionFailed"));
 
       setPending(false);
 
@@ -56,19 +58,19 @@ export function UserRowActions({ userId, role, banned }: UserRowActionsProps) {
           <Button disabled={pending} size="icon" variant="ghost">
             <MoreHorizontal className="size-4" />
 
-            <span className="sr-only">User actions</span>
+            <span className="sr-only">{t("admin.users.actions")}</span>
           </Button>
         </DropdownMenuTrigger>
 
         <DropdownMenuContent align="end">
-          <DropdownMenuLabel>Platform role</DropdownMenuLabel>
+          <DropdownMenuLabel>{t("admin.users.platformRole")}</DropdownMenuLabel>
 
           <DropdownMenuItem
             disabled={pending || isSuperadmin}
             onClick={() => run(() => setUserRoleAction({ userId, role: "superadmin" }))}
           >
             <ShieldCheck />
-            Make superadmin
+            {t("admin.users.makeSuperadmin")}
           </DropdownMenuItem>
 
           <DropdownMenuItem
@@ -76,7 +78,7 @@ export function UserRowActions({ userId, role, banned }: UserRowActionsProps) {
             onClick={() => run(() => setUserRoleAction({ userId, role: "user" }))}
           >
             <UserRound />
-            Make user
+            {t("admin.users.makeUser")}
           </DropdownMenuItem>
 
           <DropdownMenuSeparator />
@@ -89,13 +91,13 @@ export function UserRowActions({ userId, role, banned }: UserRowActionsProps) {
                 setUserBanAction({
                   userId,
                   banned: !isBanned,
-                  banReason: isBanned ? undefined : "Banned by a superadmin",
+                  banReason: isBanned ? undefined : t("admin.users.banReason"),
                 }),
               )
             }
           >
             <Ban />
-            {isBanned ? "Unban user" : "Ban user"}
+            {isBanned ? t("admin.users.unban") : t("admin.users.ban")}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
