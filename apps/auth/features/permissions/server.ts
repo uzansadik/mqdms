@@ -62,7 +62,7 @@ export async function getOrganizationGrants(organizationId: string): Promise<Per
  * yetki kontrolü doğru sonucu verir.
  */
 async function getCurrentMember(): Promise<{ id: string; role: string } | null> {
-  const activeMember = await getActiveOrganizationMember().catch(() => null);
+  const activeMember = await getActiveOrganizationMember();
 
   if (activeMember) {
     return { id: activeMember.id, role: activeMember.role };

@@ -8,7 +8,7 @@ import {
 import { z } from "zod";
 import { audit } from "@/features/audit/server";
 import { getSession } from "@/features/auth/session";
-import { getActiveOrganizationMember, requireOrganization } from "@/features/organization/server";
+import { getCurrentOrganizationMember, requireOrganization } from "@/features/organization/server";
 
 const updateOrganizationSchema = z.object({
   name: z.string().trim().min(1).max(100),
@@ -43,7 +43,7 @@ export async function PATCH(request: Request) {
   }
 
   const organization = await requireOrganization();
-  const member = await getActiveOrganizationMember();
+  const member = await getCurrentOrganizationMember(organization.id);
 
   if (!member || !isOwner(member.role)) {
     return Response.json(
@@ -184,9 +184,9 @@ export async function DELETE() {
   }
 
   const organization = await requireOrganization();
-  const member = await getActiveOrganizationMember();
+  const member = await getCurrentOrganizationMember(organization.id);
 
-  if (!member || member.role !== "owner") {
+  if (member?.role !== "owner") {
     return Response.json(
       {
         error: "Only the organization owner can delete this organization.",

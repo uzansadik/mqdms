@@ -3,7 +3,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { cache } from "react";
 
-import { requireSession } from "@/features/auth/session";
+import { getSession, requireSession } from "@/features/auth/session";
 
 export const getOrganizations = cache(async () => {
   const result = await auth.api.listOrganizations({
@@ -19,20 +19,49 @@ function hasRole(role: string | string[], targetRole: string) {
   return roles.includes(targetRole);
 }
 
+/**
+ * Oturumdaki kullanıcının aktif organizasyondaki üye kaydı.
+ *
+ * Oturumun cookie cache'inde aktif organizasyon yoksa (yeni giriş, cache
+ * süresinin dolması) better-auth `NO_ACTIVE_ORGANIZATION` hatası fırlatır.
+ * Bu durumda üye bilgisi organizasyon üzerinden bulunur; burada `null`
+ * dönülür.
+ */
 export const getActiveOrganizationMember = cache(async () => {
-  return auth.api.getActiveMember({
-    headers: await headers(),
-  });
+  const session = await getSession();
+
+  if (!session?.session.activeOrganizationId) {
+    return null;
+  }
+
+  try {
+    return await auth.api.getActiveMember({
+      headers: await headers(),
+    });
+  } catch {
+    return null;
+  }
 });
 
-export async function isOrganizationOwner() {
-  const member = await getActiveOrganizationMember();
+/**
+ * Kullanıcının verilen organizasyondaki üye kaydı.
+ *
+ * Aktif organizasyon oturumda kayıtlı değilse üye bilgisi organizasyonun üye
+ * listesinden bulunur.
+ */
+export async function getCurrentOrganizationMember(organizationId: string) {
+  const activeMember = await getActiveOrganizationMember();
 
-  return Boolean(member && hasRole(member.role, "owner"));
+  if (activeMember) {
+    return activeMember;
+  }
+
+  return getOrganizationMember(organizationId);
 }
+
 export async function requireOrganizationOwner() {
   const organization = await requireOrganization();
-  const member = await getActiveOrganizationMember();
+  const member = await getCurrentOrganizationMember(organization.id);
 
   if (!member || !hasRole(member.role, "owner")) {
     redirect("/dashboard");
@@ -100,7 +129,12 @@ export const getOrganizationMembers = cache(async (organizationId: string) => {
 /** Oturumdaki kullanıcının verilen organizasyondaki üye kaydı. */
 export async function getOrganizationMember(organizationId: string) {
   const session = await requireSession();
-  const members = await getOrganizationMembers(organizationId);
+
+  /*
+   * Kullanıcı organizasyonun üyesi değilse better-auth yetki hatası fırlatır;
+   * bu durumda "üye yok" sayılır.
+   */
+  const members = await getOrganizationMembers(organizationId).catch(() => []);
 
   return members.find((member) => member.userId === session.user.id) ?? null;
 }
