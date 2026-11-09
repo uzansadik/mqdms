@@ -1,0 +1,14 @@
+{
+  "extends": "@mqdms/typescript-config/base.json",
+  "compilerOptions": {
+    "types": ["node"],
+    /*
+     * `@types/node`, pnpm'de her paketin kendi `node_modules/@types` altına
+     * bağlanır. `pnpm install` çalıştırılmadan önce tip tanımı pnpm'in gizli
+     * deposundan okunur; install sonrası ilk yol zaten bağlı olur.
+     */
+    "typeRoots": ["../../node_modules/@types", "../../node_modules/.pnpm/node_modules/@types"]
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules"]
+}

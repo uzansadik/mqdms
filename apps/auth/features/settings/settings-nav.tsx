@@ -14,6 +14,11 @@ const items = [
     href: "/settings/members",
   },
   {
+    title: "Permissions",
+    href: "/settings/permissions",
+    requiresPermissionManagement: true,
+  },
+  {
     title: "Profile",
     href: "/settings/profile",
   },
@@ -27,12 +32,20 @@ const items = [
   },
 ];
 
-export function SettingsNav() {
+type SettingsNavProps = {
+  canManagePermissions: boolean;
+};
+
+export function SettingsNav({ canManagePermissions }: SettingsNavProps) {
   const pathname = usePathname();
 
+  const visibleItems = items.filter(
+    (item) => !item.requiresPermissionManagement || canManagePermissions,
+  );
+
   return (
-    <nav className="flex gap-4">
-      {items.map((item) => {
+    <nav className="flex flex-wrap gap-4">
+      {visibleItems.map((item) => {
         const active =
           item.href === "/settings" ? pathname === "/settings" : pathname.startsWith(item.href);
 

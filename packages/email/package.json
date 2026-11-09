@@ -6,9 +6,17 @@
   "exports": {
     ".": "./src/index.ts"
   },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
   "dependencies": {
     "@mqdms/config": "workspace:*",
     "@mqdms/env": "workspace:*",
     "resend": "^6.0.0"
+  },
+  "devDependencies": {
+    "@mqdms/typescript-config": "workspace:*",
+    "@types/node": "^20",
+    "typescript": "^5"
   }
 }

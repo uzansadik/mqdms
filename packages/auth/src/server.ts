@@ -6,8 +6,11 @@ import { env } from "@mqdms/env/server";
 import { addJob } from "@mqdms/queue";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { APIError } from "better-auth/api";
 import { admin, organization } from "better-auth/plugins";
 import { platformAc, platformRoles } from "./permissions/platform";
+import { isAssignableRoleId } from "./permissions/roles";
+import { ac, roles } from "./permissions/statements";
 
 export const auth = betterAuth({
   appName: appConfig.name,
@@ -45,7 +48,16 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
     requireEmailVerification: true,
-    disableSignUp: true,
+
+    /*
+     * Kayıt açık: davet edilen kişinin hesabı olmayabilir, davet e-postasındaki
+     * bağlantıdan kayıt olup daveti kabul edebilmelidir.
+     *
+     * Güvenlik sınırı organizasyon açmaktır: `allowUserToCreateOrganization`
+     * kapalı olduğu için kayıt olan kullanıcı hiçbir organizasyona kendiliğinden
+     * giremez, yalnızca davetle üye olur.
+     */
+    disableSignUp: false,
 
     customSyntheticUser: ({ coreFields, additionalFields, id }) => ({
       ...coreFields,
@@ -77,8 +89,60 @@ export const auth = betterAuth({
     }),
 
     organization({
+      ac,
+      roles,
+
+      /*
+       * Organizasyonu yalnızca superadmin açabilir; public endpoint kapalıdır.
+       *
+       * Superadmin'in sunucu aksiyonu (`features/admin/actions.ts`) bu endpoint'i
+       * `userId` vererek "system action" olarak çağırır ve oturum taşımaz.
+       * Normal kullanıcı için endpoint tamamen kapalı kalır.
+       */
       allowUserToCreateOrganization: false,
       requireEmailVerificationOnInvitation: true,
+
+      /*
+       * Rol kataloğu better-auth tarafından doğrulanmaz: "owner" da geçerli bir
+       * better-auth rolüdür. Bu hook olmadan bir organizasyon admin'i ham API'yi
+       * çağırarak kendini (ya da başka bir üyeyi) "owner" yapabilirdi.
+       *
+       * "owner" yalnızca organizasyonu açan superadmin tarafından, oluşturma
+       * anında verilir; geri kalan roller katalogdan seçilir.
+       */
+      organizationHooks: {
+        beforeUpdateMemberRole: async ({ newRole }) => {
+          const roles = newRole
+            .split(",")
+            .map((role) => role.trim())
+            .filter(Boolean);
+
+          const invalid = roles.filter((role) => !isAssignableRoleId(role));
+
+          if (invalid.length > 0) {
+            throw new APIError("FORBIDDEN", {
+              code: "ROLE_NOT_ASSIGNABLE",
+              message: `These roles cannot be assigned: ${invalid.join(", ")}`,
+            });
+          }
+        },
+
+        beforeCreateInvitation: async ({ invitation }) => {
+          const roles = invitation.role
+            .split(",")
+            .map((role) => role.trim())
+            .filter(Boolean);
+
+          const invalid = roles.filter((role) => !isAssignableRoleId(role));
+
+          if (invalid.length > 0) {
+            throw new APIError("FORBIDDEN", {
+              code: "ROLE_NOT_ASSIGNABLE",
+              message: `These roles cannot be assigned: ${invalid.join(", ")}`,
+            });
+          }
+        },
+      },
 
       async sendInvitationEmail(data) {
         const url = new URL("/accept-invitation", env.BETTER_AUTH_URL);

@@ -157,6 +157,9 @@ importers:
       '@mqdms/typescript-config':
         specifier: workspace:*
         version: link:../../packages/typescript-config
+      '@types/node':
+        specifier: ^20
+        version: 20.19.41
       tsx:
         specifier: ^4.20.0
         version: 4.23.12
@@ -169,6 +172,16 @@ importers:
       '@mqdms/db':
         specifier: workspace:*
         version: link:../db
+    devDependencies:
+      '@mqdms/typescript-config':
+        specifier: workspace:*
+        version: link:../typescript-config
+      '@types/node':
+        specifier: ^20
+        version: 20.19.41
+      typescript:
+        specifier: ^5
+        version: 5.9.3
 
   packages/auth:
     dependencies:
@@ -193,6 +206,16 @@ importers:
       better-auth:
         specifier: ^1.6.24
         version: 1.7.1(drizzle-kit@0.31.10)(drizzle-orm@0.45.2(@types/pg@8.23.1)(kysely@0.29.5)(pg@8.23.0))(next@16.2.6(@babel/core@7.29.7)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(pg@8.23.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+    devDependencies:
+      '@mqdms/typescript-config':
+        specifier: workspace:*
+        version: link:../typescript-config
+      '@types/node':
+        specifier: ^20
+        version: 20.19.41
+      typescript:
+        specifier: ^5
+        version: 5.9.3
 
   packages/config:
     devDependencies:
@@ -215,6 +238,12 @@ importers:
         specifier: ^8.16.0
         version: 8.23.0
     devDependencies:
+      '@mqdms/typescript-config':
+        specifier: workspace:*
+        version: link:../typescript-config
+      '@types/node':
+        specifier: ^20
+        version: 20.19.41
       '@types/pg':
         specifier: ^8.15.0
         version: 8.23.1
@@ -224,6 +253,9 @@ importers:
       drizzle-kit:
         specifier: ^0.31.0
         version: 0.31.10
+      typescript:
+        specifier: ^5
+        version: 5.9.3
 
   packages/email:
     dependencies:
@@ -236,12 +268,32 @@ importers:
       resend:
         specifier: ^6.0.0
         version: 6.21.0
+    devDependencies:
+      '@mqdms/typescript-config':
+        specifier: workspace:*
+        version: link:../typescript-config
+      '@types/node':
+        specifier: ^20
+        version: 20.19.41
+      typescript:
+        specifier: ^5
+        version: 5.9.3
 
   packages/env:
     dependencies:
       zod:
         specifier: ^4.0.0
         version: 4.4.3
+    devDependencies:
+      '@mqdms/typescript-config':
+        specifier: workspace:*
+        version: link:../typescript-config
+      '@types/node':
+        specifier: ^20
+        version: 20.19.41
+      typescript:
+        specifier: ^5
+        version: 5.9.3
 
   packages/i18n:
     devDependencies:
@@ -276,6 +328,9 @@ importers:
       '@mqdms/typescript-config':
         specifier: workspace:*
         version: link:../typescript-config
+      '@types/node':
+        specifier: ^20
+        version: 20.19.41
       typescript:
         specifier: ^5
         version: 5.9.3
@@ -292,6 +347,9 @@ importers:
       '@mqdms/typescript-config':
         specifier: workspace:*
         version: link:../typescript-config
+      '@types/node':
+        specifier: ^20
+        version: 20.19.41
       typescript:
         specifier: ^5
         version: 5.9.3
@@ -307,6 +365,16 @@ importers:
       '@mqdms/env':
         specifier: workspace:*
         version: link:../env
+    devDependencies:
+      '@mqdms/typescript-config':
+        specifier: workspace:*
+        version: link:../typescript-config
+      '@types/node':
+        specifier: ^20
+        version: 20.19.41
+      typescript:
+        specifier: ^5
+        version: 5.9.3
 
   packages/typescript-config: {}
 

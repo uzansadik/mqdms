@@ -3,6 +3,7 @@ import { env } from "@mqdms/env/client";
 import { adminClient, organizationClient } from "better-auth/client/plugins";
 import { createAuthClient } from "better-auth/react";
 import { platformAc, platformRoles } from "./permissions/platform";
+import { ac, roles } from "./permissions/statements";
 
 export const authClient = createAuthClient({
   baseURL: env.NEXT_PUBLIC_APP_URL,
@@ -11,7 +12,10 @@ export const authClient = createAuthClient({
       ac: platformAc,
       roles: platformRoles,
     }),
-    organizationClient(),
+    organizationClient({
+      ac,
+      roles,
+    }),
     apiKeyClient(),
   ],
 });

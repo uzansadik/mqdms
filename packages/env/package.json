@@ -10,7 +10,15 @@
     "./worker": "./src/worker.ts",
     "./email": "./src/email.ts"
   },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
   "dependencies": {
     "zod": "^4.0.0"
+  },
+  "devDependencies": {
+    "@mqdms/typescript-config": "workspace:*",
+    "@types/node": "^20",
+    "typescript": "^5"
   }
 }

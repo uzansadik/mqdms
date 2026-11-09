@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { authClient } from "@mqdms/auth/client";
+import { assignableRoleIds, roleDefinitions } from "@mqdms/auth/permissions";
 import { Button } from "@mqdms/ui/components/button";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@mqdms/ui/components/field";
 import { Input } from "@mqdms/ui/components/input";
@@ -15,6 +15,7 @@ import {
 import { useRouter } from "next/navigation";
 import { Controller, useForm } from "react-hook-form";
 
+import { inviteMemberAction } from "./actions";
 import { type InviteMemberValues, inviteMemberSchema } from "./schemas";
 
 type InviteMemberFormProps = {
@@ -35,15 +36,15 @@ export function InviteMemberForm({ organizationId }: InviteMemberFormProps) {
   async function onSubmit(values: InviteMemberValues) {
     form.clearErrors("root");
 
-    const { error } = await authClient.organization.inviteMember({
+    const result = await inviteMemberAction({
+      organizationId,
       email: values.email,
       role: values.role,
-      organizationId,
     });
 
-    if (error) {
+    if (!result.success) {
       form.setError("root", {
-        message: error.message ?? "Unable to send invitation.",
+        message: result.error,
       });
 
       return;
@@ -93,9 +94,11 @@ export function InviteMemberForm({ organizationId }: InviteMemberFormProps) {
                   </SelectTrigger>
 
                   <SelectContent>
-                    <SelectItem value="member">Member</SelectItem>
-
-                    <SelectItem value="admin">Admin</SelectItem>
+                    {assignableRoleIds.map((roleId) => (
+                      <SelectItem key={roleId} value={roleId}>
+                        {roleDefinitions[roleId].label}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
 

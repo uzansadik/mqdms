@@ -1,3 +1,4 @@
+import { assignableRoleIds, type RoleId } from "@mqdms/auth/permissions";
 import { z } from "zod";
 
 export const organizationSettingsSchema = z.object({
@@ -38,7 +39,11 @@ export type CreateOrganizationValues = z.infer<typeof createOrganizationSchema>;
 export const inviteMemberSchema = z.object({
   email: z.string().trim().email("Enter a valid email address."),
 
-  role: z.enum(["admin", "member"]),
+  /*
+   * Roller sabit katalogdan gelir. `owner` bilinçli olarak listede yok:
+   * ikinci bir owner üretmek kazara olmasın.
+   */
+  role: z.enum(assignableRoleIds as [RoleId, ...RoleId[]]),
 });
 
 export type InviteMemberValues = z.infer<typeof inviteMemberSchema>;

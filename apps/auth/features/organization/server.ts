@@ -90,6 +90,21 @@ export const getOrganizationDetails = cache(async (organizationId: string) => {
   return result;
 });
 
+/** Bir organizasyonun üye listesi. */
+export const getOrganizationMembers = cache(async (organizationId: string) => {
+  const result = await getOrganizationDetails(organizationId);
+
+  return result?.members ?? [];
+});
+
+/** Oturumdaki kullanıcının verilen organizasyondaki üye kaydı. */
+export async function getOrganizationMember(organizationId: string) {
+  const session = await requireSession();
+  const members = await getOrganizationMembers(organizationId);
+
+  return members.find((member) => member.userId === session.user.id) ?? null;
+}
+
 export const getOrganizationInvitations = cache(async (organizationId: string) => {
   const result = await auth.api.listInvitations({
     headers: await headers(),

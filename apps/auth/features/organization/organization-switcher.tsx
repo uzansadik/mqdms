@@ -6,11 +6,10 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@mqdms/ui/components/dropdown-menu";
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@mqdms/ui/components/sidebar";
-import { ChevronsUpDown, Plus } from "lucide-react";
+import { ChevronsUpDown } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -93,15 +92,6 @@ export function OrganizationSwitcher({ organization }: OrganizationSwitcherProps
                 )}
               </DropdownMenuItem>
             ))}
-
-            <DropdownMenuSeparator />
-
-            <DropdownMenuItem onClick={() => router.push("/organizations/new")}>
-              <div className="flex size-6 items-center justify-center rounded-md border">
-                <Plus className="size-3.5" />
-              </div>
-              Create organization
-            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </SidebarMenuItem>

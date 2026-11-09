@@ -1,3 +1,4 @@
+import { hasOrganizationStatement } from "@mqdms/auth/permissions";
 import { Badge } from "@mqdms/ui/components/badge";
 import {
   Card,
@@ -29,9 +30,11 @@ export default async function MembersPage() {
 
   const currentMember = details.members.find((member) => member.userId === session.user.id);
 
-  const roles = currentMember?.role.split(",") ?? [];
+  const canManageMembers = hasOrganizationStatement({
+    role: currentMember?.role,
+    statement: "inviteMember",
+  });
 
-  const canManageMembers = roles.includes("owner") || roles.includes("admin");
   const invitations = canManageMembers ? await getOrganizationInvitations(organization.id) : [];
 
   const pendingInvitations = invitations.filter((invitation) => invitation.status === "pending");
@@ -111,7 +114,7 @@ export default async function MembersPage() {
         <CardContent>
           <div className="divide-y rounded-md border">
             {details.members.map((member) => {
-              const memberRoles = member.role.split(",");
+              const memberRoles = member.role.split(",").map((item) => item.trim());
 
               const isOwner = memberRoles.includes("owner");
 

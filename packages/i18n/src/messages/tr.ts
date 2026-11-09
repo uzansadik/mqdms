@@ -51,4 +51,66 @@ export const tr = {
   "auth.register.submitting": "Hesap oluşturuluyor...",
   "auth.register.error": "Hesabınız oluşturulamadı. Lütfen tekrar deneyin.",
   "auth.register.hasAccount": "Zaten hesabınız var mı?",
+
+  "onboarding.noWorkspace.title": "Henüz workspace yok",
+  "onboarding.noWorkspace.description": "Henüz hiçbir organizasyonun üyesi değilsiniz.",
+  "onboarding.noWorkspace.hint":
+    "Organizasyonları platform superadmin'i oluşturur. Organizasyon sahibinden sizi e-posta ile davet etmesini isteyin.",
+  "onboarding.noWorkspace.waiting": "Daveti kabul ettiğinizde workspace'iniz burada görünecek.",
+
+  "permissions.title": "Yetkiler",
+  "permissions.description":
+    "Roller bir üyenin varsayılan olarak ne yapabileceğini belirler. Burada belirli bir üyeye belirli bir kaynak için izin verebilir veya engelleyebilirsiniz. Engelleme her zaman iznin önünde gelir.",
+  "permissions.state.inherit": "Rol",
+  "permissions.state.allowed": "İzinli",
+  "permissions.state.denied": "Yasak",
+  "permissions.state.inheritAllowed": "Rol (izinli)",
+  "permissions.state.inheritDenied": "Rol (yasak)",
+  "permissions.empty.title": "Üye yok",
+  "permissions.empty.description": "Yetki atamak için bir üyeyi davet edin.",
+
+  "admin.layout.title": "Platform yönetimi",
+  "admin.overview.title": "Platform",
+  "admin.overview.description":
+    "Bu kimlik doğrulama sağlayıcısında barındırılan organizasyonları ve kullanıcıları yönetin.",
+  "admin.overview.newOrganization": "Yeni organizasyon",
+  "admin.overview.recent": "Son organizasyonlar",
+  "admin.overview.recentDescription": "En son oluşturulan workspace'ler.",
+  "admin.overview.empty": "Henüz organizasyon yok",
+  "admin.overview.emptyDescription": "Başlamak için ilk workspace'i oluşturun.",
+
+  "admin.stats.organizations": "Organizasyonlar",
+  "admin.stats.organizationsDescription": "Kayıtlı workspace'ler",
+  "admin.stats.users": "Kullanıcılar",
+  "admin.stats.usersDescription": "Kayıtlı hesaplar",
+  "admin.stats.memberships": "Üyelikler",
+  "admin.stats.membershipsDescription": "Organizasyon üyelikleri",
+  "admin.stats.superadmins": "Superadmin'ler",
+  "admin.stats.superadminsDescription": "Platform yöneticileri",
+
+  "admin.organizations.title": "Organizasyonlar",
+  "admin.organizations.description": "Bu kimlik doğrulama sağlayıcısına kayıtlı tüm workspace'ler.",
+  "admin.organizations.all": "Tüm organizasyonlar",
+  "admin.organizations.count": "{count} kayıtlı workspace.",
+  "admin.organizations.empty": "Henüz organizasyon yok",
+  "admin.organizations.emptyDescription": "Organizasyonları yalnızca superadmin oluşturabilir.",
+  "admin.organizations.memberCount": "{count} üye",
+
+  "admin.organization.members": "Üyeler",
+  "admin.organization.membersCount": "Bu organizasyonda {count} üye var.",
+  "admin.organization.noMembers": "Üye yok",
+  "admin.organization.invitations": "Davetler",
+  "admin.organization.invitationsCount": "{count} davet.",
+  "admin.organization.noInvitations": "Davet yok",
+  "admin.organization.fixedRoles": "Sabit roller",
+  "admin.organization.fixedRolesDescription":
+    "Roller kod içinde tanımlıdır ve bu sağlayıcıdaki tüm organizasyonlar tarafından paylaşılır.",
+
+  "admin.users.title": "Kullanıcılar",
+  "admin.users.description": "Bu kimlik doğrulama sağlayıcısına kayıtlı tüm hesaplar.",
+  "admin.users.all": "Tüm kullanıcılar",
+  "admin.users.count": "{count} hesap.",
+  "admin.users.empty": "Henüz kullanıcı yok",
+  "admin.users.unverified": "Doğrulanmamış",
+  "admin.users.banned": "Yasaklı",
 } satisfies Record<MessageKey, string>;

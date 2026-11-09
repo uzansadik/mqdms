@@ -6,7 +6,11 @@
   "exports": {
     "./client": "./src/client.ts",
     "./server": "./src/server.ts",
-    "./next": "./src/next.ts"
+    "./next": "./src/next.ts",
+    "./permissions": "./src/permissions/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@better-auth/api-key": "^1.7.1",
@@ -16,5 +20,10 @@
     "@mqdms/queue": "workspace:*",
     "@mqdms/env": "workspace:*",
     "better-auth": "^1.6.24"
+  },
+  "devDependencies": {
+    "@mqdms/typescript-config": "workspace:*",
+    "@types/node": "^20",
+    "typescript": "^5"
   }
 }

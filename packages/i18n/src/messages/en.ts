@@ -49,6 +49,69 @@ export const en = {
   "auth.register.submitting": "Creating account...",
   "auth.register.error": "Unable to create your account. Please try again.",
   "auth.register.hasAccount": "Already have an account?",
+
+  "onboarding.noWorkspace.title": "No workspace yet",
+  "onboarding.noWorkspace.description": "You are not a member of any organization yet.",
+  "onboarding.noWorkspace.hint":
+    "Organizations are created by the platform superadmin. Ask your organization owner to invite you by email.",
+  "onboarding.noWorkspace.waiting":
+    "Once you accept the invitation, your workspace will appear here.",
+
+  "permissions.title": "Permissions",
+  "permissions.description":
+    "Roles decide what a member can do by default. Here you can allow or deny a specific resource for a specific member. A denial always wins over an allowance.",
+  "permissions.state.inherit": "Inherited",
+  "permissions.state.allowed": "Allowed",
+  "permissions.state.denied": "Denied",
+  "permissions.state.inheritAllowed": "Inherited (allowed)",
+  "permissions.state.inheritDenied": "Inherited (denied)",
+  "permissions.empty.title": "No members",
+  "permissions.empty.description": "Invite a member to assign permissions.",
+
+  "admin.layout.title": "Platform administration",
+  "admin.overview.title": "Platform",
+  "admin.overview.description":
+    "Manage the organizations and users hosted on this authentication provider.",
+  "admin.overview.newOrganization": "New organization",
+  "admin.overview.recent": "Recent organizations",
+  "admin.overview.recentDescription": "Workspaces created most recently.",
+  "admin.overview.empty": "No organizations yet",
+  "admin.overview.emptyDescription": "Create the first workspace to get started.",
+
+  "admin.stats.organizations": "Organizations",
+  "admin.stats.organizationsDescription": "Registered workspaces",
+  "admin.stats.users": "Users",
+  "admin.stats.usersDescription": "Registered accounts",
+  "admin.stats.memberships": "Memberships",
+  "admin.stats.membershipsDescription": "Organization memberships",
+  "admin.stats.superadmins": "Superadmins",
+  "admin.stats.superadminsDescription": "Platform administrators",
+
+  "admin.organizations.title": "Organizations",
+  "admin.organizations.description": "Every workspace registered on this authentication provider.",
+  "admin.organizations.all": "All organizations",
+  "admin.organizations.count": "{count} registered workspaces.",
+  "admin.organizations.empty": "No organizations yet",
+  "admin.organizations.emptyDescription": "Organizations can only be created by a superadmin.",
+  "admin.organizations.memberCount": "{count} members",
+
+  "admin.organization.members": "Members",
+  "admin.organization.membersCount": "{count} members in this organization.",
+  "admin.organization.noMembers": "No members",
+  "admin.organization.invitations": "Invitations",
+  "admin.organization.invitationsCount": "{count} invitations.",
+  "admin.organization.noInvitations": "No invitations",
+  "admin.organization.fixedRoles": "Fixed roles",
+  "admin.organization.fixedRolesDescription":
+    "Roles are defined in code and shared by every organization on this provider.",
+
+  "admin.users.title": "Users",
+  "admin.users.description": "Every account registered on this authentication provider.",
+  "admin.users.all": "All users",
+  "admin.users.count": "{count} accounts.",
+  "admin.users.empty": "No users yet",
+  "admin.users.unverified": "Unverified",
+  "admin.users.banned": "Banned",
 } as const;
 
 export type MessageKey = keyof typeof en;

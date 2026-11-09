@@ -1,6 +1,6 @@
 "use client";
 
-import { authClient } from "@mqdms/auth/client";
+import { assignableRoleIds, roleDefinitions } from "@mqdms/auth/permissions";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -16,12 +16,18 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@mqdms/ui/components/dropdown-menu";
 import { MoreHorizontal, ShieldCheck, UserRound, UserX } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+
+import { removeMemberAction, updateMemberRoleAction } from "./actions";
 
 type MemberActionsProps = {
   memberId: string;
@@ -37,24 +43,24 @@ export function MemberActions({ memberId, memberName, organizationId, role }: Me
   const [removeOpen, setRemoveOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const roles = role.split(",");
+  const currentRoles = role.split(",").map((item) => item.trim());
 
-  const isAdmin = roles.includes("admin");
+  const availableRoles = assignableRoleIds.filter((roleId) => !currentRoles.includes(roleId));
 
-  async function updateRole(nextRole: "admin" | "member") {
+  async function updateRole(nextRole: string) {
     setIsPending(true);
     setError(null);
 
-    const { error } = await authClient.organization.updateMemberRole({
-      memberId,
+    const result = await updateMemberRoleAction({
       organizationId,
+      memberId,
       role: nextRole,
     });
 
-    if (error) {
-      setError(error.message ?? "Unable to update member role.");
-
+    if (!result.success) {
+      setError(result.error);
       setIsPending(false);
+
       return;
     }
 
@@ -66,15 +72,15 @@ export function MemberActions({ memberId, memberName, organizationId, role }: Me
     setIsPending(true);
     setError(null);
 
-    const { error } = await authClient.organization.removeMember({
-      memberIdOrEmail: memberId,
+    const result = await removeMemberAction({
       organizationId,
+      memberId,
     });
 
-    if (error) {
-      setError(error.message ?? "Unable to remove member.");
-
+    if (!result.success) {
+      setError(result.error);
       setIsPending(false);
+
       return;
     }
 
@@ -97,16 +103,24 @@ export function MemberActions({ memberId, memberName, organizationId, role }: Me
           </DropdownMenuTrigger>
 
           <DropdownMenuContent align="end">
-            {isAdmin ? (
-              <DropdownMenuItem onClick={() => updateRole("member")}>
-                <UserRound />
-                Make member
-              </DropdownMenuItem>
+            {availableRoles.length > 0 ? (
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger>
+                  <ShieldCheck />
+                  Change role
+                </DropdownMenuSubTrigger>
+
+                <DropdownMenuSubContent>
+                  {availableRoles.map((roleId) => (
+                    <DropdownMenuItem key={roleId} onClick={() => updateRole(roleId)}>
+                      <UserRound />
+                      {roleDefinitions[roleId].label}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuSubContent>
+              </DropdownMenuSub>
             ) : (
-              <DropdownMenuItem onClick={() => updateRole("admin")}>
-                <ShieldCheck />
-                Make admin
-              </DropdownMenuItem>
+              <DropdownMenuLabel>All roles assigned</DropdownMenuLabel>
             )}
 
             <DropdownMenuSeparator />

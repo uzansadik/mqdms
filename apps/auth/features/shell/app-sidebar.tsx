@@ -13,7 +13,7 @@ import {
   SidebarMenuItem,
   SidebarRail,
 } from "@mqdms/ui/components/sidebar";
-import { LayoutDashboard, Settings } from "lucide-react";
+import { LayoutDashboard, Settings, Shield } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -30,6 +30,7 @@ type AppSidebarProps = {
     name: string;
     email: string;
   };
+  isSuperadmin: boolean;
 };
 
 const navigation = [
@@ -45,7 +46,7 @@ const navigation = [
   },
 ];
 
-export function AppSidebar({ organization, user }: AppSidebarProps) {
+export function AppSidebar({ organization, user, isSuperadmin }: AppSidebarProps) {
   const pathname = usePathname();
 
   return (
@@ -81,6 +82,29 @@ export function AppSidebar({ organization, user }: AppSidebarProps) {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+
+        {isSuperadmin && (
+          <SidebarGroup>
+            <SidebarGroupLabel>Platform</SidebarGroupLabel>
+
+            <SidebarGroupContent>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={pathname === "/admin" || pathname.startsWith("/admin/")}
+                    tooltip="Platform"
+                  >
+                    <Link href="/admin">
+                      <Shield />
+                      <span>Platform</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
       </SidebarContent>
 
       <SidebarFooter>

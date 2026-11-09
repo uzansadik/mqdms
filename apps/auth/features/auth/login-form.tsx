@@ -45,13 +45,6 @@ export function LoginForm({ next }: LoginFormProps) {
       callbackURL: next,
     });
 
-    const organizations = await authClient.organization.list();
-    if (organizations.data?.length) {
-      await authClient.organization.setActive({
-        organizationId: organizations.data[0]?.id,
-      });
-    }
-
     if (error) {
       if (error.status === 403) {
         const params = new URLSearchParams({
@@ -71,7 +64,26 @@ export function LoginForm({ next }: LoginFormProps) {
       return;
     }
 
-    router.replace(next);
+    const organizations = await authClient.organization.list();
+    if (organizations.data?.length) {
+      await authClient.organization.setActive({
+        organizationId: organizations.data[0]?.id,
+      });
+    }
+
+    /*
+     * Superadmin organizasyon üyesi olmayabilir; dashboard yerine platform
+     * paneline yönlendirilir.
+     */
+    const { data: sessionData } = await authClient.getSession({
+      fetchOptions: {
+        cache: "no-store",
+      },
+    });
+
+    const isSuperadmin = sessionData?.user?.role === "superadmin";
+
+    router.replace(isSuperadmin ? "/admin" : next);
     router.refresh();
   }
 
