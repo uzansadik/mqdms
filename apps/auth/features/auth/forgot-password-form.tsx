@@ -1,5 +1,6 @@
 "use client";
 
+import { zodResolver } from "@hookform/resolvers/zod";
 import { authClient } from "@mqdms/auth/client";
 import { Button } from "@mqdms/ui/components/button";
 import {
@@ -11,7 +12,6 @@ import {
 } from "@mqdms/ui/components/card";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@mqdms/ui/components/field";
 import { Input } from "@mqdms/ui/components/input";
-import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
 import { Controller, useForm } from "react-hook-form";
 

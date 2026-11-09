@@ -1,5 +1,6 @@
 "use client";
 
+import { Combobox as ComboboxPrimitive } from "@base-ui/react";
 import { Button } from "@mqdms/ui/components/button";
 import {
   InputGroup,
@@ -7,9 +8,7 @@ import {
   InputGroupButton,
   InputGroupInput,
 } from "@mqdms/ui/components/input-group";
-
 import { cn } from "@mqdms/ui/lib/utils";
-import { Combobox as ComboboxPrimitive } from "@base-ui/react";
 import { CheckIcon, ChevronDownIcon, XIcon } from "lucide-react";
 import * as React from "react";
 
