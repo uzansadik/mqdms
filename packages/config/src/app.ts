@@ -1,5 +1,3 @@
-import { features } from "./features";
-
 export type AppConfig = {
   name: string;
   slug: string;
@@ -13,8 +11,6 @@ export type AppConfig = {
   support: {
     email: string;
   };
-
-  features: typeof features;
 };
 
 export const appConfig = {
@@ -32,6 +28,4 @@ export const appConfig = {
   support: {
     email: "support@example.com",
   },
-
-  features,
 } satisfies AppConfig;

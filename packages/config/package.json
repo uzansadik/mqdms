@@ -5,9 +5,7 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./app": "./src/app.ts",
-    "./features": "./src/features.ts",
-    "./plans": "./src/plans.ts"
+    "./app": "./src/app.ts"
   },
   "scripts": {
     "lint": "biome check .",

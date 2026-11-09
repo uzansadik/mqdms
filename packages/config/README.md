@@ -9,20 +9,13 @@ Shared static configuration for the MQDMS monorepo.
 Typical responsibilities:
 
 * Application metadata
-* Feature flags
-* SaaS plan definitions
-* Plan limits
 * Shared configuration constants
 * Small pure configuration helpers
 
 Example usage:
 
 ```ts
-import {
-  appConfig,
-  features,
-  getPlan,
-} from "@mqdms/config";
+import { appConfig } from "@mqdms/config";
 ```
 
 ## Structure
@@ -31,8 +24,6 @@ import {
 packages/config/
 └── src/
     ├── app.ts
-    ├── features.ts
-    ├── plans.ts
     └── index.ts
 ```
 
@@ -50,48 +41,6 @@ export const appConfig = {
 
 Application code should use `appConfig` instead of duplicating configurable values throughout the codebase.
 
-### `features.ts`
-
-Contains global product capability flags.
-
-Examples:
-
-```ts
-export const features = {
-  admin: true,
-  billing: true,
-  organizations: true,
-  uploads: true,
-  usage: true,
-};
-```
-
-Keep these generic. Domain-specific functionality such as RFQ, 8D, inventory, or project management should normally stay inside the application's domain code.
-
-### `plans.ts`
-
-Contains SaaS plans, features, and usage limits.
-
-```ts
-export const plans = {
-  free: {
-    limits: {
-      members: 1,
-      storageMb: 100,
-      usage: 20,
-    },
-  },
-};
-```
-
-Use `null` for unlimited limits.
-
-```ts
-members: null
-```
-
-means unlimited members.
-
 ## Package Rules
 
 `@mqdms/config` should stay lightweight and framework-agnostic.
@@ -101,8 +50,6 @@ It may contain:
 * Plain TypeScript objects
 * Types
 * Constants
-* Feature definitions
-* Plan definitions
 * Small pure helper functions
 
 It should **not** contain:
@@ -135,7 +82,7 @@ Public configuration should be exported through `src/index.ts`.
 Consumers should prefer:
 
 ```ts
-import { plans } from "@mqdms/config";
+import { appConfig } from "@mqdms/config";
 ```
 
 instead of importing internal files directly.
