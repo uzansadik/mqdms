@@ -213,6 +213,8 @@ export const en = {
     "The owner manages members and permissions of this organization.",
   "admin.organizationForm.submit": "Create organization",
   "admin.organizationForm.submitting": "Creating...",
+  "admin.organizationForm.success": "Organization created.",
+  "admin.organizationForm.error": "The organization could not be created.",
   "admin.organization.delete.title": "Delete {name}?",
   "admin.organization.delete.description":
     "This removes the organization together with its members, invitations and permission grants. This action cannot be undone.",

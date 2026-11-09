@@ -216,6 +216,8 @@ export const tr = {
     "Sahip, bu organizasyonun üye ve yetkilerini yönetir.",
   "admin.organizationForm.submit": "Organizasyon oluştur",
   "admin.organizationForm.submitting": "Oluşturuluyor...",
+  "admin.organizationForm.success": "Organizasyon oluşturuldu.",
+  "admin.organizationForm.error": "Organizasyon oluşturulamadı.",
   "admin.organization.delete.title": "{name} silinsin mi?",
   "admin.organization.delete.description":
     "Organizasyon; üyeleri, davetleri ve yetki kayıtlarıyla birlikte silinir. Bu işlem geri alınamaz.",

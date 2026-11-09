@@ -28,6 +28,7 @@ import {
 import { useRouter } from "next/navigation";
 import { useRef } from "react";
 import { Controller, useForm } from "react-hook-form";
+import { toast } from "sonner";
 
 import { createSlug } from "@/features/organization/utils";
 
@@ -55,18 +56,39 @@ export function CreateOrganizationForm() {
   async function onSubmit(values: CreateOrganizationByAdminValues) {
     form.clearErrors("root");
 
-    const result = await createOrganizationAction(values);
+    try {
+      const result = await createOrganizationAction(values);
 
-    if (!result.success) {
+      if (!result.success) {
+        form.setError("root", {
+          message: result.error,
+        });
+
+        /*
+         * Hata mesajı formun üst kısmında görünür; kullanıcı butona
+         * baktığında aksiyon almadığını düşünebilir. Toast her durumda
+         * görünür kaldığı için hata da bildirim olarak gösterilir.
+         */
+        toast.error(result.error);
+
+        return;
+      }
+
+      toast.success(t("admin.organizationForm.success"));
+
+      router.push("/admin/organizations");
+      router.refresh();
+    } catch (error) {
+      console.error("Failed to create the organization:", error);
+
+      const message = t("admin.organizationForm.error");
+
       form.setError("root", {
-        message: result.error,
+        message,
       });
 
-      return;
+      toast.error(message);
     }
-
-    router.push(`/admin/organizations/${result.data.organizationId}`);
-    router.refresh();
   }
 
   return (

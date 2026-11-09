@@ -2,7 +2,8 @@ import { Geist_Mono, Inter } from "next/font/google";
 
 import "@mqdms/ui/globals.css";
 import { getMessages, I18nProvider } from "@mqdms/i18n";
-import { getLocale, getTranslations } from "@mqdms/i18n/server";
+import { getLocale } from "@mqdms/i18n/server";
+import { Toaster } from "@mqdms/ui/components/sonner";
 import { TooltipProvider } from "@mqdms/ui/components/tooltip";
 import { cn } from "@mqdms/ui/lib/utils";
 import { ThemeProvider } from "@/components/theme-provider";
@@ -30,7 +31,11 @@ export default async function RootLayout({
       <body>
         <I18nProvider locale={locale} messages={messages}>
           <ThemeProvider>
-            <TooltipProvider>{children}</TooltipProvider>
+            <TooltipProvider>
+              {children}
+
+              <Toaster />
+            </TooltipProvider>
           </ThemeProvider>
         </I18nProvider>
       </body>
