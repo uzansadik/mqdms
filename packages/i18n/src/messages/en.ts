@@ -27,7 +27,6 @@ export const en = {
 
   "auth.login": "Log in",
   "auth.logout": "Log out",
-  "auth.register": "Create account",
 
   "auth.login.title": "Sign in",
   "auth.login.description": "Enter your credentials to continue.",
@@ -37,24 +36,13 @@ export const en = {
   "auth.login.submit": "Sign in",
   "auth.login.submitting": "Signing in...",
   "auth.login.error": "Unable to sign in. Please try again.",
-  "auth.login.noAccount": "Don't have an account?",
-  "auth.login.signUp": "Sign up",
+  "auth.login.invitationOnly":
+    "Don't have an account? Ask an organization admin to invite you by e-mail.",
 
   "auth.layout.headline": "Build and manage your work in one place.",
   "auth.layout.description":
     "A modern SaaS application starter kit. Built with Next.js, TypeScript, Tailwind CSS, and shadcn/ui.",
   "auth.layout.copyright": "© {year} {name}",
-
-  "auth.register.title": "Create account",
-  "auth.register.description": "Create your account to get started.",
-  "auth.register.name": "Name",
-  "auth.register.email": "Email",
-  "auth.register.password": "Password",
-  "auth.register.confirmPassword": "Confirm password",
-  "auth.register.submit": "Create account",
-  "auth.register.submitting": "Creating account...",
-  "auth.register.error": "Unable to create your account. Please try again.",
-  "auth.register.hasAccount": "Already have an account?",
 
   "onboarding.noWorkspace.title": "No workspace yet",
   "onboarding.noWorkspace.description": "You are not a member of any organization yet.",
@@ -107,6 +95,34 @@ export const en = {
   "organization.members.keepInvitation": "Keep invitation",
   "organization.members.cancelling": "Cancelling...",
   "organization.members.cancelError": "Unable to cancel invitation.",
+
+  "organization.invitation.title": "Organization invitation",
+  "organization.invitation.description": "You have been invited to join an organization.",
+  "organization.invitation.signedInAs": "Signed in as",
+  "organization.invitation.accept": "Accept invitation",
+  "organization.invitation.joining": "Joining...",
+  "organization.invitation.decline": "Decline",
+  "organization.invitation.declining": "Declining...",
+  "organization.invitation.acceptError": "Unable to accept the invitation.",
+  "organization.invitation.declineError": "Unable to decline the invitation.",
+  "organization.invitation.invalid.title": "Invalid invitation",
+  "organization.invitation.invalid.description":
+    "This invitation link is invalid, has expired, or has already been used.",
+  "organization.invitation.wrongAccount.title": "Invitation sent to another account",
+  "organization.invitation.wrongAccount.description":
+    "This invitation was sent to {email}. Sign in with that account to accept it.",
+  "organization.invitation.register.title": "Create your account",
+  "organization.invitation.register.description":
+    "Create an account to join {organization} with this invitation.",
+  "organization.invitation.register.email": "E-mail",
+  "organization.invitation.register.name": "Full name",
+  "organization.invitation.register.password": "Password",
+  "organization.invitation.register.confirmPassword": "Password (again)",
+  "organization.invitation.register.submit": "Create account",
+  "organization.invitation.register.submitting": "Creating account...",
+  "organization.invitation.register.error": "Unable to create your account. Please try again.",
+  "organization.invitation.register.hasAccount": "Already have an account?",
+  "organization.invitation.register.signIn": "Sign in",
 
   "roles.owner.label": "Owner",
   "roles.owner.description":

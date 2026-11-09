@@ -385,7 +385,6 @@ Authentication is implemented with Better Auth.
 
 Included flows:
 
-* Register
 * Login
 * Email verification
 * Forgot password
@@ -394,6 +393,12 @@ Included flows:
 * Session management
 * Sign out
 * Organization invitations
+
+Public registration is disabled: `/register` returns 404 and the Better Auth
+`/sign-up/email` endpoint is closed (`disableSignUp: true`). Accounts are created
+either by a superadmin or through an organization invitation link
+(`/accept-invitation`), which is also where a user without an account sets their
+password.
 
 The `@mqdms/auth` package must not depend on Next.js APIs such as:
 

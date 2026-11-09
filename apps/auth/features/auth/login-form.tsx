@@ -87,10 +87,6 @@ export function LoginForm({ next }: LoginFormProps) {
     router.refresh();
   }
 
-  const registerParams = new URLSearchParams({
-    next,
-  });
-
   return (
     <Card>
       <CardHeader>
@@ -158,13 +154,9 @@ export function LoginForm({ next }: LoginFormProps) {
       </CardContent>
 
       <CardFooter className="justify-center">
-        <div className="flex items-center gap-1 text-sm text-muted-foreground">
-          <span>{t("auth.login.noAccount")}</span>
-
-          <Button asChild variant="link" size="sm">
-            <Link href={`/register?${registerParams.toString()}`}>{t("auth.login.signUp")}</Link>
-          </Button>
-        </div>
+        <p className="text-center text-sm text-muted-foreground">
+          {t("auth.login.invitationOnly")}
+        </p>
       </CardFooter>
     </Card>
   );

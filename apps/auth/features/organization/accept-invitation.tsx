@@ -1,6 +1,7 @@
 "use client";
 
 import { authClient } from "@mqdms/auth/client";
+import { useI18n } from "@mqdms/i18n";
 import { Button } from "@mqdms/ui/components/button";
 import {
   Card,
@@ -20,6 +21,7 @@ type AcceptInvitationProps = {
 
 export function AcceptInvitation({ invitationId, email }: AcceptInvitationProps) {
   const router = useRouter();
+  const { t } = useI18n();
 
   const [pendingAction, setPendingAction] = useState<"accept" | "reject" | null>(null);
 
@@ -37,7 +39,7 @@ export function AcceptInvitation({ invitationId, email }: AcceptInvitationProps)
       });
 
     if (invitationError || !invitation) {
-      setError(invitationError?.message ?? "This invitation is invalid or has expired.");
+      setError(invitationError?.message ?? t("organization.invitation.invalid.description"));
 
       setPendingAction(null);
       return;
@@ -48,7 +50,7 @@ export function AcceptInvitation({ invitationId, email }: AcceptInvitationProps)
     });
 
     if (error) {
-      setError(error.message ?? "Unable to accept invitation.");
+      setError(error.message ?? t("organization.invitation.acceptError"));
 
       setPendingAction(null);
       return;
@@ -71,7 +73,7 @@ export function AcceptInvitation({ invitationId, email }: AcceptInvitationProps)
     });
 
     if (error) {
-      setError(error.message ?? "Unable to decline invitation.");
+      setError(error.message ?? t("organization.invitation.declineError"));
 
       setPendingAction(null);
       return;
@@ -84,14 +86,14 @@ export function AcceptInvitation({ invitationId, email }: AcceptInvitationProps)
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Organization invitation</CardTitle>
+        <CardTitle>{t("organization.invitation.title")}</CardTitle>
 
-        <CardDescription>You have been invited to join an organization.</CardDescription>
+        <CardDescription>{t("organization.invitation.description")}</CardDescription>
       </CardHeader>
 
       <CardContent className="space-y-4">
         <div className="rounded-lg border p-4">
-          <p className="text-sm text-muted-foreground">Signed in as</p>
+          <p className="text-sm text-muted-foreground">{t("organization.invitation.signedInAs")}</p>
 
           <p className="font-medium">{email}</p>
         </div>
@@ -101,11 +103,15 @@ export function AcceptInvitation({ invitationId, email }: AcceptInvitationProps)
 
       <CardFooter className="justify-end gap-2">
         <Button disabled={pendingAction !== null} onClick={handleReject} variant="outline">
-          {pendingAction === "reject" ? "Declining..." : "Decline"}
+          {pendingAction === "reject"
+            ? t("organization.invitation.declining")
+            : t("organization.invitation.decline")}
         </Button>
 
         <Button disabled={pendingAction !== null} onClick={handleAccept}>
-          {pendingAction === "accept" ? "Joining..." : "Accept invitation"}
+          {pendingAction === "accept"
+            ? t("organization.invitation.joining")
+            : t("organization.invitation.accept")}
         </Button>
       </CardFooter>
     </Card>

@@ -29,7 +29,6 @@ export const tr = {
 
   "auth.login": "Giriş yap",
   "auth.logout": "Çıkış yap",
-  "auth.register": "Hesap oluştur",
 
   "auth.login.title": "Giriş yap",
   "auth.login.description": "Devam etmek için bilgilerinizi girin.",
@@ -39,24 +38,13 @@ export const tr = {
   "auth.login.submit": "Giriş yap",
   "auth.login.submitting": "Giriş yapılıyor...",
   "auth.login.error": "Giriş yapılamadı. Lütfen tekrar deneyin.",
-  "auth.login.noAccount": "Hesabınız yok mu?",
-  "auth.login.signUp": "Kayıt ol",
+  "auth.login.invitationOnly":
+    "Hesabınız yok mu? Bir organizasyon yöneticisinden e-posta ile davet alın.",
 
   "auth.layout.headline": "İşinizi tek bir yerden oluşturun ve yönetin.",
   "auth.layout.description":
     "Next.js, TypeScript, Tailwind CSS ve shadcn/ui ile hazırlanmış modern SaaS uygulama başlangıç kiti.",
   "auth.layout.copyright": "© {year} {name}",
-
-  "auth.register.title": "Hesap oluştur",
-  "auth.register.description": "Başlamak için hesabınızı oluşturun.",
-  "auth.register.name": "Ad Soyad",
-  "auth.register.email": "E-posta",
-  "auth.register.password": "Şifre",
-  "auth.register.confirmPassword": "Şifre (tekrar)",
-  "auth.register.submit": "Hesap oluştur",
-  "auth.register.submitting": "Hesap oluşturuluyor...",
-  "auth.register.error": "Hesabınız oluşturulamadı. Lütfen tekrar deneyin.",
-  "auth.register.hasAccount": "Zaten hesabınız var mı?",
 
   "onboarding.noWorkspace.title": "Henüz workspace yok",
   "onboarding.noWorkspace.description": "Henüz hiçbir organizasyonun üyesi değilsiniz.",
@@ -108,6 +96,34 @@ export const tr = {
   "organization.members.keepInvitation": "Daveti koru",
   "organization.members.cancelling": "İptal ediliyor...",
   "organization.members.cancelError": "Davet iptal edilemedi.",
+
+  "organization.invitation.title": "Organizasyon daveti",
+  "organization.invitation.description": "Bir organizasyona katılmak için davet edildiniz.",
+  "organization.invitation.signedInAs": "Giriş yapıldı",
+  "organization.invitation.accept": "Daveti kabul et",
+  "organization.invitation.joining": "Katılılıyor...",
+  "organization.invitation.decline": "Reddet",
+  "organization.invitation.declining": "Reddediliyor...",
+  "organization.invitation.acceptError": "Davet kabul edilemedi.",
+  "organization.invitation.declineError": "Davet reddedilemedi.",
+  "organization.invitation.invalid.title": "Geçersiz davet",
+  "organization.invitation.invalid.description":
+    "Bu davet bağlantısı geçersiz, süresi dolmuş veya daha önce kullanılmış.",
+  "organization.invitation.wrongAccount.title": "Davet başka bir hesaba gönderilmiş",
+  "organization.invitation.wrongAccount.description":
+    "Bu davet {email} adresine gönderildi. Kabul etmek için o hesapla giriş yapın.",
+  "organization.invitation.register.title": "Hesabınızı oluşturun",
+  "organization.invitation.register.description":
+    "Bu davetle {organization} organizasyonuna katılmak için hesabınızı oluşturun.",
+  "organization.invitation.register.email": "E-posta",
+  "organization.invitation.register.name": "Ad soyad",
+  "organization.invitation.register.password": "Şifre",
+  "organization.invitation.register.confirmPassword": "Şifre (tekrar)",
+  "organization.invitation.register.submit": "Hesap oluştur",
+  "organization.invitation.register.submitting": "Hesap oluşturuluyor...",
+  "organization.invitation.register.error": "Hesabınız oluşturulamadı. Lütfen tekrar deneyin.",
+  "organization.invitation.register.hasAccount": "Zaten hesabınız var mı?",
+  "organization.invitation.register.signIn": "Giriş yap",
 
   "roles.owner.label": "Owner",
   "roles.owner.description":

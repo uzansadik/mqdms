@@ -50,24 +50,19 @@ export const auth = betterAuth({
     requireEmailVerification: true,
 
     /*
-     * Kayıt açık: davet edilen kişinin hesabı olmayabilir, davet e-postasındaki
-     * bağlantıdan kayıt olup daveti kabul edebilmelidir.
+     * Genel kayıt kapalı: `/register` sayfası ve `/sign-up/email` endpoint'i
+     * kullanılamaz. Hesaplar yalnızca iki yoldan oluşur:
      *
-     * Güvenlik sınırı organizasyon açmaktır: `allowUserToCreateOrganization`
-     * kapalı olduğu için kayıt olan kullanıcı hiçbir organizasyona kendiliğinden
-     * giremez, yalnızca davetle üye olur.
+     * 1. Superadmin (`/bootstrap-superadmin` veya admin paneli) — admin plugin'in
+     *    sunucu tarafı `createUser` çağrısı.
+     * 2. Davet — `features/organization/invitation-registration.ts` sunucu
+     *    aksiyonu; davet bağlantısı geçerliyse davet edilen e-posta adresiyle
+     *    hesap açar.
+     *
+     * Kayıt olmayan kullanıcı hiçbir organizasyona kendiliğinden giremez:
+     * `allowUserToCreateOrganization` kapalı, üyelik yalnızca davetle mümkün.
      */
-    disableSignUp: false,
-
-    customSyntheticUser: ({ coreFields, additionalFields, id }) => ({
-      ...coreFields,
-      role: "user",
-      banned: false,
-      banReason: null,
-      banExpires: null,
-      ...additionalFields,
-      id,
-    }),
+    disableSignUp: true,
 
     sendResetPassword: async ({ user, url }) => {
       await addJob(
