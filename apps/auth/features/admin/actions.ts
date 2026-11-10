@@ -151,10 +151,6 @@ export async function createOrganizationAction(
   /*
    * better-auth creator'a daima `creatorRole` verir. Superadmin owner'ı admin
    * olarak atamak istediğinde rolü burada düzeltiyoruz.
-   */
-  /*
-   * better-auth creator'a daima `creatorRole` verir. Superadmin owner'ı admin
-   * olarak atamak istediğinde rolü burada düzeltiyoruz.
    *
    * Organizasyon bu noktada zaten oluşmuştur; rol güncellemesi başarısız
    * olursa hata yutulmaz, çağıran tarafa açık bir mesajla bildirilir.
