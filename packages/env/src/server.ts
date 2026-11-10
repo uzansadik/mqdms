@@ -28,6 +28,13 @@ const envBoolean = z.preprocess((value) => {
 
   const normalized = value.trim().toLowerCase();
 
+  // Boş değer "tanımsız" sayılır. `.env` içinde değişken tanımlı ama boş
+  // bırakılmış olabilir; bu durumda doğrulama hatası verip uygulamanın
+  // başlamasını engellemek yerine varsayılan değer uygulanır.
+  if (normalized === "") {
+    return false;
+  }
+
   if (normalized === "true" || normalized === "1") {
     return true;
   }
