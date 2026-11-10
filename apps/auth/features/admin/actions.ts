@@ -152,9 +152,14 @@ export async function createOrganizationAction(
    * better-auth creator'a daima `creatorRole` verir. Superadmin owner'ı admin
    * olarak atamak istediğinde rolü burada düzeltiyoruz.
    *
-   * Organizasyon bu noktada zaten oluşmuştur; rol güncellemesi başarısız
-   * olursa hata yutulmaz, çağıran tarafa açık bir mesajla bildirilir.
+   * Organizasyon bu noktada zaten oluşmuştur. Rol güncellemesi başarısız
+   * olursa akış burada kesilmez: doğrulama e-postası, parola sıfırlama ve
+   * audit kaydı yine de çalışır, hata en sonda çağıran tarafa bildirilir.
+   * Aksi halde sahipsiz bir organizasyon ve erişilemeyen bir owner hesabı
+   * kalırdı; slug zaten kullanıldığı için superadmin tekrar deneyemezdi.
    */
+  let roleError: string | null = null;
+
   if (owner.role !== "owner") {
     try {
       await db
@@ -164,10 +169,7 @@ export async function createOrganizationAction(
     } catch (error) {
       console.error("Failed to set the owner role:", error);
 
-      return {
-        success: false,
-        error: "Organization created, but the owner role could not be set.",
-      };
+      roleError = "Organization created, but the owner role could not be set.";
     }
   }
 
@@ -213,8 +215,13 @@ export async function createOrganizationAction(
       ownerUserId,
       ownerRole: owner.role,
       ownerCreated,
+      ownerRoleUpdateFailed: roleError !== null,
     },
   });
+
+  if (roleError) {
+    return { success: false, error: roleError };
+  }
 
   return { success: true, data: { organizationId } };
 }
