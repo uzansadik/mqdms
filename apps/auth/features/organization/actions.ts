@@ -1,12 +1,17 @@
 "use server";
 
-import { assignableRoleIds, hasOrganizationStatement, type RoleId } from "@mqdms/auth/permissions";
+import {
+  assignableRoleIds,
+  hasOrganizationStatement,
+  parseRoles,
+  type RoleId,
+} from "@mqdms/auth/permissions";
 import { auth } from "@mqdms/auth/server";
 import { headers } from "next/headers";
 import { z } from "zod";
 
 import { audit } from "@/features/audit/server";
-import { getOrganizationMember, getOrganizationMembers } from "@/features/organization/server";
+import { getOrganizationMember, getOrganizationMemberById } from "@/features/organization/server";
 
 export type OrganizationActionResult = { success: true } | { success: false; error: string };
 
@@ -106,8 +111,7 @@ export async function updateMemberRoleAction(input: unknown): Promise<Organizati
     return { success: false, error: "You are not allowed to change member roles." };
   }
 
-  const members = await getOrganizationMembers(organizationId);
-  const target = members.find((item) => item.id === memberId);
+  const target = await getOrganizationMemberById(organizationId, memberId);
 
   if (!target) {
     return { success: false, error: "Member not found in this organization." };
@@ -117,12 +121,7 @@ export async function updateMemberRoleAction(input: unknown): Promise<Organizati
    * Owner rolü bu ekrandan değiştirilemez: organizasyonun sahibi başka bir
    * üyeye devredilmeden korunur.
    */
-  if (
-    target.role
-      .split(",")
-      .map((item) => item.trim())
-      .includes("owner")
-  ) {
+  if (parseRoles(target.role).includes("owner")) {
     return { success: false, error: "The owner role cannot be changed here." };
   }
 
@@ -175,19 +174,13 @@ export async function removeMemberAction(input: unknown): Promise<OrganizationAc
     return { success: false, error: "You are not allowed to remove members." };
   }
 
-  const members = await getOrganizationMembers(organizationId);
-  const target = members.find((item) => item.id === memberId);
+  const target = await getOrganizationMemberById(organizationId, memberId);
 
   if (!target) {
     return { success: false, error: "Member not found in this organization." };
   }
 
-  if (
-    target.role
-      .split(",")
-      .map((item) => item.trim())
-      .includes("owner")
-  ) {
+  if (parseRoles(target.role).includes("owner")) {
     return { success: false, error: "The owner cannot be removed." };
   }
 

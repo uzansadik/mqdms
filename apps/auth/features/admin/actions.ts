@@ -99,7 +99,7 @@ export async function createOrganizationAction(
     try {
       await auth.api.createUser({
         body: {
-          name: owner.name ?? owner.email.split("@")[0] ?? owner.email,
+          name: owner.name || owner.email.split("@")[0] || owner.email,
           email: owner.email,
           password: generateTemporaryPassword(),
           role: "user",

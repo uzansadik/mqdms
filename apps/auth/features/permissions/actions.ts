@@ -1,6 +1,6 @@
 "use server";
 
-import { isResourceActionKey } from "@mqdms/auth/permissions";
+import { isResourceActionKey, parseRoles } from "@mqdms/auth/permissions";
 import { db } from "@mqdms/db";
 import { member, memberPermission } from "@mqdms/db/schema";
 import { and, eq } from "drizzle-orm";
@@ -44,7 +44,7 @@ export async function setMemberPermissionAction(input: unknown): Promise<SetPerm
   const organization = await requireOrganization();
 
   const target = await db
-    .select({ id: member.id, userId: member.userId })
+    .select({ id: member.id, userId: member.userId, role: member.role })
     .from(member)
     .where(and(eq(member.id, memberId), eq(member.organizationId, organization.id)))
     .limit(1);
@@ -53,6 +53,15 @@ export async function setMemberPermissionAction(input: unknown): Promise<SetPerm
 
   if (!targetMember) {
     return { success: false, error: "Member not found in this organization." };
+  }
+
+  /*
+   * Owner'ın yetkileri değiştirilemez. Rol değiştirme ve üye silme aksiyonları
+   * owner hedefini zaten reddediyor; `deny` kaydı rolün üzerine yazdığı için
+   * izin yönetimi de aynı korumayı taşımalı.
+   */
+  if (parseRoles(targetMember.role).includes("owner")) {
+    return { success: false, error: "The owner's permissions cannot be changed." };
   }
 
   const existing = await db

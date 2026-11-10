@@ -47,7 +47,7 @@ export function CreateOrganizationForm() {
       slug: "",
       owner: {
         email: "",
-        name: undefined,
+        name: "",
         role: "owner",
       },
     },

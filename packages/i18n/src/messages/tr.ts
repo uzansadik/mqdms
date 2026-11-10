@@ -101,7 +101,7 @@ export const tr = {
   "organization.invitation.description": "Bir organizasyona katılmak için davet edildiniz.",
   "organization.invitation.signedInAs": "Giriş yapıldı",
   "organization.invitation.accept": "Daveti kabul et",
-  "organization.invitation.joining": "Katılılıyor...",
+  "organization.invitation.joining": "Katılıyor...",
   "organization.invitation.decline": "Reddet",
   "organization.invitation.declining": "Reddediliyor...",
   "organization.invitation.acceptError": "Davet kabul edilemedi.",
@@ -224,4 +224,5 @@ export const tr = {
   "admin.organization.delete.aria": "{name} sil",
   "admin.organization.delete.confirm": "Organizasyonu sil",
   "admin.organization.delete.deleting": "Siliniyor...",
+  "admin.organization.delete.failed": "Organizasyon silinemedi.",
 } satisfies Record<MessageKey, string>;

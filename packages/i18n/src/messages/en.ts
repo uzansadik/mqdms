@@ -221,6 +221,7 @@ export const en = {
   "admin.organization.delete.aria": "Delete {name}",
   "admin.organization.delete.confirm": "Delete organization",
   "admin.organization.delete.deleting": "Deleting...",
+  "admin.organization.delete.failed": "The organization could not be deleted.",
 } as const;
 
 export type MessageKey = keyof typeof en;

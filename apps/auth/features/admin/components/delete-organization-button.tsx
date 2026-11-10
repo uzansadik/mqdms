@@ -15,7 +15,7 @@ import {
 import { Button } from "@mqdms/ui/components/button";
 import { Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { type MouseEvent, useState } from "react";
 
 import { deleteOrganizationAction } from "../actions";
 
@@ -32,23 +32,31 @@ export function DeleteOrganizationButton({ organizationId, name }: DeleteOrganiz
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function handleDelete() {
+  async function handleDelete(event: MouseEvent<HTMLButtonElement>) {
+    // Radix, butona tıklandığında dialog'u kendisi kapatır; aksi halde silme
+    // bitmeden pencere kapanır ve kullanıcı ikinci bir silme başlatabilir.
+    event.preventDefault();
+
     setPending(true);
     setError(null);
 
-    const result = await deleteOrganizationAction(organizationId);
+    try {
+      const result = await deleteOrganizationAction(organizationId);
 
-    if (!result.success) {
-      setError(result.error);
+      if (!result.success) {
+        setError(result.error);
+
+        return;
+      }
+
+      setOpen(false);
+
+      router.refresh();
+    } catch {
+      setError(t("admin.organization.delete.failed"));
+    } finally {
       setPending(false);
-
-      return;
     }
-
-    setOpen(false);
-    setPending(false);
-
-    router.refresh();
   }
 
   return (

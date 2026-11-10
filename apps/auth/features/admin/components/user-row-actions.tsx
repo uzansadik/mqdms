@@ -36,19 +36,21 @@ export function UserRowActions({ userId, role, banned }: UserRowActionsProps) {
     setPending(true);
     setError(null);
 
-    const result = await action();
+    try {
+      const result = await action();
 
-    if (!result.success) {
-      setError(result.error ?? t("admin.users.actionFailed"));
+      if (!result.success) {
+        setError(result.error ?? t("admin.users.actionFailed"));
 
+        return;
+      }
+
+      router.refresh();
+    } catch {
+      setError(t("admin.users.actionFailed"));
+    } finally {
       setPending(false);
-
-      return;
     }
-
-    setPending(false);
-
-    router.refresh();
   }
 
   return (

@@ -1,4 +1,7 @@
 import { auth } from "@mqdms/auth/server";
+import { db } from "@mqdms/db";
+import { member } from "@mqdms/db/schema";
+import { and, eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { cache } from "react";
@@ -61,15 +64,15 @@ export async function getCurrentOrganizationMember(organizationId: string) {
 
 export async function requireOrganizationOwner() {
   const organization = await requireOrganization();
-  const member = await getCurrentOrganizationMember(organization.id);
+  const currentMember = await getCurrentOrganizationMember(organization.id);
 
-  if (!member || !hasRole(member.role, "owner")) {
+  if (!currentMember || !hasRole(currentMember.role, "owner")) {
     redirect("/dashboard");
   }
 
   return {
     organization,
-    member,
+    member: currentMember,
   };
 }
 
@@ -119,25 +122,35 @@ export const getOrganizationDetails = cache(async (organizationId: string) => {
   return result;
 });
 
-/** Bir organizasyonun üye listesi. */
-export const getOrganizationMembers = cache(async (organizationId: string) => {
-  const result = await getOrganizationDetails(organizationId);
-
-  return result?.members ?? [];
-});
-
 /** Oturumdaki kullanıcının verilen organizasyondaki üye kaydı. */
 export async function getOrganizationMember(organizationId: string) {
   const session = await requireSession();
 
   /*
-   * Kullanıcı organizasyonun üyesi değilse better-auth yetki hatası fırlatır;
-   * bu durumda "üye yok" sayılır.
+   * Üye kaydı doğrudan `member` tablosundan okunur. better-auth'in
+   * `getFullOrganization` çağrısı ilk 100 üyeyi döndürdüğü için, büyük
+   * organizasyonlarda sonraki üyeler listede görünmezdi ve yetkileri
+   * "üye değil" gibi görünüyordu.
    */
-  const members = await getOrganizationMembers(organizationId).catch(() => []);
+  const rows = await db
+    .select({ id: member.id, userId: member.userId, role: member.role })
+    .from(member)
+    .where(and(eq(member.organizationId, organizationId), eq(member.userId, session.user.id)))
+    .limit(1);
 
-  return members.find((member) => member.userId === session.user.id) ?? null;
+  return rows[0] ?? null;
 }
+
+/** Verilen organizasyondaki belirli bir üyenin kaydı. */
+export const getOrganizationMemberById = cache(async (organizationId: string, memberId: string) => {
+  const rows = await db
+    .select({ id: member.id, userId: member.userId, role: member.role })
+    .from(member)
+    .where(and(eq(member.organizationId, organizationId), eq(member.id, memberId)))
+    .limit(1);
+
+  return rows[0] ?? null;
+});
 
 export const getOrganizationInvitations = cache(async (organizationId: string) => {
   const result = await auth.api.listInvitations({
