@@ -92,7 +92,7 @@ export function AdminSidebar({ user }: AdminSidebarProps) {
       </SidebarContent>
 
       <SidebarFooter>
-        <UserMenu user={user} />
+        <UserMenu user={user} variant="platform" />
       </SidebarFooter>
 
       <SidebarRail />

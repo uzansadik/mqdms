@@ -10,7 +10,7 @@ import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 
 import { audit } from "@/features/audit/server";
-import { getSession } from "@/features/auth/session";
+import { getFreshSession } from "@/features/auth/session";
 
 import { createOrganizationByAdminSchema } from "./schemas";
 
@@ -34,8 +34,16 @@ function generateTemporaryPassword() {
   return `${randomBytes(24).toString("base64url")}Aa1!`;
 }
 
+/**
+ * Superadmin oturumunu cookie cache'i atlayarak doğrular.
+ *
+ * better-auth oturumu 60 saniye cookie içinde cache'ler. Rolü düşürülen veya
+ * yasaklanan bir superadmin, cache süresi dolmadan admin aksiyonlarını
+ * çalıştırabilirdi. Bu yüzden yetki kontrolü her zaman veritabanından
+ * okunan oturumla yapılır.
+ */
 async function requireSuperadminSession() {
-  const session = await getSession();
+  const session = await getFreshSession();
 
   if (session?.user.role !== "superadmin") {
     return null;
@@ -144,11 +152,27 @@ export async function createOrganizationAction(
    * better-auth creator'a daima `creatorRole` verir. Superadmin owner'ı admin
    * olarak atamak istediğinde rolü burada düzeltiyoruz.
    */
+  /*
+   * better-auth creator'a daima `creatorRole` verir. Superadmin owner'ı admin
+   * olarak atamak istediğinde rolü burada düzeltiyoruz.
+   *
+   * Organizasyon bu noktada zaten oluşmuştur; rol güncellemesi başarısız
+   * olursa hata yutulmaz, çağıran tarafa açık bir mesajla bildirilir.
+   */
   if (owner.role !== "owner") {
-    await db
-      .update(member)
-      .set({ role: owner.role })
-      .where(and(eq(member.organizationId, organizationId), eq(member.userId, ownerUserId)));
+    try {
+      await db
+        .update(member)
+        .set({ role: owner.role })
+        .where(and(eq(member.organizationId, organizationId), eq(member.userId, ownerUserId)));
+    } catch (error) {
+      console.error("Failed to set the owner role:", error);
+
+      return {
+        success: false,
+        error: "Organization created, but the owner role could not be set.",
+      };
+    }
   }
 
   if (ownerCreated) {
@@ -160,16 +184,21 @@ export async function createOrganizationAction(
         },
       })
       .catch(console.error);
-  }
 
-  await auth.api
-    .requestPasswordReset({
-      body: {
-        email: owner.email,
-        redirectTo: `${env.NEXT_PUBLIC_APP_URL}/reset-password`,
-      },
-    })
-    .catch(console.error);
+    /*
+     * Parola sıfırlama e-postası yalnızca yeni açılan hesap için gerekir.
+     * Mevcut bir kullanıcı owner olarak atanırsa kendi parolası geçerlidir;
+     * sıfırlama e-postası göndermek istem dışı bir e-postaya yol açar.
+     */
+    await auth.api
+      .requestPasswordReset({
+        body: {
+          email: owner.email,
+          redirectTo: `${env.NEXT_PUBLIC_APP_URL}/reset-password`,
+        },
+      })
+      .catch(console.error);
+  }
 
   await audit({
     organizationId,

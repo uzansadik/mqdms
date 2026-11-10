@@ -30,7 +30,7 @@ import { useRef } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
 
-import { createSlug } from "@/features/organization/utils";
+import { createSlug, sanitizeSlugInput } from "@/features/organization/utils";
 
 import { createOrganizationAction } from "../actions";
 import { type CreateOrganizationByAdminValues, createOrganizationByAdminSchema } from "../schemas";
@@ -149,7 +149,11 @@ export function CreateOrganizationForm() {
                     onChange={(event) => {
                       slugEdited.current = true;
 
+                      field.onChange(sanitizeSlugInput(event.target.value));
+                    }}
+                    onBlur={(event) => {
                       field.onChange(createSlug(event.target.value));
+                      field.onBlur();
                     }}
                   />
 

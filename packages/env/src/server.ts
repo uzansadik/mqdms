@@ -8,9 +8,15 @@ const optionalUrl = z.preprocess((value) => (value === "" ? undefined : value), 
 
 // Boş bırakılmış bootstrap anahtarı "tanımsız" sayılır (aksi halde uygulama
 // başlarken doğrulama hatası verir).
+//
+// Uzunluk kontrolü burada yapılmaz: daha önce yayımlanan örnek dosyada 32
+// karakterden kısa bir anahtar bulunuyordu ve şema onu doğrulamaya çalışınca
+// uygulama başlamıyordu. 32 karakterlik şart zaten bootstrap servisinde
+// uygulanıyor (`isBootstrapAvailable` / `verifyBootstrapKey`); kısa bir anahtar
+// bootstrap'u etkinleştirmez, yalnızca kullanılmaz.
 const optionalSecret = z.preprocess(
   (value) => (value === "" ? undefined : value),
-  z.string().min(32).optional(),
+  z.string().optional(),
 );
 
 // `.env` dosyasında değişken `"true"` / `"false"` metni olarak tutulur.
@@ -53,7 +59,12 @@ const serverEnvSchema = z.object({
   STORAGE_PUBLIC_URL: optionalUrl,
   NEXT_PUBLIC_APP_URL: z.url().min(1, "NEXT_PUBLIC_APP_URL is required"),
   REDIS_URL: z.string().min(1, "REDIS_URL is required"),
-  SUPERADMIN_BOOTSTRAP_ENABLED: envBoolean.default(true),
+  /*
+   * Bootstrap varsayılan olarak kapalıdır; açıkça etkinleştirilmedikçe kapalı
+   * kalır. Değişken tanımsız olduğunda `true`ya düşmek, üretimde ilk
+   * superadmin'i herkesin oluşturabileceği bir pencere açardı.
+   */
+  SUPERADMIN_BOOTSTRAP_ENABLED: envBoolean.default(false),
   SUPERADMIN_BOOTSTRAP_KEY: optionalSecret,
 });
 

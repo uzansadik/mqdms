@@ -3,7 +3,7 @@ import { invitation, member, organization, user } from "@mqdms/db/schema";
 import { count, desc, eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
 
-import { getSession, requireSession } from "@/features/auth/session";
+import { getFreshSession, requireFreshSession } from "@/features/auth/session";
 
 export type AdminOrganization = {
   id: string;
@@ -46,16 +46,21 @@ export type AdminUser = {
   createdAt: Date;
 };
 
-/** Kullanıcının platform rolü superadmin mi? */
+/**
+ * Kullanıcının platform rolü superadmin mi?
+ *
+ * Oturum cookie cache'i atlanarak okunur: rolü düşürülen bir superadmin,
+ * cache süresi dolmadan superadmin sayılmamalıdır.
+ */
 export async function isSuperadmin(): Promise<boolean> {
-  const session = await getSession();
+  const session = await getFreshSession();
 
   return session?.user.role === "superadmin";
 }
 
 /** Superadmin olmayan kullanıcıyı uzaklaştırır. */
 export async function requireSuperadmin() {
-  const session = await requireSession();
+  const session = await requireFreshSession();
 
   if (session.user.role !== "superadmin") {
     redirect("/dashboard");
