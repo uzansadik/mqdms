@@ -4,6 +4,7 @@ import { createHash, timingSafeEqual } from "node:crypto";
 import { auth } from "@mqdms/auth/server";
 import { db } from "@mqdms/db";
 import { user } from "@mqdms/db/schema";
+import { env } from "@mqdms/env/server";
 import { sql } from "drizzle-orm";
 
 import type { BootstrapValues } from "./schema";
@@ -11,11 +12,11 @@ import type { BootstrapValues } from "./schema";
 const BOOTSTRAP_LOCK_ID = 723451901;
 
 export async function isBootstrapAvailable() {
-  if (process.env.SUPERADMIN_BOOTSTRAP_ENABLED !== "true") {
+  if (!env.SUPERADMIN_BOOTSTRAP_ENABLED) {
     return false;
   }
 
-  const key = process.env.SUPERADMIN_BOOTSTRAP_KEY;
+  const key = env.SUPERADMIN_BOOTSTRAP_KEY;
 
   if (!key || key.length < 32) {
     return false;
@@ -31,7 +32,7 @@ export async function isBootstrapAvailable() {
 }
 
 function verifyBootstrapKey(provided: string) {
-  const expected = process.env.SUPERADMIN_BOOTSTRAP_KEY;
+  const expected = env.SUPERADMIN_BOOTSTRAP_KEY;
 
   if (!expected || expected.length < 32) {
     return false;
@@ -45,7 +46,7 @@ function verifyBootstrapKey(provided: string) {
 }
 
 export async function createSuperadmin(input: BootstrapValues) {
-  if (process.env.SUPERADMIN_BOOTSTRAP_ENABLED !== "true") {
+  if (!env.SUPERADMIN_BOOTSTRAP_ENABLED) {
     throw new Error("Bootstrap is disabled");
   }
 

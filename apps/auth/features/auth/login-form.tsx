@@ -45,13 +45,6 @@ export function LoginForm({ next }: LoginFormProps) {
       callbackURL: next,
     });
 
-    const organizations = await authClient.organization.list();
-    if (organizations.data?.length) {
-      await authClient.organization.setActive({
-        organizationId: organizations.data[0]?.id,
-      });
-    }
-
     if (error) {
       if (error.status === 403) {
         const params = new URLSearchParams({
@@ -71,13 +64,28 @@ export function LoginForm({ next }: LoginFormProps) {
       return;
     }
 
-    router.replace(next);
+    const organizations = await authClient.organization.list();
+    if (organizations.data?.length) {
+      await authClient.organization.setActive({
+        organizationId: organizations.data[0]?.id,
+      });
+    }
+
+    /*
+     * Superadmin organizasyon üyesi olmayabilir; dashboard yerine platform
+     * paneline yönlendirilir.
+     */
+    const { data: sessionData } = await authClient.getSession({
+      fetchOptions: {
+        cache: "no-store",
+      },
+    });
+
+    const isSuperadmin = sessionData?.user?.role === "superadmin";
+
+    router.replace(isSuperadmin ? "/admin" : next);
     router.refresh();
   }
-
-  const registerParams = new URLSearchParams({
-    next,
-  });
 
   return (
     <Card>
@@ -146,13 +154,9 @@ export function LoginForm({ next }: LoginFormProps) {
       </CardContent>
 
       <CardFooter className="justify-center">
-        <div className="flex items-center gap-1 text-sm text-muted-foreground">
-          <span>{t("auth.login.noAccount")}</span>
-
-          <Button asChild variant="link" size="sm">
-            <Link href={`/register?${registerParams.toString()}`}>{t("auth.login.signUp")}</Link>
-          </Button>
-        </div>
+        <p className="text-center text-sm text-muted-foreground">
+          {t("auth.login.invitationOnly")}
+        </p>
       </CardFooter>
     </Card>
   );

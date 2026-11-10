@@ -1,4 +1,4 @@
-import "dotenv/config";
+import "./load-env";
 
 import { env } from "@mqdms/env/server";
 import { defineConfig } from "drizzle-kit";

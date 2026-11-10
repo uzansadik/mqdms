@@ -1,7 +1,8 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { authClient } from "@mqdms/auth/client";
+import { assignableRoleIds } from "@mqdms/auth/permissions";
+import { useI18n } from "@mqdms/i18n";
 import { Button } from "@mqdms/ui/components/button";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@mqdms/ui/components/field";
 import { Input } from "@mqdms/ui/components/input";
@@ -15,6 +16,7 @@ import {
 import { useRouter } from "next/navigation";
 import { Controller, useForm } from "react-hook-form";
 
+import { inviteMemberAction } from "./actions";
 import { type InviteMemberValues, inviteMemberSchema } from "./schemas";
 
 type InviteMemberFormProps = {
@@ -23,6 +25,7 @@ type InviteMemberFormProps = {
 
 export function InviteMemberForm({ organizationId }: InviteMemberFormProps) {
   const router = useRouter();
+  const { t } = useI18n();
 
   const form = useForm<InviteMemberValues>({
     resolver: zodResolver(inviteMemberSchema),
@@ -35,15 +38,15 @@ export function InviteMemberForm({ organizationId }: InviteMemberFormProps) {
   async function onSubmit(values: InviteMemberValues) {
     form.clearErrors("root");
 
-    const { error } = await authClient.organization.inviteMember({
+    const result = await inviteMemberAction({
+      organizationId,
       email: values.email,
       role: values.role,
-      organizationId,
     });
 
-    if (error) {
+    if (!result.success) {
       form.setError("root", {
-        message: error.message ?? "Unable to send invitation.",
+        message: result.error,
       });
 
       return;
@@ -65,13 +68,15 @@ export function InviteMemberForm({ organizationId }: InviteMemberFormProps) {
             name="email"
             render={({ field, fieldState }) => (
               <Field data-invalid={fieldState.invalid}>
-                <FieldLabel htmlFor={field.name}>Email</FieldLabel>
+                <FieldLabel htmlFor={field.name}>
+                  {t("organization.members.invite.email")}
+                </FieldLabel>
 
                 <Input
                   {...field}
                   aria-invalid={fieldState.invalid}
                   id={field.name}
-                  placeholder="name@example.com"
+                  placeholder={t("organization.members.invite.emailPlaceholder")}
                   type="email"
                 />
 
@@ -85,7 +90,7 @@ export function InviteMemberForm({ organizationId }: InviteMemberFormProps) {
             name="role"
             render={({ field, fieldState }) => (
               <Field data-invalid={fieldState.invalid}>
-                <FieldLabel>Role</FieldLabel>
+                <FieldLabel>{t("organization.members.invite.role")}</FieldLabel>
 
                 <Select onValueChange={field.onChange} value={field.value}>
                   <SelectTrigger aria-invalid={fieldState.invalid}>
@@ -93,9 +98,11 @@ export function InviteMemberForm({ organizationId }: InviteMemberFormProps) {
                   </SelectTrigger>
 
                   <SelectContent>
-                    <SelectItem value="member">Member</SelectItem>
-
-                    <SelectItem value="admin">Admin</SelectItem>
+                    {assignableRoleIds.map((roleId) => (
+                      <SelectItem key={roleId} value={roleId}>
+                        {t(`roles.${roleId}.label`)}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
 
@@ -106,7 +113,9 @@ export function InviteMemberForm({ organizationId }: InviteMemberFormProps) {
 
           <div className="flex items-end">
             <Button disabled={form.formState.isSubmitting} type="submit">
-              {form.formState.isSubmitting ? "Sending..." : "Invite"}
+              {form.formState.isSubmitting
+                ? t("organization.members.invite.submitting")
+                : t("organization.members.invite.submit")}
             </Button>
           </div>
         </div>

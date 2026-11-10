@@ -19,9 +19,15 @@ type UserMenuProps = {
     name: string;
     email: string;
   };
+  /**
+   * Platform (superadmin) menüsünde organizasyon bağımlı bağlantılar
+   * gösterilmez. Superadmin'in bir organizasyon üyesi olması gerekmez;
+   * `/settings/*` sayfaları kurum gerektirdiği için erişilemez.
+   */
+  variant?: "organization" | "platform";
 };
 
-export function UserMenu({ user }: UserMenuProps) {
+export function UserMenu({ user, variant = "organization" }: UserMenuProps) {
   const router = useRouter();
   const [isSigningOut, setIsSigningOut] = useState(false);
 
@@ -68,15 +74,21 @@ export function UserMenu({ user }: UserMenuProps) {
 
             <DropdownMenuSeparator />
 
-            <DropdownMenuItem onClick={() => router.push("/settings/profile")}>
+            <DropdownMenuItem
+              onClick={() =>
+                router.push(variant === "platform" ? "/admin/profile" : "/settings/profile")
+              }
+            >
               <User />
               Profile
             </DropdownMenuItem>
 
-            <DropdownMenuItem onClick={() => router.push("/settings")}>
-              <Settings />
-              Settings
-            </DropdownMenuItem>
+            {variant === "organization" && (
+              <DropdownMenuItem onClick={() => router.push("/settings")}>
+                <Settings />
+                Settings
+              </DropdownMenuItem>
+            )}
 
             <DropdownMenuSeparator />
 

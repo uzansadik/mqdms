@@ -8,6 +8,13 @@
       "when": 1787835687043,
       "tag": "0000_illegal_korg",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1794258900000,
+      "tag": "0001_member_permission",
+      "breakpoints": true
     }
   ]
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { authClient } from "@mqdms/auth/client";
+import { useI18n } from "@mqdms/i18n";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -23,6 +24,7 @@ type CancelInvitationButtonProps = {
 
 export function CancelInvitationButton({ invitationId, email }: CancelInvitationButtonProps) {
   const router = useRouter();
+  const { t } = useI18n();
   const [isPending, setIsPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -35,7 +37,7 @@ export function CancelInvitationButton({ invitationId, email }: CancelInvitation
     });
 
     if (error) {
-      setError(error.message ?? "Unable to cancel invitation.");
+      setError(error.message ?? t("organization.members.cancelError"));
 
       setIsPending(false);
       return;
@@ -49,24 +51,26 @@ export function CancelInvitationButton({ invitationId, email }: CancelInvitation
       <AlertDialog>
         <AlertDialogTrigger asChild>
           <Button disabled={isPending} size="sm" variant="outline">
-            Cancel
+            {t("organization.members.cancelInvitation")}
           </Button>
         </AlertDialogTrigger>
 
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Cancel invitation?</AlertDialogTitle>
+            <AlertDialogTitle>{t("organization.members.cancelInvitationTitle")}</AlertDialogTitle>
 
             <AlertDialogDescription>
-              The invitation sent to {email} will no longer be valid.
+              {t("organization.members.cancelInvitationDescription", { email })}
             </AlertDialogDescription>
           </AlertDialogHeader>
 
           <AlertDialogFooter>
-            <AlertDialogCancel>Keep invitation</AlertDialogCancel>
+            <AlertDialogCancel>{t("organization.members.keepInvitation")}</AlertDialogCancel>
 
             <AlertDialogAction disabled={isPending} onClick={handleCancel}>
-              {isPending ? "Cancelling..." : "Cancel invitation"}
+              {isPending
+                ? t("organization.members.cancelling")
+                : t("organization.members.cancelInvitation")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

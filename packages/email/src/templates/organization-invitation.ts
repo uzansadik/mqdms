@@ -26,6 +26,11 @@ export function organizationInvitationEmail({
             Accept invitation
           </a>
         </p>
+
+        <p>
+          If you don't have an account yet, opening this link will ask you to
+          create one before the invitation is accepted.
+        </p>
       </div>
     `,
   };

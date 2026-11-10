@@ -1,3 +1,4 @@
+import { assignableRoleIds, type RoleId } from "@mqdms/auth/permissions";
 import { z } from "zod";
 
 export const organizationSettingsSchema = z.object({
@@ -38,9 +39,36 @@ export type CreateOrganizationValues = z.infer<typeof createOrganizationSchema>;
 export const inviteMemberSchema = z.object({
   email: z.string().trim().email("Enter a valid email address."),
 
-  role: z.enum(["admin", "member"]),
+  /*
+   * Roller sabit katalogdan gelir. `owner` bilinçli olarak listede yok:
+   * ikinci bir owner üretmek kazara olmasın.
+   */
+  role: z.enum(assignableRoleIds as [RoleId, ...RoleId[]]),
 });
 
 export type InviteMemberValues = z.infer<typeof inviteMemberSchema>;
+
+/** Davet bağlantısıyla hesap açma formu. */
+export const invitationRegistrationSchema = z
+  .object({
+    name: z
+      .string()
+      .trim()
+      .min(2, "Name must be at least 2 characters.")
+      .max(100, "Name must be at most 100 characters."),
+
+    password: z
+      .string()
+      .min(8, "Password must be at least 8 characters.")
+      .max(128, "Password must be at most 128 characters."),
+
+    confirmPassword: z.string(),
+  })
+  .refine(({ password, confirmPassword }) => password === confirmPassword, {
+    message: "Passwords do not match.",
+    path: ["confirmPassword"],
+  });
+
+export type InvitationRegistrationValues = z.infer<typeof invitationRegistrationSchema>;
 
 export type OrganizationSettingsValues = z.infer<typeof organizationSettingsSchema>;

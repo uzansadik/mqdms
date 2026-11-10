@@ -2,7 +2,7 @@ import { LanguageSelect } from "@/components/language-switcher";
 import { requireSession } from "@/features/auth/session";
 import { ChangePasswordForm } from "@/features/profile/change-password-form";
 import { ProfileForm } from "@/features/profile/profile-form";
-import { SessionsSection } from "./sessions-section";
+import { SessionsSection } from "@/features/profile/sessions-section";
 
 export default async function ProfilePage() {
   const session = await requireSession();

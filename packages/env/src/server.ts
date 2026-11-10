@@ -6,8 +6,48 @@ import { z } from "zod";
 // `undefined`'a çeviriyoruz.
 const optionalUrl = z.preprocess((value) => (value === "" ? undefined : value), z.url().optional());
 
+// Boş bırakılmış bootstrap anahtarı "tanımsız" sayılır (aksi halde uygulama
+// başlarken doğrulama hatası verir).
+//
+// Uzunluk kontrolü burada yapılmaz: daha önce yayımlanan örnek dosyada 32
+// karakterden kısa bir anahtar bulunuyordu ve şema onu doğrulamaya çalışınca
+// uygulama başlamıyordu. 32 karakterlik şart zaten bootstrap servisinde
+// uygulanıyor (`isBootstrapAvailable` / `verifyBootstrapKey`); kısa bir anahtar
+// bootstrap'u etkinleştirmez, yalnızca kullanılmaz.
+const optionalSecret = z.preprocess(
+  (value) => (value === "" ? undefined : value),
+  z.string().optional(),
+);
+
+// `.env` dosyasında değişken `"true"` / `"false"` metni olarak tutulur.
+// `1` / `0` ve büyük/küçük harf varyantları da kabul edilir.
+const envBoolean = z.preprocess((value) => {
+  if (typeof value !== "string") {
+    return value;
+  }
+
+  const normalized = value.trim().toLowerCase();
+
+  // Boş değer "tanımsız" sayılır. `.env` içinde değişken tanımlı ama boş
+  // bırakılmış olabilir; bu durumda doğrulama hatası verip uygulamanın
+  // başlamasını engellemek yerine varsayılan değer uygulanır.
+  if (normalized === "") {
+    return false;
+  }
+
+  if (normalized === "true" || normalized === "1") {
+    return true;
+  }
+
+  if (normalized === "false" || normalized === "0") {
+    return false;
+  }
+
+  return value;
+}, z.boolean());
+
 const serverEnvSchema = z.object({
-  APP_ENV: z.enum(["local", "production", "test"]).default("local"),
+  APP_ENV: z.enum(["local", "staging", "production", "test"]).default("local"),
   DATABASE_URL: z
     .string()
     .min(1, "DATABASE_URL is required")
@@ -26,8 +66,13 @@ const serverEnvSchema = z.object({
   STORAGE_PUBLIC_URL: optionalUrl,
   NEXT_PUBLIC_APP_URL: z.url().min(1, "NEXT_PUBLIC_APP_URL is required"),
   REDIS_URL: z.string().min(1, "REDIS_URL is required"),
-  SUPERADMIN_BOOTSTRAP_ENABLED: z.boolean().default(true),
-  SUPERADMIN_BOOTSTRAP_KEY: z.string().min(32).optional(),
+  /*
+   * Bootstrap varsayılan olarak kapalıdır; açıkça etkinleştirilmedikçe kapalı
+   * kalır. Değişken tanımsız olduğunda `true`ya düşmek, üretimde ilk
+   * superadmin'i herkesin oluşturabileceği bir pencere açardı.
+   */
+  SUPERADMIN_BOOTSTRAP_ENABLED: envBoolean.default(false),
+  SUPERADMIN_BOOTSTRAP_KEY: optionalSecret,
 });
 
 export const env = serverEnvSchema.parse({
@@ -46,6 +91,8 @@ export const env = serverEnvSchema.parse({
   STORAGE_PUBLIC_URL: process.env.STORAGE_PUBLIC_URL,
   NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
   REDIS_URL: process.env.REDIS_URL,
+  SUPERADMIN_BOOTSTRAP_ENABLED: process.env.SUPERADMIN_BOOTSTRAP_ENABLED,
+  SUPERADMIN_BOOTSTRAP_KEY: process.env.SUPERADMIN_BOOTSTRAP_KEY,
 });
 
 export type ServerEnv = z.infer<typeof serverEnvSchema>;

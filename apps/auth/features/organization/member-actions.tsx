@@ -1,6 +1,7 @@
 "use client";
 
-import { authClient } from "@mqdms/auth/client";
+import { assignableRoleIds } from "@mqdms/auth/permissions";
+import { useI18n } from "@mqdms/i18n";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -16,12 +17,18 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@mqdms/ui/components/dropdown-menu";
 import { MoreHorizontal, ShieldCheck, UserRound, UserX } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+
+import { removeMemberAction, updateMemberRoleAction } from "./actions";
 
 type MemberActionsProps = {
   memberId: string;
@@ -32,29 +39,30 @@ type MemberActionsProps = {
 
 export function MemberActions({ memberId, memberName, organizationId, role }: MemberActionsProps) {
   const router = useRouter();
+  const { t } = useI18n();
 
   const [isPending, setIsPending] = useState(false);
   const [removeOpen, setRemoveOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const roles = role.split(",");
+  const currentRoles = role.split(",").map((item) => item.trim());
 
-  const isAdmin = roles.includes("admin");
+  const availableRoles = assignableRoleIds.filter((roleId) => !currentRoles.includes(roleId));
 
-  async function updateRole(nextRole: "admin" | "member") {
+  async function updateRole(nextRole: string) {
     setIsPending(true);
     setError(null);
 
-    const { error } = await authClient.organization.updateMemberRole({
-      memberId,
+    const result = await updateMemberRoleAction({
       organizationId,
+      memberId,
       role: nextRole,
     });
 
-    if (error) {
-      setError(error.message ?? "Unable to update member role.");
-
+    if (!result.success) {
+      setError(result.error);
       setIsPending(false);
+
       return;
     }
 
@@ -66,15 +74,15 @@ export function MemberActions({ memberId, memberName, organizationId, role }: Me
     setIsPending(true);
     setError(null);
 
-    const { error } = await authClient.organization.removeMember({
-      memberIdOrEmail: memberId,
+    const result = await removeMemberAction({
       organizationId,
+      memberId,
     });
 
-    if (error) {
-      setError(error.message ?? "Unable to remove member.");
-
+    if (!result.success) {
+      setError(result.error);
       setIsPending(false);
+
       return;
     }
 
@@ -92,21 +100,29 @@ export function MemberActions({ memberId, memberName, organizationId, role }: Me
             <Button disabled={isPending} size="icon" variant="ghost">
               <MoreHorizontal className="size-4" />
 
-              <span className="sr-only">Member actions</span>
+              <span className="sr-only">{t("organization.members.actions")}</span>
             </Button>
           </DropdownMenuTrigger>
 
           <DropdownMenuContent align="end">
-            {isAdmin ? (
-              <DropdownMenuItem onClick={() => updateRole("member")}>
-                <UserRound />
-                Make member
-              </DropdownMenuItem>
+            {availableRoles.length > 0 ? (
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger>
+                  <ShieldCheck />
+                  {t("organization.members.changeRole")}
+                </DropdownMenuSubTrigger>
+
+                <DropdownMenuSubContent>
+                  {availableRoles.map((roleId) => (
+                    <DropdownMenuItem key={roleId} onClick={() => updateRole(roleId)}>
+                      <UserRound />
+                      {t(`roles.${roleId}.label`)}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuSubContent>
+              </DropdownMenuSub>
             ) : (
-              <DropdownMenuItem onClick={() => updateRole("admin")}>
-                <ShieldCheck />
-                Make admin
-              </DropdownMenuItem>
+              <DropdownMenuLabel>{t("organization.members.allRolesAssigned")}</DropdownMenuLabel>
             )}
 
             <DropdownMenuSeparator />
@@ -116,7 +132,7 @@ export function MemberActions({ memberId, memberName, organizationId, role }: Me
               onSelect={() => setRemoveOpen(true)}
             >
               <UserX />
-              Remove member
+              {t("organization.members.remove")}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -127,18 +143,22 @@ export function MemberActions({ memberId, memberName, organizationId, role }: Me
       <AlertDialog onOpenChange={setRemoveOpen} open={removeOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Remove {memberName}?</AlertDialogTitle>
+            <AlertDialogTitle>
+              {t("organization.members.removeTitle", { name: memberName })}
+            </AlertDialogTitle>
 
             <AlertDialogDescription>
-              This member will lose access to the organization and its resources.
+              {t("organization.members.removeDescription")}
             </AlertDialogDescription>
           </AlertDialogHeader>
 
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={isPending}>{t("common.cancel")}</AlertDialogCancel>
 
             <AlertDialogAction disabled={isPending} onClick={removeMember}>
-              {isPending ? "Removing..." : "Remove member"}
+              {isPending
+                ? t("organization.members.removing")
+                : t("organization.members.removeConfirm")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
