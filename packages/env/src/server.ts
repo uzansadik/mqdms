@@ -12,7 +12,7 @@ const optionalUrl = z.preprocess((value) => (value === "" ? undefined : value), 
 // Uzunluk kontrolü burada yapılmaz: daha önce yayımlanan örnek dosyada 32
 // karakterden kısa bir anahtar bulunuyordu ve şema onu doğrulamaya çalışınca
 // uygulama başlamıyordu. 32 karakterlik şart zaten bootstrap servisinde
-// uygulanıyor (`isBootstrapAvailable` / `verifyBootstrapKey`); kısa bir anahtar
+// uygulanıyor (`getBootstrapStatus` / `verifyBootstrapKey`); kısa bir anahtar
 // bootstrap'u etkinleştirmez, yalnızca kullanılmaz.
 const optionalSecret = z.preprocess(
   (value) => (value === "" ? undefined : value),

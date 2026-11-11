@@ -19,6 +19,12 @@ x-runtime-env: &runtime-env
   STORAGE_SECRET_ACCESS_KEY: ${STORAGE_SECRET_ACCESS_KEY:?STORAGE_SECRET_ACCESS_KEY is required}
   STORAGE_ENDPOINT: ${STORAGE_ENDPOINT:-}
   STORAGE_PUBLIC_URL: ${STORAGE_PUBLIC_URL:-}
+  # Bootstrap akışı çalışma zamanında okunur (build-time değeri etkisiz):
+  # sayfa `force-dynamic` ve bu değişkenler `NEXT_PUBLIC_` önekli olmadığı
+  # için sunucuda container ortamından gelir. Varsayılan kapalı; açmak için
+  # Coolify'da iki değişkeni de tanımla.
+  SUPERADMIN_BOOTSTRAP_ENABLED: ${SUPERADMIN_BOOTSTRAP_ENABLED:-false}
+  SUPERADMIN_BOOTSTRAP_KEY: ${SUPERADMIN_BOOTSTRAP_KEY:-}
 
 services:
   postgres:

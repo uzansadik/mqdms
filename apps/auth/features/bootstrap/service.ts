@@ -11,15 +11,43 @@ import type { BootstrapValues } from "./schema";
 
 const BOOTSTRAP_LOCK_ID = 723451901;
 
-export async function isBootstrapAvailable() {
+/**
+ * Bootstrap neden kullanılamıyor?
+ *
+ * - `disabled`: env bayrağı kapalı ya da anahtar 32 karakterden kısa.
+ * - `already-initialized`: tabloda zaten `superadmin` rolüyle bir kullanıcı var.
+ *
+ * İki durum da eskiden aynı 404'e dönüyordu; ayrım, "neden çalışmıyor"
+ * sorusunun cevabını operatöre göstermek için yapıldı.
+ */
+export type BootstrapUnavailableReason = "disabled" | "already-initialized";
+
+export type BootstrapStatus =
+  | { available: true }
+  | { available: false; reason: BootstrapUnavailableReason };
+
+/**
+ * Formda girilen bootstrap anahtarı hatalı.
+ *
+ * Bu, kullanıcının kendi girdisine dönen bir hata olduğu için sunucu
+ * hata mesajlarından ayrı tutulur; iç hata detayları sızdırılmaz.
+ */
+export class InvalidBootstrapKeyError extends Error {
+  constructor() {
+    super("Invalid bootstrap key");
+    this.name = "InvalidBootstrapKeyError";
+  }
+}
+
+export async function getBootstrapStatus(): Promise<BootstrapStatus> {
   if (!env.SUPERADMIN_BOOTSTRAP_ENABLED) {
-    return false;
+    return { available: false, reason: "disabled" };
   }
 
   const key = env.SUPERADMIN_BOOTSTRAP_KEY;
 
   if (!key || key.length < 32) {
-    return false;
+    return { available: false, reason: "disabled" };
   }
 
   const existingUsers = await db
@@ -28,7 +56,11 @@ export async function isBootstrapAvailable() {
     .where(sql`${user.role} = 'superadmin'`)
     .limit(1);
 
-  return existingUsers.length === 0;
+  if (existingUsers.length > 0) {
+    return { available: false, reason: "already-initialized" };
+  }
+
+  return { available: true };
 }
 
 function verifyBootstrapKey(provided: string) {
@@ -51,7 +83,7 @@ export async function createSuperadmin(input: BootstrapValues) {
   }
 
   if (!verifyBootstrapKey(input.bootstrapKey)) {
-    throw new Error("Invalid bootstrap key");
+    throw new InvalidBootstrapKeyError();
   }
 
   // Requires at least two available database

@@ -1,7 +1,7 @@
 "use server";
 
 import { bootstrapSchema } from "./schema";
-import { createSuperadmin, isBootstrapAvailable } from "./service";
+import { createSuperadmin, getBootstrapStatus, InvalidBootstrapKeyError } from "./service";
 
 type BootstrapResult = { success: true } | { success: false; error: string };
 
@@ -16,17 +16,29 @@ export async function bootstrapSuperadminAction(input: unknown): Promise<Bootstr
   }
 
   try {
-    if (!(await isBootstrapAvailable())) {
+    const status = await getBootstrapStatus();
+
+    if (!status.available) {
       return {
         success: false,
-        error: "Bootstrap is unavailable",
+        error:
+          status.reason === "already-initialized"
+            ? "A superadmin account already exists"
+            : "Bootstrap is disabled on this server",
       };
     }
 
     await createSuperadmin(parsed.data);
 
     return { success: true };
-  } catch {
+  } catch (error) {
+    if (error instanceof InvalidBootstrapKeyError) {
+      return {
+        success: false,
+        error: "Invalid bootstrap key",
+      };
+    }
+
     // Do not expose database errors, internal
     // configuration or bootstrap secrets.
     return {

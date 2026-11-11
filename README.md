@@ -338,6 +338,11 @@ STORAGE_ENDPOINT=
 STORAGE_PUBLIC_URL=
 ```
 
+`SUPERADMIN_BOOTSTRAP_ENABLED` and `SUPERADMIN_BOOTSTRAP_KEY` are only needed
+while the first superadmin is created — see
+[Creating the first superadmin](#creating-the-first-superadmin). They are read
+at runtime, so the GitHub build secrets are irrelevant for them.
+
 `docker-compose.yml` overrides `DATABASE_URL`, `REDIS_URL` and `QUEUE_PREFIX`
 with the in-network service names, so those three are not read from the host
 `.env`. `NEXT_PUBLIC_APP_URL` and `BETTER_AUTH_URL` fall back to
@@ -413,6 +418,43 @@ Next.js-specific authentication helpers belong in:
 ```text
 apps/auth/features/auth
 ```
+
+## Creating the first superadmin
+
+The bootstrap flow is disabled by default. It is only enabled by two runtime
+environment variables:
+
+```text
+SUPERADMIN_BOOTSTRAP_ENABLED=true
+SUPERADMIN_BOOTSTRAP_KEY=<openssl rand -base64 32>
+```
+
+Both are read at **runtime**, not at build time: they are not `NEXT_PUBLIC_`
+prefixed, so the auth container reads them from its own environment. Adding
+them to the GitHub build secrets has no effect — and the key should not be
+passed as a Docker build argument, because build arguments end up in the
+image layers and in the GitHub Actions build cache.
+
+Where they have to be defined depends on how the stack is deployed:
+
+* `docker-compose.yml` reads them from the host `.env` (`env_file: .env`).
+* `docker-compose.coolify.yml` lists every variable explicitly, so they have
+  to be added to the Coolify stack environment (or to the host `.env` that
+  Compose interpolates).
+
+The flow itself:
+
+1. Enable both variables and restart (or redeploy) the `auth` container.
+2. Open `/bootstrap-superadmin` and submit the bootstrap key together with the
+   account details.
+3. Verify the email address, then sign in.
+4. Set `SUPERADMIN_BOOTSTRAP_ENABLED=false` again.
+
+The page closes itself once a user with the `superadmin` role exists, and the
+whole flow is refused for every other role — an existing regular user does not
+block it. If the page reports that bootstrap is unavailable, the reason is
+either that the variables above are missing or that a superadmin already
+exists.
 
 ---
 
