@@ -162,18 +162,23 @@ export const oauthProviderOptions: OAuthOptions<Scope[]> = {
       return claims;
     }
 
-    claims[OAUTH_ORGANIZATION_CLAIM] = referenceId;
-
-    if (!scopes.includes(OAUTH_PERMISSIONS_SCOPE)) {
-      return claims;
-    }
-
+    /*
+     * Organizasyon claim'i yalnızca kullanıcının **hâlâ üyesi olduğu**
+     * organizasyon için yayınlanır. Üyelik onaydan sonra sona ermişse token,
+     * kullanıcının artık üyesi olmadığı bir organizasyonu gösteriyor olur.
+     */
     const published = await getPublishedAuthorization({
       userId: user.id,
       organizationId: referenceId,
     });
 
     if (!published) {
+      return claims;
+    }
+
+    claims[OAUTH_ORGANIZATION_CLAIM] = referenceId;
+
+    if (!scopes.includes(OAUTH_PERMISSIONS_SCOPE)) {
       return claims;
     }
 
