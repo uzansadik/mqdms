@@ -14,7 +14,8 @@
       "!**/dist",
       "!**/build",
       "!**/.turbo",
-      "!**/coverage"
+      "!**/coverage",
+      "!packages/db/drizzle/meta"
     ]
   },
   "formatter": {
