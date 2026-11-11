@@ -82,10 +82,21 @@ export default async function Page({ searchParams }: PageProps) {
   const selectedOrganizationId = cookieStore.get(OAUTH_ORGANIZATION_COOKIE)?.value;
 
   const memberships = await getMemberships(session.user.id);
-  const organizationId = resolveAuthorizationOrganization({
-    memberships,
-    organizationId: selectedOrganizationId ?? session.session.activeOrganizationId ?? undefined,
-  });
+
+  /*
+   * Akışta seçilen organizasyon önceliklidir; ancak cookie artık geçerli
+   * bir üyeliği göstermiyorsa (kullanıcı organizasyondan ayrılmış olabilir)
+   * oturumun aktif organizasyonuna düşülür.
+   */
+  const organizationId =
+    resolveAuthorizationOrganization({
+      memberships,
+      organizationId: selectedOrganizationId,
+    }) ??
+    resolveAuthorizationOrganization({
+      memberships,
+      organizationId: session.session.activeOrganizationId ?? undefined,
+    });
 
   /*
    * Seçim, oturumun aktif organizasyonuna sabitlenir: onay anında

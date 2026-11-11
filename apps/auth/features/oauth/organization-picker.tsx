@@ -70,7 +70,12 @@ export function OrganizationPicker({ organizations }: { organizations: Organizat
        * organizasyonu tüm sekmelerde paylaşıldığı için onay ekranı yanlış
        * organizasyonu gösterebilirdi.
        */
-      await rememberOAuthOrganizationAction(organizationId);
+      const remembered = await rememberOAuthOrganizationAction(organizationId);
+
+      if (!remembered.success) {
+        setError(t("oauth.organizations.error"));
+        return;
+      }
 
       /*
        * Plugin, oturum çerezi set edilen yanıtlarda OAuth akışını kendisi

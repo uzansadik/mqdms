@@ -133,9 +133,12 @@ export function buildAuthorizationUrl(path: string, searchParams: URLSearchParam
       continue;
     }
 
-    const value = searchParams.get(name);
-
-    if (value !== null) {
+    /*
+     * Tekrar eden parametrelerin tümü korunur: authorize isteği birden
+     * fazla `resource` ile gelebilir ve yalnızca ilki aktarılırsa akış
+     * eksik resource'larla yeniden başlatılır.
+     */
+    for (const value of searchParams.getAll(name)) {
       params.append(name, value);
     }
   }
