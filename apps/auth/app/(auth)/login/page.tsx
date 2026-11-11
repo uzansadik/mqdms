@@ -1,7 +1,11 @@
 import { LoginForm } from "@/features/auth/login-form";
 import { redirectIfAuthenticated } from "@/features/auth/session";
 import { getSafeNextPath } from "@/features/auth/utils";
-import { isOAuthAuthorizationRequest } from "@/features/oauth/query";
+import {
+  buildAuthorizationUrl,
+  isOAuthAuthorizationRequest,
+  toSearchParams,
+} from "@/features/oauth/query";
 
 type PageProps = {
   searchParams: Promise<{
@@ -24,5 +28,14 @@ export default async function Page({ searchParams }: PageProps) {
     await redirectIfAuthenticated();
   }
 
-  return <LoginForm next={getSafeNextPath(params.next)} isOAuthFlow={isOAuthFlow} />;
+  /*
+   * OAuth akışında "nereye döneceğimiz" bilgisi authorize isteğinin kendisidir:
+   * e-posta doğrulaması gerektiğinde kullanıcı doğrulamadan sonra bu adrese
+   * geri döner ve akış kaldığı yerden devam eder.
+   */
+  const next = isOAuthFlow
+    ? buildAuthorizationUrl("/api/auth/oauth2/authorize", toSearchParams(params))
+    : getSafeNextPath(params.next);
+
+  return <LoginForm isOAuthFlow={isOAuthFlow} next={next} />;
 }

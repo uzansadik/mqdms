@@ -1,10 +1,19 @@
 import { verifyOAuthQueryParams } from "@better-auth/oauth-provider";
+import { getMemberships, resolveAuthorizationOrganization } from "@mqdms/auth/permissions/publish";
 import { auth } from "@mqdms/auth/server";
 import { Card, CardDescription, CardHeader, CardTitle } from "@mqdms/ui/components/card";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { getSession } from "@/features/auth/session";
 import { ConsentForm } from "@/features/oauth/consent-form";
-import { buildSignedQuery, firstValue, toSearchParams } from "@/features/oauth/query";
+import {
+  buildSignedQuery,
+  firstValue,
+  OAUTH_ORGANIZATION_COOKIE,
+  parseRequestedClaims,
+  toSearchParams,
+} from "@/features/oauth/query";
+import { getOrganizationSummary } from "@/features/oauth/server";
 
 export const dynamic = "force-dynamic";
 
@@ -15,10 +24,10 @@ type PageProps = {
 /**
  * OAuth akışındaki onay ekranı.
  *
- * Ekranda gösterilen uygulama adı ve izinler, imzalı authorize sorgusundan
- * gelir. Sorgun imzası doğrulanmazsa onay ekranı gösterilmez: aksi halde
- * saldırgan kendi istediği bir uygulama adını gösterip başka bir uygulamayı
- * yetkilendirebilirdi.
+ * Ekranda gösterilen uygulama adı, istenen izinler ve organizasyon imzalı
+ * authorize sorgusundan gelir. Sorgun imzası doğrulanmazsa onay ekranı
+ * gösterilmez: aksi halde saldırgan kendi istediği bir uygulama adını
+ * gösterip başka bir uygulamayı yetkilendirebilirdi.
  */
 export default async function Page({ searchParams }: PageProps) {
   const params = await searchParams;
@@ -52,9 +61,45 @@ export default async function Page({ searchParams }: PageProps) {
     redirect("/login");
   }
 
+  const requestHeaders = await headers();
+
+  /*
+   * `getOAuthClientPublic` oturum middleware'i kullanır; istek başlıkları
+   * iletilmediğinde kullanıcı doğrulanamaz.
+   */
   const client = await auth.api.getOAuthClientPublic({
+    headers: requestHeaders,
     query: { client_id: clientId },
   });
+
+  /*
+   * Organizasyon bağlamı akışa bağlıdır: seçim ekranında seçilen
+   * organizasyon cookie'de tutulur. Cookie yoksa oturumun aktif
+   * organizasyonu kullanılır, ancak her ikisi de güncel bir üyeliği
+   * göstermelidir.
+   */
+  const cookieStore = await cookies();
+  const selectedOrganizationId = cookieStore.get(OAUTH_ORGANIZATION_COOKIE)?.value;
+
+  const memberships = await getMemberships(session.user.id);
+  const organizationId = resolveAuthorizationOrganization({
+    memberships,
+    organizationId: selectedOrganizationId ?? session.session.activeOrganizationId ?? undefined,
+  });
+
+  /*
+   * Seçim, oturumun aktif organizasyonuna sabitlenir: onay anında
+   * `referenceId` oturumdan okunduğu için başka bir sekmede organizasyon
+   * değiştirilmiş olsa bile token doğru organizasyonu gösterir.
+   */
+  if (organizationId && organizationId !== session.session.activeOrganizationId) {
+    await auth.api.setActiveOrganization({
+      headers: requestHeaders,
+      body: { organizationId },
+    });
+  }
+
+  const organization = organizationId ? await getOrganizationSummary(organizationId) : null;
 
   const redirectUri = firstValue(params.redirect_uri);
   let redirectHost = "";
@@ -70,8 +115,14 @@ export default async function Page({ searchParams }: PageProps) {
 
   return (
     <ConsentForm
+      claims={parseRequestedClaims(firstValue(params.claims))}
       clientName={client.client_name ?? clientId}
+      organizationName={organization?.name ?? null}
       redirectHost={redirectHost}
+      roles={memberships
+        .filter((membership) => membership.organizationId === organizationId)
+        .flatMap((membership) => membership.role.split(",").map((role) => role.trim()))
+        .filter(Boolean)}
       scopes={scopes}
     />
   );

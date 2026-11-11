@@ -101,6 +101,10 @@ export function OAuthClientsSection({ clients }: { clients: OAuthClientSummary[]
 
       toast.success(t("admin.oauthClients.deleted"));
       router.refresh();
+    } catch (error) {
+      console.error("Failed to delete the OAuth client:", error);
+
+      toast.error(t("admin.oauthClients.deleteError"));
     } finally {
       setDeletingId(null);
     }

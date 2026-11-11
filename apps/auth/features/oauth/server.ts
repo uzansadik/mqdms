@@ -1,5 +1,5 @@
 import { db } from "@mqdms/db";
-import { oauthClient, oauthClientResource, oauthResource } from "@mqdms/db/schema";
+import { oauthClient, oauthClientResource, oauthResource, organization } from "@mqdms/db/schema";
 import { desc, eq } from "drizzle-orm";
 
 export type OAuthClientSummary = {
@@ -88,4 +88,17 @@ export async function oauthResourceExists(identifier: string): Promise<boolean> 
     .limit(1);
 
   return rows.length > 0;
+}
+
+/** Onay ekranında gösterilecek organizasyon. */
+export async function getOrganizationSummary(
+  organizationId: string,
+): Promise<{ id: string; name: string } | null> {
+  const rows = await db
+    .select({ id: organization.id, name: organization.name })
+    .from(organization)
+    .where(eq(organization.id, organizationId))
+    .limit(1);
+
+  return rows[0] ?? null;
 }

@@ -76,3 +76,78 @@ export function firstValue(value: string | string[] | undefined): string | undef
 
   return value;
 }
+
+/**
+ * Yetkilendirme isteğinde istenen UserInfo/ID token claim'leri.
+ *
+ * İstek `claims={"userinfo":{"email":null}}` biçiminde gelir. Onay ekranında
+ * gösterilmezse kullanıcı, kapsam listesinde görünmeyen bir bilgiyi
+ * (örneğin e-posta adresini) sessizce paylaşmış olur.
+ */
+export function parseRequestedClaims(value: string | undefined): string[] {
+  if (!value) {
+    return [];
+  }
+
+  let parsed: unknown;
+
+  try {
+    parsed = JSON.parse(value);
+  } catch {
+    return [];
+  }
+
+  if (!parsed || typeof parsed !== "object") {
+    return [];
+  }
+
+  const names = new Set<string>();
+
+  for (const section of ["userinfo", "id_token"]) {
+    const group = (parsed as Record<string, unknown>)[section];
+
+    if (group && typeof group === "object") {
+      for (const name of Object.keys(group)) {
+        names.add(name);
+      }
+    }
+  }
+
+  return [...names];
+}
+
+/**
+ * İmzalı authorize isteğinden yetkilendirme adresini üretir.
+ *
+ * Akış, e-posta doğrulaması gerektiğinde kullanıcıyı `/verify-email`
+ * ekranına yönlendirir. Doğrulama sonrasında akışın devam etmesi için
+ * authorize isteği yeniden gönderilmelidir; imzalı parametreler bu adresin
+ * içinde taşınır.
+ */
+export function buildAuthorizationUrl(path: string, searchParams: URLSearchParams): string {
+  const signedNames = new Set(searchParams.getAll("ba_param"));
+  const params = new URLSearchParams();
+
+  for (const name of signedNames) {
+    if (name === "sig" || name === "exp" || name === "ba_iat" || name === "ba_param") {
+      continue;
+    }
+
+    const value = searchParams.get(name);
+
+    if (value !== null) {
+      params.append(name, value);
+    }
+  }
+
+  return params.size > 0 ? `${path}?${params.toString()}` : path;
+}
+
+/**
+ * Yetkilendirme akışında seçilen organizasyonu taşıyan cookie.
+ *
+ * Oturumun aktif organizasyonu tüm sekmelerde paylaşılır; akışa özel bu
+ * cookie, onay ekranında "hangi organizasyon için onay veriliyor" sorusunun
+ * cevabını akışa bağlı tutar.
+ */
+export const OAUTH_ORGANIZATION_COOKIE = "mqdms_oauth_org";

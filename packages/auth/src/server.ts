@@ -179,9 +179,15 @@ export const auth = betterAuth({
      * JWT plugin'i OAuth provider'ın imzalama katmanıdır: access/id token'ları
      * bu plugin'in anahtarlarıyla imzalanır ve `/jwks` ucu tüketen
      * uygulamaların doğrulaması için yayınlanır.
+     *
+     * `issuer` bilgisi keşif metadata'sında ve token'ların `iss` claim'inde
+     * kullanılır; `OAUTH_ISSUER` tanımlıysa o, değilse auth adresi kullanılır.
      */
     jwt({
       disableSettingJwtHeader: true,
+      jwt: {
+        issuer: env.OAUTH_ISSUER ?? env.BETTER_AUTH_URL,
+      },
     }),
 
     /*

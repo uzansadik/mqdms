@@ -103,6 +103,36 @@ export function getEffectivePermissionList({
 }
 
 /**
+ * Yetkilendirme için etkin organizasyon.
+ *
+ * Aktif organizasyon (oturumda yazan) yalnızca kullanıcının **üye olduğu**
+ * organizasyonsa kullanılır: üyelik sona ermiş bir organizasyon adı
+ * yayınlanmamalıdır. Aktif organizasyon geçersizse ve kullanıcının tek
+ * üyeliği varsa o üyelik kullanılır; birden fazla üyelik varsa seçim
+ * gerekir (`undefined`).
+ */
+export function resolveAuthorizationOrganization({
+  memberships,
+  organizationId,
+}: {
+  memberships: Membership[];
+  organizationId?: string;
+}): string | undefined {
+  if (memberships.length === 0) {
+    return undefined;
+  }
+
+  if (
+    organizationId &&
+    memberships.some((membership) => membership.organizationId === organizationId)
+  ) {
+    return organizationId;
+  }
+
+  return memberships.length === 1 ? memberships[0]?.organizationId : undefined;
+}
+
+/**
  * Yayınlanacak yetki bilgisi.
  *
  * Kullanıcının verilen organizasyonda üyeliği yoksa `null` döner; bu durumda

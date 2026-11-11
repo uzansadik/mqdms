@@ -2,6 +2,7 @@
 
 import { authClient } from "@mqdms/auth/client";
 import { useI18n } from "@mqdms/i18n";
+import { Badge } from "@mqdms/ui/components/badge";
 import { Button } from "@mqdms/ui/components/button";
 import {
   Card,
@@ -36,12 +37,18 @@ function getRedirectUrl(payload: unknown): string | undefined {
  * doğrulamadan kodu üretmez.
  */
 export function ConsentForm({
+  claims,
   clientName,
+  organizationName,
   redirectHost,
+  roles,
   scopes,
 }: {
+  claims: string[];
   clientName: string;
+  organizationName: string | null;
   redirectHost: string;
+  roles: string[];
   scopes: string[];
 }) {
   const { t } = useI18n();
@@ -98,6 +105,23 @@ export function ConsentForm({
             {t("oauth.consent.redirectHost", { host: redirectHost })}
           </p>
 
+          {organizationName && (
+            <div className="space-y-1">
+              <p className="text-sm font-medium">{t("oauth.consent.organization")}</p>
+              <p className="text-sm text-muted-foreground">{organizationName}</p>
+
+              {roles.length > 0 && (
+                <div className="flex flex-wrap gap-1 pt-1">
+                  {roles.map((role) => (
+                    <Badge key={role} variant="secondary">
+                      {role}
+                    </Badge>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
           {scopes.length > 0 && (
             <div className="space-y-1">
               <p className="text-sm font-medium">{t("oauth.consent.scopes")}</p>
@@ -108,15 +132,26 @@ export function ConsentForm({
               </ul>
             </div>
           )}
+
+          {claims.length > 0 && (
+            <div className="space-y-1">
+              <p className="text-sm font-medium">{t("oauth.consent.claims")}</p>
+              <ul className="space-y-1 text-sm text-muted-foreground">
+                {claims.map((claim) => (
+                  <li key={claim}>{claim}</li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
       </CardContent>
 
       <CardFooter className="gap-2">
         <Button
           className="flex-1"
-          variant="outline"
           disabled={pending !== null}
           onClick={() => decide(false)}
+          variant="outline"
         >
           {t("oauth.consent.deny")}
         </Button>

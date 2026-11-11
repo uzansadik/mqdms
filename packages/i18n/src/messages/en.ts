@@ -235,6 +235,8 @@ export const en = {
   "oauth.consent.title": "Authorize application",
   "oauth.consent.description": "{name} wants to access your account.",
   "oauth.consent.scopes": "Requested permissions",
+  "oauth.consent.claims": "Requested personal information",
+  "oauth.consent.organization": "Organization",
   "oauth.consent.accept": "Allow",
   "oauth.consent.deny": "Deny",
   "oauth.consent.working": "Please wait...",
@@ -270,6 +272,7 @@ export const en = {
   "admin.oauthClients.empty": "No application has been registered yet.",
   "admin.oauthClients.delete": "Delete",
   "admin.oauthClients.deleted": "Application deleted.",
+  "admin.oauthClients.deleteError": "The application could not be deleted.",
 } as const;
 
 export type MessageKey = keyof typeof en;

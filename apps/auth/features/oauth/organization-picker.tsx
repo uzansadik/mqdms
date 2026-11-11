@@ -12,6 +12,8 @@ import {
 } from "@mqdms/ui/components/card";
 import { useState } from "react";
 
+import { rememberOAuthOrganizationAction } from "./actions";
+
 type OrganizationOption = {
   id: string;
   name: string;
@@ -62,6 +64,13 @@ export function OrganizationPicker({ organizations }: { organizations: Organizat
         setError(t("oauth.organizations.error"));
         return;
       }
+
+      /*
+       * Seçim ayrıca akışa bağlı bir cookie'ye yazılır: oturumun aktif
+       * organizasyonu tüm sekmelerde paylaşıldığı için onay ekranı yanlış
+       * organizasyonu gösterebilirdi.
+       */
+      await rememberOAuthOrganizationAction(organizationId);
 
       /*
        * Plugin, oturum çerezi set edilen yanıtlarda OAuth akışını kendisi

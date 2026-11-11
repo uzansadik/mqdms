@@ -1,9 +1,11 @@
 "use server";
 
+import { getMemberships } from "@mqdms/auth/permissions/publish";
 import { auth } from "@mqdms/auth/server";
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { getFreshSession } from "@/features/auth/session";
 
+import { OAUTH_ORGANIZATION_COOKIE } from "./query";
 import { createOAuthClientSchema, splitLines } from "./schemas";
 import { oauthResourceExists } from "./server";
 
@@ -12,6 +14,8 @@ type CreateOAuthClientResult =
   | { success: false; error: string };
 
 type DeleteOAuthClientResult = { success: true } | { success: false; error: string };
+
+type RememberOrganizationResult = { success: true } | { success: false };
 
 function isValidUrl(value: string): boolean {
   try {
@@ -82,6 +86,12 @@ export async function createOAuthClientAction(input: unknown): Promise<CreateOAu
       body: {
         client_name: parsed.data.clientName,
         redirect_uris: redirectUris,
+        /*
+         * `offline_access` scope'u isteyen client'lar refresh token alabilsin:
+         * refresh token üretimi `refresh_token` grant'ına bağlıdır ve grant
+         * verilmezse plugin yalnızca `authorization_code` kaydeder.
+         */
+        grant_types: ["authorization_code", "refresh_token"],
         ...(resources.length > 0 ? { resources } : {}),
         ...(parsed.data.scope ? { scope: parsed.data.scope } : {}),
         ...(parsed.data.publicClient ? { token_endpoint_auth_method: "none" } : {}),
@@ -128,4 +138,38 @@ export async function deleteOAuthClientAction(clientId: string): Promise<DeleteO
 
     return { success: false, error: message };
   }
+}
+
+/**
+ * Yetkilendirme akışında seçilen organizasyonu akışa bağlı olarak hatırlar.
+ *
+ * Oturumun aktif organizasyonu tüm sekmelerde paylaşılır; başka bir sekmede
+ * organizasyon değiştirilirse onay ekranı yanlış organizasyonu gösterip
+ * onaylayabilirdi. Bu cookie seçimi akışın kendisine bağlar.
+ */
+export async function rememberOAuthOrganizationAction(
+  organizationId: string,
+): Promise<RememberOrganizationResult> {
+  const session = await getFreshSession();
+
+  if (!session) {
+    return { success: false };
+  }
+
+  const memberships = await getMemberships(session.user.id);
+  const isMember = memberships.some((membership) => membership.organizationId === organizationId);
+
+  if (!isMember) {
+    return { success: false };
+  }
+
+  const cookieStore = await cookies();
+
+  cookieStore.set(OAUTH_ORGANIZATION_COOKIE, organizationId, {
+    path: "/",
+    maxAge: 60 * 10,
+    sameSite: "lax",
+  });
+
+  return { success: true };
 }

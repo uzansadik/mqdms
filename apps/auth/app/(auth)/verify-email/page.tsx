@@ -1,4 +1,4 @@
-// app/(auth)/verify-email/verify-email.tsx
+// app/(auth)/verify-email/page.tsx
 
 import { redirectIfAuthenticated } from "@/features/auth/session";
 import { getSafeNextPath } from "@/features/auth/utils";

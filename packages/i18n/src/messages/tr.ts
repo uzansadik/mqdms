@@ -237,6 +237,8 @@ export const tr = {
   "oauth.consent.title": "Uygulamaya yetki ver",
   "oauth.consent.description": "{name} hesabınıza erişmek istiyor.",
   "oauth.consent.scopes": "İstenen izinler",
+  "oauth.consent.claims": "İstenen kişisel bilgiler",
+  "oauth.consent.organization": "Organizasyon",
   "oauth.consent.accept": "İzin ver",
   "oauth.consent.deny": "Reddet",
   "oauth.consent.working": "Lütfen bekleyin...",
@@ -272,4 +274,5 @@ export const tr = {
   "admin.oauthClients.empty": "Henüz kayıtlı uygulama yok.",
   "admin.oauthClients.delete": "Sil",
   "admin.oauthClients.deleted": "Uygulama silindi.",
+  "admin.oauthClients.deleteError": "Uygulama silinemedi.",
 } satisfies Record<MessageKey, string>;

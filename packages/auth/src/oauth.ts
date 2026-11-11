@@ -1,7 +1,11 @@
 import type { OAuthOptions, Scope } from "@better-auth/oauth-provider";
 import { env } from "@mqdms/env/server";
 
-import { getMemberships, getPublishedAuthorization } from "./permissions/publish";
+import {
+  getMemberships,
+  getPublishedAuthorization,
+  resolveAuthorizationOrganization,
+} from "./permissions/publish";
 
 /**
  * Merkezi kimlik yöneticisi (OAuth provider) ayarları.
@@ -103,12 +107,12 @@ export const oauthProviderOptions: OAuthOptions<Scope[]> = {
         return getPlatformRole(user) !== "superadmin";
       }
 
-      const activeOrganizationId = getActiveOrganizationId(session);
-      const isValid = memberships.some(
-        (membership) => membership.organizationId === activeOrganizationId,
-      );
+      const resolved = resolveAuthorizationOrganization({
+        memberships,
+        organizationId: getActiveOrganizationId(session),
+      });
 
-      if (isValid) {
+      if (resolved) {
         return false;
       }
 
@@ -125,15 +129,17 @@ export const oauthProviderOptions: OAuthOptions<Scope[]> = {
     },
 
     consentReferenceId: async ({ user, session }) => {
-      const activeOrganizationId = getActiveOrganizationId(session);
-
-      if (activeOrganizationId) {
-        return activeOrganizationId;
-      }
-
       const memberships = await getMemberships(user.id);
 
-      return memberships.length === 1 ? memberships[0]?.organizationId : undefined;
+      /*
+       * Oturumdaki aktif organizasyon yalnızca kullanıcının hâlâ üyesi
+       * olduğu organizasyon ise kullanılır. Üyelik sona ermiş bir
+       * organizasyon yayınlanırsa token yanlış organizasyonu gösterir.
+       */
+      return resolveAuthorizationOrganization({
+        memberships,
+        organizationId: getActiveOrganizationId(session),
+      });
     },
   },
 
@@ -199,6 +205,15 @@ export const oauthProviderOptions: OAuthOptions<Scope[]> = {
   clientPrivileges: async ({ user }) => {
     return getPlatformRole(user) === "superadmin";
   },
+
+  /*
+   * Tüm client kayıtları platforma aittir.
+   *
+   * Bu değer tanımlanmazsa plugin client'ı kaydeden kullanıcıya bağlar ve
+   * başka bir superadmin client'ı silemez (client.userId eşleşmesi zorunlu
+   * olur). Platform referansıyla her superadmin tüm client'ları yönetebilir.
+   */
+  clientReference: async () => "platform",
 
   /** Resource (korunan API) yönetimi de yalnızca superadmin'ine açık. */
   resourcePrivileges: async ({ user }) => {

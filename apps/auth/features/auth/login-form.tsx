@@ -51,10 +51,12 @@ export function LoginForm({ next, isOAuthFlow = false }: LoginFormProps) {
       email: values.email,
       password: values.password,
       /*
-       * OAuth akışında `callbackURL` verilmez: sunucu akışın bir sonraki
-       * adımını (organizasyon seçimi ya da onay ekranı) döner.
+       * OAuth akışında `callbackURL` authorize adresidir: e-posta doğrulaması
+       * gerektiğinde gönderilen doğrulama e-postası bu adrese döner ve akış
+       * kaldığı yerden devam eder. Başarılı girişte ise sunucu akışın bir
+       * sonraki adımını (organizasyon seçimi ya da onay ekranı) döner.
        */
-      ...(isOAuthFlow ? {} : { callbackURL: next }),
+      callbackURL: next,
     });
 
     if (error) {
