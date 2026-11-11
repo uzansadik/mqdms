@@ -458,6 +458,87 @@ exists.
 
 ---
 
+# OAuth provider (central identity provider)
+
+The auth app is the identity provider of the platform. Other applications
+(e.g. `app.example.com`) delegate authentication to it and receive the user's
+roles and permissions as token claims.
+
+It is built on `@better-auth/oauth-provider` (OAuth 2.1 + OpenID Connect) with
+the `jwt` plugin for signing.
+
+## Endpoints
+
+All provider endpoints live under the Better Auth base path (`/api/auth`):
+
+| Endpoint | Purpose |
+| --- | --- |
+| `GET /api/auth/oauth2/authorize` | Authorization request; redirects to the login page when there is no session |
+| `POST /api/auth/oauth2/token` | Code (and refresh token) exchange; PKCE `S256` is required |
+| `GET /api/auth/oauth2/userinfo` | Standard claims plus the published role/permission claims |
+| `POST /api/auth/oauth2/consent` | Approval decision |
+| `POST /api/auth/oauth2/continue` | Resumes the flow after the organization selection |
+| `GET /api/auth/jwks` | Public signing keys for local token verification |
+
+The discovery documents are mounted by hand, because the plugin only provides
+the handlers:
+
+* `GET /.well-known/oauth-authorization-server`
+* `GET /.well-known/openid-configuration`
+
+## Flow
+
+1. The application redirects the user to `/api/auth/oauth2/authorize` with
+   `client_id`, `redirect_uri`, `scope`, `state` and a PKCE `code_challenge`.
+2. Without a session the provider redirects to `/login` with the signed
+   authorization request. The user signs in; the flow continues.
+3. If the user belongs to more than one organization, `/oauth/organizations`
+   asks which organization the token belongs to.
+4. `/oauth/consent` shows the requested scopes; the user approves or denies.
+5. The provider redirects back to the application's `redirect_uri` with
+   `code`, `state` and `iss`.
+6. The application exchanges the code at `/api/auth/oauth2/token` and receives
+   an access token, an ID token and (with `offline_access`) a refresh token.
+
+## Published claims
+
+| Claim | Content |
+| --- | --- |
+| `https://auth.mqdms.com/organization` | Id of the selected organization |
+| `https://auth.mqdms.com/roles` | Role ids of the membership (`owner`, `quality-engineer`, …) |
+| `https://auth.mqdms.com/permissions` | Effective permissions (`fmea:read`, `fmea:submit`, …) |
+| `https://auth.mqdms.com/platform-role` | Platform role (`user` / `superadmin`) |
+
+Permissions are computed from the same RBAC model the app uses internally
+(`packages/auth/src/permissions`): an explicit `deny` grant wins over an
+explicit `allow` grant, and the fixed role catalog is the fallback. The role
+and permission claims are only added when the client requested the
+`permissions:read` scope.
+
+## Registering an application
+
+Superadmins register applications in the admin panel under
+`/admin/oauth-clients`. The panel writes the client id and the client secret;
+the secret is shown only once.
+
+Give the application a **resource** (the URI of its protected API). With a
+resource the access token becomes a JWT whose audience is that resource, so
+the application can verify it locally against `/api/auth/jwks` instead of
+calling the introspection endpoint.
+
+## Configuration
+
+| Variable | Purpose |
+| --- | --- |
+| `OAUTH_TRUSTED_ORIGINS` | Comma separated origins of the consuming applications; Better Auth validates `callbackURL` redirects against this list |
+| `OAUTH_PAIRWISE_SECRET` | Secret for pairwise subject ids (at least 32 characters) |
+| `OAUTH_ISSUER` | Issuer URI; defaults to `BETTER_AUTH_URL` |
+
+`NEXT_PUBLIC_APP_URL` must point at the auth app itself (`auth.mqdms.com`):
+the client bundle talks to `/api/auth/*` on that origin.
+
+---
+
 # Organizations
 
 Organizations are the primary application workspace / tenant abstraction.

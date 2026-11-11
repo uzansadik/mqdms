@@ -73,6 +73,22 @@ const serverEnvSchema = z.object({
    */
   SUPERADMIN_BOOTSTRAP_ENABLED: envBoolean.default(false),
   SUPERADMIN_BOOTSTRAP_KEY: optionalSecret,
+
+  /*
+   * OAuth provider (merkezi kimlik yöneticisi) ayarları.
+   *
+   * `OAUTH_TRUSTED_ORIGINS`: tüketen uygulamaların origin listesi (virgülle
+   * ayrılmış). better-auth'in `callbackURL` origin kontrolü ve OAuth plugin'inin
+   * redirect doğrulaması bu listeyi kullanır. Boş bırakılırsa yalnızca
+   * `BETTER_AUTH_URL` origin'i güvenilir sayılır.
+   *
+   * `OAUTH_PAIRWISE_SECRET`: eşleştirilmiş (pairwise) subject id üretimi için
+   * kullanılan sır; en az 32 karakter olmalı. Boş bırakılırsa plugin'in
+   * varsayılanı kullanılır.
+   */
+  OAUTH_TRUSTED_ORIGINS: optionalSecret,
+  OAUTH_PAIRWISE_SECRET: optionalSecret,
+  OAUTH_ISSUER: optionalUrl,
 });
 
 export const env = serverEnvSchema.parse({
@@ -93,6 +109,9 @@ export const env = serverEnvSchema.parse({
   REDIS_URL: process.env.REDIS_URL,
   SUPERADMIN_BOOTSTRAP_ENABLED: process.env.SUPERADMIN_BOOTSTRAP_ENABLED,
   SUPERADMIN_BOOTSTRAP_KEY: process.env.SUPERADMIN_BOOTSTRAP_KEY,
+  OAUTH_TRUSTED_ORIGINS: process.env.OAUTH_TRUSTED_ORIGINS,
+  OAUTH_PAIRWISE_SECRET: process.env.OAUTH_PAIRWISE_SECRET,
+  OAUTH_ISSUER: process.env.OAUTH_ISSUER,
 });
 
 export type ServerEnv = z.infer<typeof serverEnvSchema>;

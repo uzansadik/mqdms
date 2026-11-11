@@ -25,6 +25,11 @@ x-runtime-env: &runtime-env
   # Coolify'da iki değişkeni de tanımla.
   SUPERADMIN_BOOTSTRAP_ENABLED: ${SUPERADMIN_BOOTSTRAP_ENABLED:-false}
   SUPERADMIN_BOOTSTRAP_KEY: ${SUPERADMIN_BOOTSTRAP_KEY:-}
+  # OAuth provider (merkezi kimlik yöneticisi) ayarları. Tüketen uygulamaların
+  # origin'leri burada virgülle ayrılmış olarak tanımlanır.
+  OAUTH_TRUSTED_ORIGINS: ${OAUTH_TRUSTED_ORIGINS:-}
+  OAUTH_PAIRWISE_SECRET: ${OAUTH_PAIRWISE_SECRET:-}
+  OAUTH_ISSUER: ${OAUTH_ISSUER:-}
 
 services:
   postgres:

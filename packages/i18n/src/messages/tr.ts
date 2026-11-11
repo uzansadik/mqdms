@@ -145,6 +145,7 @@ export const tr = {
   "admin.nav.overview": "Genel bakış",
   "admin.nav.organizations": "Organizasyonlar",
   "admin.nav.users": "Kullanıcılar",
+  "admin.nav.applications": "Uygulamalar",
   "admin.overview.title": "Platform",
   "admin.overview.description":
     "Bu kimlik doğrulama sağlayıcısında barındırılan organizasyonları ve kullanıcıları yönetin.",
@@ -225,4 +226,50 @@ export const tr = {
   "admin.organization.delete.confirm": "Organizasyonu sil",
   "admin.organization.delete.deleting": "Siliniyor...",
   "admin.organization.delete.failed": "Organizasyon silinemedi.",
+
+  "oauth.organizations.title": "Organizasyon seçin",
+  "oauth.organizations.description": "Uygulamanın sizin adınıza erişeceği organizasyonu seçin.",
+  "oauth.organizations.empty":
+    "Hiçbir organizasyona üye değilsiniz; bu yüzden hiçbir uygulama hesabınıza erişemez.",
+  "oauth.organizations.select": "Devam et",
+  "oauth.organizations.selecting": "Devam ediliyor...",
+  "oauth.organizations.error": "Organizasyon seçilemedi.",
+  "oauth.consent.title": "Uygulamaya yetki ver",
+  "oauth.consent.description": "{name} hesabınıza erişmek istiyor.",
+  "oauth.consent.scopes": "İstenen izinler",
+  "oauth.consent.accept": "İzin ver",
+  "oauth.consent.deny": "Reddet",
+  "oauth.consent.working": "Lütfen bekleyin...",
+  "oauth.consent.error": "İstek tamamlanamadı.",
+  "oauth.consent.redirectHost": "Sonrasında {host} adresine yönlendirileceksiniz.",
+
+  "admin.oauthClients.pageTitle": "Uygulamalar",
+  "admin.oauthClients.pageDescription":
+    "Kimlik doğrulamayı bu sağlayıcıya devreden uygulamalar. Roller ve izinler token claim'leri olarak onlara yayınlanır.",
+  "admin.oauthClients.title": "Uygulama kaydet",
+  "admin.oauthClients.description":
+    "Uygulama kullanıcıyı buraya gönderir ve yetkilendirme koduyla geri döner.",
+  "admin.oauthClients.clientName": "Uygulama adı",
+  "admin.oauthClients.redirectUris": "Redirect URI'ler",
+  "admin.oauthClients.redirectUrisDescription": "Her satıra bir URI.",
+  "admin.oauthClients.resources": "Resource'lar",
+  "admin.oauthClients.resourcesDescription":
+    "Korunan API URI'leri, her satıra bir tane. Resource verildiğinde access token, audience'ı bu resource olan bir JWT olur.",
+  "admin.oauthClients.scope": "Scope'lar",
+  "admin.oauthClients.scopeDescription":
+    "Uygulamanın isteyebileceği scope'ların boşlukla ayrılmış listesi.",
+  "admin.oauthClients.publicClient": "Public client (yalnızca PKCE)",
+  "admin.oauthClients.publicClientDescription":
+    "Client secret üretilmez; uygulama kendini PKCE ile kanıtlar.",
+  "admin.oauthClients.create": "Uygulamayı kaydet",
+  "admin.oauthClients.creating": "Kaydediliyor...",
+  "admin.oauthClients.created": "Uygulama kaydedildi.",
+  "admin.oauthClients.createError": "Uygulama kaydedilemedi.",
+  "admin.oauthClients.createdDetails": "Bu bilgileri şimdi kopyalayın:",
+  "admin.oauthClients.secretNotice":
+    "Client secret yalnızca bir kez gösterilir. Uygulamanın secret deposuna kaydedin.",
+  "admin.oauthClients.listTitle": "Kayıtlı uygulamalar",
+  "admin.oauthClients.empty": "Henüz kayıtlı uygulama yok.",
+  "admin.oauthClients.delete": "Sil",
+  "admin.oauthClients.deleted": "Uygulama silindi.",
 } satisfies Record<MessageKey, string>;
