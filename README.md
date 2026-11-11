@@ -374,8 +374,13 @@ pulls the published images (never builds them) and applies pending migrations
 through the one-shot `migrate` service before `auth` and `worker` start.
 
 ```text
-merge into main → CI publishes latest + sha-<short-sha> → Coolify redeploys
+merge into main → CI publishes latest + sha-<short-sha> → CI calls the
+Coolify deploy webhook → Coolify pulls the new images and redeploys
 ```
+
+The deploy is triggered **by CI**, not by Coolify's push webhook: the webhook
+call happens after the images are pushed, so Coolify can never pull a stale
+`latest`. Coolify's own "Auto Deploy" therefore stays **off**.
 
 Coolify side:
 
@@ -387,8 +392,15 @@ Coolify side:
    `BETTER_AUTH_URL`, `BETTER_AUTH_SECRET`, `RESEND_API_KEY`,
    `RESEND_FROM_EMAIL`, `STORAGE_*`) plus the optional bootstrap and OAuth
    variables.
-4. **Auto deploy** — the stack's base branch is `main` and the GitHub webhook
-   redeploys on push.
+4. **Deploy webhook** — copy the URL from Application → Deploy Webhook and
+   register it as the repository secret:
+
+   ```bash
+   gh secret set COOLIFY_DEPLOY_WEBHOOK
+   ```
+
+   Without the secret the images are still published, but no deployment is
+   triggered.
 
 The image tag is `APP_TAG` and defaults to `latest`. Pin it to roll back to a
 previous build:
