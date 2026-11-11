@@ -1,4 +1,5 @@
 import { apiKeyClient } from "@better-auth/api-key/client";
+import { oauthProviderClient } from "@better-auth/oauth-provider/client";
 import { env } from "@mqdms/env/client";
 import { adminClient, organizationClient } from "better-auth/client/plugins";
 import { createAuthClient } from "better-auth/react";
@@ -17,6 +18,12 @@ export const authClient = createAuthClient({
       roles,
     }),
     apiKeyClient(),
+    /*
+     * OAuth provider akışı: sayfanın adres çubuğundaki imzalı sorguyu her
+     * POST isteğine ekler. Böylece giriş, onay ve akışa devam istekleri
+     * authorize isteğinin imzalı parametrelerini taşır.
+     */
+    oauthProviderClient(),
   ],
 });
 

@@ -1,4 +1,5 @@
 import { apiKey } from "@better-auth/api-key";
+import { oauthProvider } from "@better-auth/oauth-provider";
 import { appConfig } from "@mqdms/config";
 import { db } from "@mqdms/db";
 import * as schema from "@mqdms/db/schema";
@@ -7,7 +8,8 @@ import { addJob } from "@mqdms/queue";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { APIError } from "better-auth/api";
-import { admin, organization } from "better-auth/plugins";
+import { admin, jwt, organization } from "better-auth/plugins";
+import { getTrustedOrigins, oauthProviderOptions } from "./oauth";
 import { platformAc, platformRoles } from "./permissions/platform";
 import { isAssignableRoleId } from "./permissions/roles";
 import { ac, roles } from "./permissions/statements";
@@ -17,6 +19,19 @@ export const auth = betterAuth({
 
   baseURL: env.BETTER_AUTH_URL,
   secret: env.BETTER_AUTH_SECRET,
+
+  /*
+   * Tüketen uygulamaların origin'leri. better-auth `callbackURL` ve
+   * `redirectTo` alanlarını bu listeye göre doğrular; listede olmayan bir
+   * origin'e yönlendirme `INVALID_CALLBACK_URL` ile reddedilir.
+   */
+  trustedOrigins: getTrustedOrigins(),
+
+  /*
+   * JWT plugin'inin kendi `/token` ucu OAuth provider'ın `/oauth2/token` ucu
+   * ile karışmasın diye kapatılır.
+   */
+  disabledPaths: ["/token"],
 
   database: drizzleAdapter(db, {
     provider: "pg",
@@ -159,6 +174,29 @@ export const auth = betterAuth({
         defaultPrefix: "up_",
       },
     ]),
+
+    /*
+     * JWT plugin'i OAuth provider'ın imzalama katmanıdır: access/id token'ları
+     * bu plugin'in anahtarlarıyla imzalanır ve `/jwks` ucu tüketen
+     * uygulamaların doğrulaması için yayınlanır.
+     *
+     * `issuer` bilgisi keşif metadata'sında ve token'ların `iss` claim'inde
+     * kullanılır; `OAUTH_ISSUER` tanımlıysa o, değilse auth adresi kullanılır.
+     */
+    jwt({
+      disableSettingJwtHeader: true,
+      jwt: {
+        issuer: env.OAUTH_ISSUER ?? env.BETTER_AUTH_URL,
+      },
+    }),
+
+    /*
+     * Merkezi kimlik yöneticisi. Tüketen uygulamalar
+     * `/api/auth/oauth2/authorize` adresine yönlendirilir; kullanıcı giriş
+     * yapar, organizasyonunu seçer, onay verir ve uygulamaya `code` ile
+     * döner. Roller ve izinler token claim'leri olarak yayınlanır.
+     */
+    oauthProvider(oauthProviderOptions),
   ],
 });
 export type Session = typeof auth.$Infer.Session;

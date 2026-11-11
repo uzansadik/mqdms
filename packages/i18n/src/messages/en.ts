@@ -143,6 +143,7 @@ export const en = {
   "admin.nav.overview": "Overview",
   "admin.nav.organizations": "Organizations",
   "admin.nav.users": "Users",
+  "admin.nav.applications": "Applications",
   "admin.overview.title": "Platform",
   "admin.overview.description":
     "Manage the organizations and users hosted on this authentication provider.",
@@ -222,6 +223,56 @@ export const en = {
   "admin.organization.delete.confirm": "Delete organization",
   "admin.organization.delete.deleting": "Deleting...",
   "admin.organization.delete.failed": "The organization could not be deleted.",
+
+  "oauth.organizations.title": "Select an organization",
+  "oauth.organizations.description":
+    "Choose the organization the application will access on your behalf.",
+  "oauth.organizations.empty":
+    "You are not a member of any organization, so no application can access your account.",
+  "oauth.organizations.select": "Continue",
+  "oauth.organizations.selecting": "Continuing...",
+  "oauth.organizations.error": "The organization could not be selected.",
+  "oauth.consent.title": "Authorize application",
+  "oauth.consent.description": "{name} wants to access your account.",
+  "oauth.consent.scopes": "Requested permissions",
+  "oauth.consent.claims": "Requested personal information",
+  "oauth.consent.organization": "Organization",
+  "oauth.consent.accept": "Allow",
+  "oauth.consent.deny": "Deny",
+  "oauth.consent.working": "Please wait...",
+  "oauth.consent.error": "The request could not be completed.",
+  "oauth.consent.redirectHost": "Afterwards you will be redirected to {host}.",
+
+  "admin.oauthClients.pageTitle": "Applications",
+  "admin.oauthClients.pageDescription":
+    "Applications that delegate authentication to this provider. Roles and permissions are published to them as token claims.",
+  "admin.oauthClients.title": "Register an application",
+  "admin.oauthClients.description":
+    "The application sends the user here to sign in and returns with an authorization code.",
+  "admin.oauthClients.clientName": "Application name",
+  "admin.oauthClients.redirectUris": "Redirect URIs",
+  "admin.oauthClients.redirectUrisDescription": "One URI per line.",
+  "admin.oauthClients.resources": "Resources",
+  "admin.oauthClients.resourcesDescription":
+    "Protected API URIs, one per line. With a resource the access token becomes a JWT whose audience is that resource.",
+  "admin.oauthClients.scope": "Scopes",
+  "admin.oauthClients.scopeDescription":
+    "Space separated list of scopes the application may request.",
+  "admin.oauthClients.publicClient": "Public client (PKCE only)",
+  "admin.oauthClients.publicClientDescription":
+    "No client secret is issued; the application proves itself with PKCE.",
+  "admin.oauthClients.create": "Register application",
+  "admin.oauthClients.creating": "Registering...",
+  "admin.oauthClients.created": "Application registered.",
+  "admin.oauthClients.createError": "The application could not be registered.",
+  "admin.oauthClients.createdDetails": "Copy these credentials now:",
+  "admin.oauthClients.secretNotice":
+    "The client secret is shown only once. Store it in the application's secret store.",
+  "admin.oauthClients.listTitle": "Registered applications",
+  "admin.oauthClients.empty": "No application has been registered yet.",
+  "admin.oauthClients.delete": "Delete",
+  "admin.oauthClients.deleted": "Application deleted.",
+  "admin.oauthClients.deleteError": "The application could not be deleted.",
 } as const;
 
 export type MessageKey = keyof typeof en;

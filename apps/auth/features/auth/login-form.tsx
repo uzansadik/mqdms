@@ -22,9 +22,17 @@ import { type LoginValues, loginSchema } from "./schemas";
 
 type LoginFormProps = {
   next: string;
+
+  /**
+   * Sayfa, OAuth provider akışının parçası mı?
+   *
+   * Akışta better-auth sunucusu bir sonraki adımın adresini döner
+   * (organizasyon seçimi ya da onay ekranı) ve istemci o adrese yönlendirir.
+   */
+  isOAuthFlow?: boolean;
 };
 
-export function LoginForm({ next }: LoginFormProps) {
+export function LoginForm({ next, isOAuthFlow = false }: LoginFormProps) {
   const router = useRouter();
   const { t } = useI18n();
 
@@ -39,9 +47,15 @@ export function LoginForm({ next }: LoginFormProps) {
   async function onSubmit(values: LoginValues) {
     form.clearErrors("root");
 
-    const { error } = await authClient.signIn.email({
+    const { data, error } = await authClient.signIn.email({
       email: values.email,
       password: values.password,
+      /*
+       * OAuth akışında `callbackURL` authorize adresidir: e-posta doğrulaması
+       * gerektiğinde gönderilen doğrulama e-postası bu adrese döner ve akış
+       * kaldığı yerden devam eder. Başarılı girişte ise sunucu akışın bir
+       * sonraki adımını (organizasyon seçimi ya da onay ekranı) döner.
+       */
       callbackURL: next,
     });
 
@@ -60,6 +74,18 @@ export function LoginForm({ next }: LoginFormProps) {
       form.setError("root", {
         message: error.message ?? t("auth.login.error"),
       });
+
+      return;
+    }
+
+    if (isOAuthFlow) {
+      /*
+       * OAuth akışı devam ediyor. Organizasyon seçimi kullanıcıya bırakıldığı
+       * için aktif organizasyon burada değiştirilmez.
+       */
+      if (data?.redirect && data?.url) {
+        window.location.href = data.url;
+      }
 
       return;
     }

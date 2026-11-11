@@ -15,6 +15,13 @@
       "when": 1794258900000,
       "tag": "0001_member_permission",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1794384268654,
+      "tag": "0002_icy_sinister_six",
+      "breakpoints": true
     }
   ]
 }

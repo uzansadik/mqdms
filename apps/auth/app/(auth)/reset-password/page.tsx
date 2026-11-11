@@ -1,8 +1,8 @@
 // app/(auth)/reset-password/page.tsx
 
 import Link from "next/link";
-
 import { ResetPasswordForm } from "@/features/auth/reset-password-form";
+import { redirectIfAuthenticated } from "@/features/auth/session";
 
 type PageProps = {
   searchParams: Promise<{
@@ -13,6 +13,8 @@ type PageProps = {
 
 export default async function Page({ searchParams }: PageProps) {
   const { token, error } = await searchParams;
+
+  await redirectIfAuthenticated();
 
   if (!token || error) {
     return (

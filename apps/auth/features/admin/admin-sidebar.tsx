@@ -14,7 +14,7 @@ import {
   SidebarMenuItem,
   SidebarRail,
 } from "@mqdms/ui/components/sidebar";
-import { Building2, LayoutDashboard, Users } from "lucide-react";
+import { Building2, KeyRound, LayoutDashboard, Users } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -46,6 +46,11 @@ export function AdminSidebar({ user }: AdminSidebarProps) {
       title: t("admin.nav.users"),
       href: "/admin/users",
       icon: Users,
+    },
+    {
+      title: t("admin.nav.applications"),
+      href: "/admin/oauth-clients",
+      icon: KeyRound,
     },
   ];
 
