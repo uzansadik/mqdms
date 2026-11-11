@@ -399,7 +399,14 @@ Coolify side:
    gh secret set COOLIFY_DEPLOY_WEBHOOK
    ```
 
-   Without the secret the images are still published, but no deployment is
+   The webhook is authenticated with a Coolify API token (Keys & Tokens → API
+   Tokens, `deploy` permission). Register it as a second secret:
+
+   ```bash
+   gh secret set COOLIFY_API_TOKEN
+   ```
+
+   Without the secrets the images are still published, but no deployment is
    triggered.
 
 The image tag is `APP_TAG` and defaults to `latest`. Pin it to roll back to a

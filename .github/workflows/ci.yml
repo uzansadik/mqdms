@@ -185,10 +185,15 @@ jobs:
       # Coolify'nin "Deploy Webhook" adresi (Application -> Deploy Webhook).
       # Secret tanımlı değilse deploy tetiklenmez.
       COOLIFY_DEPLOY_WEBHOOK: ${{ secrets.COOLIFY_DEPLOY_WEBHOOK }}
+      # Coolify API token'ı (Keys & Tokens -> API Tokens, `deploy` izni).
+      # Deploy webhook'u Bearer token ile doğrulanır; token olmadan istek
+      # 401 (Unauthorized) ile reddedilir.
+      COOLIFY_API_TOKEN: ${{ secrets.COOLIFY_API_TOKEN }}
 
     steps:
       - name: Coolify deploy webhook'ini çağır
-        if: env.COOLIFY_DEPLOY_WEBHOOK != ''
+        if: env.COOLIFY_DEPLOY_WEBHOOK != '' && env.COOLIFY_API_TOKEN != ''
         run: |
-          curl --fail --silent --show-error --retry 3 --retry-delay 5 \
+          curl --fail-with-body --silent --show-error --retry 3 --retry-delay 5 \
+            --header "Authorization: Bearer $COOLIFY_API_TOKEN" \
             --request POST "$COOLIFY_DEPLOY_WEBHOOK"
