@@ -221,20 +221,21 @@ APP_PORT=3001 docker compose up -d
 
 # CI/CD
 
-Every push to `main` (and every merge into `main`) builds the production images
-and publishes them to GitHub Container Registry.
+Pull requests only verify the code. The production images are built and
+published to GitHub Container Registry when a pull request is merged into
+`main`; the deployment itself is done by Coolify.
 
 Workflow:
 
 ```text
-.github/workflows/docker-images.yml
+.github/workflows/ci.yml
 ```
 
 | Event                       | Verify | Build | Push to GHCR |
 | --------------------------- | ------ | ----- | ------------ |
 | Push to `main`              | yes    | yes   | yes          |
-| Pull request to `main`      | yes    | yes   | no           |
-| Manual (`workflow_dispatch`) | yes    | yes   | yes (on `main`) |
+| Pull request to `main`      | yes    | no    | no           |
+| Manual (`workflow_dispatch`) | yes    | only on `main` | yes (on `main`) |
 
 Images:
 
@@ -244,17 +245,18 @@ ghcr.io/uzansadik/mqdms/worker
 ghcr.io/uzansadik/mqdms/migrate
 ```
 
-Tags produced for every build:
+Tags produced by a build:
 
 ```text
-latest          → only for main
-main            → branch name
-<short-sha>     → commit SHA
+latest          → the newest build on main
+sha-<short-sha> → the commit the image was built from
 ```
 
-The workflow needs the `packages: write` permission. It is declared inside the
-workflow file, and `GITHUB_TOKEN` is used for the registry login, so no registry
-password secret is required.
+The `sha-…` tag is what you pin for a rollback; `latest` always moves forward.
+
+The build job needs the `packages: write` permission. It is declared on the job
+itself (the verify job only needs `contents: read`), and `GITHUB_TOKEN` is used
+for the registry login, so no registry password secret is required.
 
 ## Verify job
 
@@ -354,17 +356,48 @@ decides what the running container reports.
 
 ## Package visibility
 
-GHCR packages are private by default. To pull the images from a deployment
-host, either log in:
+GHCR packages are private by default. To pull the images on a deployment host,
+either log in:
 
 ```bash
 echo "$GHCR_TOKEN" | docker login ghcr.io -u uzansadik --password-stdin
 ```
 
-or change the package visibility to public in the package settings.
+or change the package visibility to public in the package settings. Coolify
+pulls the images with `pull_policy: always`, so the registry credentials have
+to be registered there as well (see [Deployment](#deployment)).
 
 ## Deployment
 
+The production stack runs on Coolify with `docker-compose.coolify.yml`. It
+pulls the published images (never builds them) and applies pending migrations
+through the one-shot `migrate` service before `auth` and `worker` start.
+
+```text
+merge into main → CI publishes latest + sha-<short-sha> → Coolify redeploys
+```
+
+Coolify side:
+
+1. **Preview deployments off** — pull requests do not produce images, so a
+   preview deployment would always fail.
+2. **Registry credentials** — `ghcr.io` with a token that has `read:packages`.
+3. **Environment variables** — everything `docker-compose.coolify.yml` marks
+   as required (`DATABASE_URL`, `POSTGRES_PASSWORD`, `NEXT_PUBLIC_APP_URL`,
+   `BETTER_AUTH_URL`, `BETTER_AUTH_SECRET`, `RESEND_API_KEY`,
+   `RESEND_FROM_EMAIL`, `STORAGE_*`) plus the optional bootstrap and OAuth
+   variables.
+4. **Auto deploy** — the stack's base branch is `main` and the GitHub webhook
+   redeploys on push.
+
+The image tag is `APP_TAG` and defaults to `latest`. Pin it to roll back to a
+previous build:
+
+```text
+APP_TAG=sha-1bc322d
+```
+
+The same images can be run on a plain Docker host instead of Coolify.
 `docker-compose.prod.yml` overrides `migrate`, `auth` and `worker` to use the
 published images instead of building locally:
 
@@ -374,13 +407,6 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 ```
 
 The deployment host needs Docker only; no Node.js and no source checkout.
-
-Pin a specific build with `APP_TAG`:
-
-```bash
-APP_TAG=main docker compose -f docker-compose.yml -f docker-compose.prod.yml pull
-APP_TAG=main docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
-```
 
 ---
 

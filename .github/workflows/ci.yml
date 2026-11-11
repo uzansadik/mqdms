@@ -1,7 +1,8 @@
-name: Docker Images
+name: CI
 
-# main'e push veya main'e merge olduğunda image'lar derlenir ve GHCR'a
-# gönderilir. Pull request'lerde de derleme yapılır ama push edilmez.
+# Pull request'lerde yalnızca kod doğrulanır (typecheck, format, lint).
+# Image'lar yalnızca main'e push/merge edildiğinde üretilir ve GHCR'a
+# gönderilir; üretim Coolify tarafından otomatik deploy edilir.
 on:
   push:
     branches: [main]
@@ -10,7 +11,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: docker-${{ github.ref }}
+  group: ci-${{ github.ref }}
   cancel-in-progress: true
 
 env:
@@ -19,7 +20,6 @@ env:
 
 permissions:
   contents: read
-  packages: write
 
 jobs:
   verify:
@@ -48,7 +48,7 @@ jobs:
         run: pnpm exec biome format .
 
       # Vendored shadcn bileşenlerinde ve legacy dosyalarda bilinen bulgular
-      # var. Bunlar temizlenene kadar CI'ı bloklamıyor.
+      # var; bunlar temizlenene kadar CI'ı bloklamıyor.
       - name: Lint (bilgilendirme amaçlı)
         continue-on-error: true
         run: pnpm exec biome lint .
@@ -56,18 +56,22 @@ jobs:
   build:
     name: İmajları derle
     needs: verify
+    # Image'lar yalnızca main'de üretilir: PR'lerde build çalıştırmak runner
+    # süresi ve cache kapsamı harcar, ortada çıktı bırakmaz.
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      packages: write
 
     steps:
       - uses: actions/checkout@v4
 
       - uses: docker/setup-buildx-action@v3
 
-      # Sadece push edilecek durumlarda login yapılıyor. Fork'tan gelen PR'lerde
-      # `GITHUB_TOKEN` salt-okunur olduğu için registry login başarısız olur ve
-      # build aşamasına geçilemezdi.
-      - uses: docker/login-action@v3
-        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+      - name: GHCR'a giriş
+        uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
@@ -78,8 +82,7 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/mqdms/auth
           tags: |
-            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
-            type=ref,event=branch
+            type=raw,value=latest
             type=sha,format=short
 
       - id: meta-worker
@@ -87,8 +90,7 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/mqdms/worker
           tags: |
-            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
-            type=ref,event=branch
+            type=raw,value=latest
             type=sha,format=short
 
       - id: meta-migrate
@@ -96,8 +98,7 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/mqdms/migrate
           tags: |
-            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
-            type=ref,event=branch
+            type=raw,value=latest
             type=sha,format=short
 
       # Migration image'ı build sırasında env doğrulamaz; env şeması çalışma
@@ -107,14 +108,14 @@ jobs:
         with:
           context: .
           file: docker/migrate.Dockerfile
-          push: ${{ github.ref == 'refs/heads/main' && github.event_name != 'pull_request' }}
+          push: true
           tags: ${{ steps.meta-migrate.outputs.tags }}
           labels: ${{ steps.meta-migrate.outputs.labels }}
           provenance: false
           cache-from: type=gha,scope=migrate
           cache-to: type=gha,scope=migrate,mode=max
 
-      # `next build` route handler'larını yüklerken `@mqdms/env` şemasını
+      # `next build` route handler'ları yüklerken `@mqdms/env` şemasını
       # doğruladığı için build sırasında da env gerekiyor. Gerçek sırlar
       # image'a gömülmez; secret yoksa build-only placeholder kullanılır.
       # NEXT_PUBLIC_APP_URL istisnadır: client bundle'a işlendiği için repo
@@ -124,7 +125,7 @@ jobs:
         with:
           context: .
           file: docker/auth.Dockerfile
-          push: ${{ github.ref == 'refs/heads/main' && github.event_name != 'pull_request' }}
+          push: true
           tags: ${{ steps.meta-auth.outputs.tags }}
           labels: ${{ steps.meta-auth.outputs.labels }}
           provenance: false
@@ -151,7 +152,7 @@ jobs:
         with:
           context: .
           file: docker/worker.Dockerfile
-          push: ${{ github.ref == 'refs/heads/main' && github.event_name != 'pull_request' }}
+          push: true
           tags: ${{ steps.meta-worker.outputs.tags }}
           labels: ${{ steps.meta-worker.outputs.labels }}
           provenance: false
