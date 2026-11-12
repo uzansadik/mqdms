@@ -4,7 +4,7 @@ MQDMS is a reusable SaaS starter built for creating new applications without reb
 
 ## Stack
 
-* Next.js
+* Next.js 16 (App Router)
 * Turborepo
 * pnpm
 * PostgreSQL
@@ -17,6 +17,7 @@ MQDMS is a reusable SaaS starter built for creating new applications without reb
 * React Hook Form
 * Zod
 * Biome
+* Vitest
 
 ## Project structure
 
@@ -57,7 +58,7 @@ Infrastructure packages should remain framework-independent where possible.
 For example:
 
 ```text
-apps/auth
+apps/auth, apps/app
     ↓
 @mqdms/storage
     ↓
@@ -67,12 +68,16 @@ S3-compatible provider
 and:
 
 ```text
-apps/auth
+apps/auth, apps/app
     ↓
 @mqdms/auth
     ↓
 Better Auth
 ```
+
+`@mqdms/auth` deliberately has **no** Next.js dependency: it receives the
+request headers as an argument instead of importing `next/headers`. That is
+what lets the auth package be shared by two independently deployed apps.
 
 ---
 
@@ -170,7 +175,7 @@ pnpm dev
 
 The root command first synchronizes environment variables and then starts the Turborepo development tasks.
 
-Web application:
+Web applications:
 
 ```text
 http://localhost:3000   → auth
@@ -321,9 +326,9 @@ environment when those modules are imported. The workflow therefore passes
 build-only placeholders for every variable that is not defined, so a missing
 secret never breaks the build.
 
-`NEXT_PUBLIC_APP_URL` is the exception: it is inlined into the client bundle at
-build time, so it has to be a real value. Without it the client keeps pointing
-at `http://localhost:3000`.
+`NEXT_PUBLIC_*` variables are the exception: they are inlined into the client
+bundle at build time, so they have to be real values. Without them the client
+keeps pointing at `http://localhost:3000`.
 
 Settings → Secrets and variables → Actions → Variables:
 
@@ -338,7 +343,9 @@ AUTH_COOKIE_DOMAIN=.mqdms.com
 
 `NEXT_PUBLIC_APP_URL` is the deploy's **own** origin: `auth.mqdms.com` for the
 auth image, `app.mqdms.com` for the app image. `NEXT_PUBLIC_AUTH_URL` is the
-canonical auth origin and is identical in both.
+canonical auth origin and is identical in both. The workflow overrides
+`NEXT_PUBLIC_APP_URL` with `NEXT_PUBLIC_BUSINESS_APP_URL` when building the
+app image, so the same variable name works for both.
 
 Everything else is optional on GitHub. If you do define them, put them in
 **Secrets** (they are masked in logs):
@@ -389,11 +396,12 @@ read at runtime, so the GitHub build secrets are irrelevant for them.
 
 `docker-compose.yml` overrides `DATABASE_URL`, `REDIS_URL` and `QUEUE_PREFIX`
 with the in-network service names, so those three are not read from the host
-`.env`. `NEXT_PUBLIC_APP_URL` and `BETTER_AUTH_URL` fall back to
-`http://localhost:3000` but are read from the host `.env` when it defines them.
+`.env`. The URL variables fall back to `http://localhost:3000` (the business
+app to `http://localhost:3001`) but are read from the host `.env` when it
+defines them.
 
-Note that `NEXT_PUBLIC_APP_URL` has to be correct in **both** places: the
-GitHub variable decides what is baked into the image, and the host `.env`
+Note that the `NEXT_PUBLIC_*` variables have to be correct in **both** places:
+the GitHub variable decides what is baked into the image, and the host `.env`
 decides what the running container reports.
 
 ## Package visibility
@@ -633,6 +641,70 @@ Every server action and every repository query performs this check. The
 layout is not a security boundary on its own, and hiding a menu item is never
 authorization.
 
+### Adding a new module
+
+A new business module needs four things, in this order.
+
+**1. Register its resources and actions** in the permission catalog:
+
+```ts
+// packages/auth/src/permissions/resources.ts
+export const resources = {
+  // …
+  nonconformity: {
+    label: "Nonconformity",
+    actions: ["read", "create", "update", "close"],
+  },
+} as const;
+```
+
+The catalog is the single source of truth: a `resource:action` pair that is
+not in it fails closed, and a role cannot be given a permission outside it.
+
+**2. Give the module a seed role** in the factory catalog
+(`packages/auth/src/permissions/seeds/catalog.ts`) so new organizations start
+with a sensible template. Roles are seeded per organization and can be edited
+by the owner afterwards; re-seeding never overwrites an edit.
+
+**3. Scope the data to the organization.** Every business table carries
+`organizationId`, and every query filters on it. Never trust an `organizationId`
+that arrives from the client — derive it from the request context.
+
+**4. Guard every entry point.** The layout is not the only check:
+
+```ts
+// apps/app/app/(protected)/nonconformity/page.tsx
+export default async function Page() {
+  await requirePermission("nonconformity", "read");
+
+  // …
+}
+```
+
+Server actions do the same, and they resolve the organization from the
+session rather than from their input.
+
+### Where the permission code lives
+
+```text
+packages/auth/src/permissions/
+  resources.ts    # typed catalog (browser-safe)
+  roles.ts        # better-auth management roles: owner, member (browser-safe)
+  statements.ts   # better-auth access control (browser-safe)
+  evaluate.ts     # pure evaluator (browser-safe)
+  index.ts        # browser-safe barrel
+  repository.ts   # database queries (server-only)
+  service.ts      # role/grant mutations and the authorization rules (server-only)
+  guards.ts       # requirePermission, requireOrganization (server-only)
+  seeds/catalog.ts# factory role templates (pure)
+  seeds/factory.ts# idempotent seeding (server-only)
+  server.ts       # server-only barrel
+```
+
+Client components import `@mqdms/auth/permissions`; server code imports
+`@mqdms/auth/permissions/server`. The server barrel is the only one that
+touches the database.
+
 Application resources should generally belong to an organization rather than directly to a user.
 
 Example:
@@ -650,6 +722,42 @@ document.userId
 ```
 
 when the resource belongs to a workspace.
+
+---
+
+# Business application
+
+`apps/app` holds the quality management modules (FMEA, synoptic, control plan,
+NCR, projects, items, reports). It is a separate deployment with its own
+routes, but it shares the session, the database and the permission engine with
+the auth app.
+
+```text
+apps/app/
+  app/
+    (protected)/          # session + organization guard
+      layout.tsx
+      fmea/                # FMEA list and detail routes
+      synoptic/            # synoptic routes
+    forbidden.tsx          # 403 page
+    layout.tsx
+  features/
+    auth/session.ts       # requireAuthContext, requirePermission
+    shell/                # sidebar and navigation
+  proxy.ts                # unauthenticated requests → auth login
+```
+
+The auth app is the only place with an HTTP auth handler. The business app
+reads the session from the database through the shared `BETTER_AUTH_SECRET`, so
+a user signed in on `auth.mqdms.com` is signed in on `app.mqdms.com` as well.
+
+A deep link into the business app (`app.mqdms.com/fmea/123`) that is opened
+without a session is redirected to `auth.mqdms.com/login?returnTo=…`; after
+sign-in the user returns to the original URL.
+
+The FMEA and synoptic routes are currently **route and guard shells**: the
+access control is in place, the domain behaviour is developed as separate
+features. A shell is not a finished module.
 
 ---
 
@@ -820,19 +928,19 @@ Application code should not know unnecessary provider details.
 Examples:
 
 ```text
-apps/auth
+apps/auth, apps/app
 → @mqdms/storage
 → S3-compatible provider
 ```
 
 ```text
-apps/auth
+apps/auth, apps/app
 → @mqdms/email
 → Resend
 ```
 
 ```text
-apps/auth
+apps/auth, apps/app
 → @mqdms/auth
 → Better Auth
 ```
@@ -862,7 +970,36 @@ Protect sensitive functionality on the server, including:
 * Organization settings
 * Organization deletion
 * Member management
+* Role and permission management
 * Upload verification
+
+The permission engine lives in `@mqdms/auth`; the apps only decide *where* to
+call it from.
+
+---
+
+# Conventions
+
+## Line endings
+
+The repository is stored with LF line endings (`.gitattributes`). Biome
+enforces the same, and CI runs `biome format .` as a blocking check.
+
+## Commit messages
+
+Conventional Commits:
+
+```text
+feat(auth): add organization role seeding
+fix(db): drop the account issuer column
+ci: build the app image alongside the auth image
+```
+
+## Branches and deploys
+
+Deploys are triggered by CI on merges into `main`. A pull request is only
+verified (typecheck, tests, format); it never produces an image and never
+deploys.
 
 ---
 
