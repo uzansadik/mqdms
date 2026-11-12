@@ -1,6 +1,6 @@
 import { relations } from "drizzle-orm";
 import * as t from "drizzle-orm/pg-core";
-import { boolean, index, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import { boolean, index, pgTable, text, timestamp, unique, uniqueIndex } from "drizzle-orm/pg-core";
 
 export const user = pgTable("user", {
   id: text("id").primaryKey(),
@@ -110,8 +110,15 @@ export const member = pgTable(
      * Composite unique: `member_permission` ve `member_role` tablolarının
      * (organization_id, member_id) yabancı anahtarını destekler. Bu sayede
      * grant'ın ait olduğu üye, grant'ın organizasyonuna ait olmak zorundadır.
+     *
+     * `uniqueIndex` değil `unique` kullanılıyor: PostgreSQL, yabancı anahtar
+     * hedefi olarak **constraint** ister. Drizzle migration'larında index'ler
+     * FK'lerden sonra oluşturulduğu için, index olarak tanımlanan composite
+     * unique hedefe FK eklenildiğinde "there is no unique constraint matching
+     * given keys" hatası verir. `unique` ise CREATE TABLE içinde, FK'lerden
+     * önce oluşturulur.
      */
-    uniqueIndex("member_organization_id_id_uidx").on(table.organizationId, table.id),
+    unique("member_organization_id_id_unique").on(table.organizationId, table.id),
   ],
 );
 

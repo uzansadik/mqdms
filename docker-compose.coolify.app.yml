@@ -8,6 +8,13 @@
 # The HTTP auth handler lives in the auth stack. Both deployments share the
 # same Better Auth secret and the same session cookie, so a single login
 # covers both.
+#
+# This stack joins the same external Docker network (`mqdms-net`) as the auth
+# stack. That network is how the app reaches `postgres` and `redis` — the
+# database is never exposed to the internet. Create it on the host before the
+# first deploy:
+#
+#   docker network create mqdms-net
 
 x-runtime-env: &runtime-env
   NODE_ENV: production
@@ -48,3 +55,11 @@ services:
       timeout: 5s
       retries: 3
       start_period: 30s
+    networks:
+      - mqdms
+
+# Paylaşımlı ağ: auth stack, app stack ve Cloudflare Tunnel aynı ağa bağlanır.
+networks:
+  mqdms:
+    name: mqdms-net
+    external: true

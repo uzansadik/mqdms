@@ -6,6 +6,7 @@ import {
   pgTable,
   text,
   timestamp,
+  unique,
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
@@ -55,16 +56,14 @@ export const organizationRole = pgTable(
       .notNull(),
   },
   (table) => [
+    // Aynı organizasyonda aynı slug olamaz.
     uniqueIndex("organization_role_organization_id_slug_uidx").on(table.organizationId, table.slug),
 
-    /*
-     * Composite unique: alt tabloların (organization_id, role_id) yabancı
-     * anahtarını destekler. Bu sayede bir rolün satırı hangi organizasyona
-     * aitse, alt tablolar da aynı organizasyona ait olmak zorundadır.
-     */
-    uniqueIndex("organization_role_organization_id_id_uidx").on(table.organizationId, table.id),
+    // Aynı organizasyonda aynı rol adı olamaz.
+    uniqueIndex("organization_role_organization_id_name_uidx").on(table.organizationId, table.name),
 
-    index("organization_role_organization_id_idx").on(table.organizationId),
+    // Composite foreign key desteği (multi-tenant güvenliği).
+    unique("organization_role_organization_id_id_unique").on(table.organizationId, table.id),
   ],
 );
 

@@ -1,5 +1,5 @@
 {
-  "id": "be59cb94-6164-4fd2-84fc-adacb0ab8f15",
+  "id": "3244e448-856a-4995-bccb-a2a4433a736b",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -697,27 +697,6 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
-        },
-        "member_organization_id_id_uidx": {
-          "name": "member_organization_id_id_uidx",
-          "columns": [
-            {
-              "expression": "organization_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
         }
       },
       "foreignKeys": {
@@ -749,7 +728,16 @@
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
+      "uniqueConstraints": {
+        "member_organization_id_id_unique": {
+          "name": "member_organization_id_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "organization_id",
+            "id"
+          ]
+        }
+      },
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
@@ -1702,8 +1690,8 @@
           "method": "btree",
           "with": {}
         },
-        "organization_role_organization_id_id_uidx": {
-          "name": "organization_role_organization_id_id_uidx",
+        "organization_role_organization_id_name_uidx": {
+          "name": "organization_role_organization_id_name_uidx",
           "columns": [
             {
               "expression": "organization_id",
@@ -1712,28 +1700,13 @@
               "nulls": "last"
             },
             {
-              "expression": "id",
+              "expression": "name",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
             }
           ],
           "isUnique": true,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "organization_role_organization_id_idx": {
-          "name": "organization_role_organization_id_idx",
-          "columns": [
-            {
-              "expression": "organization_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
           "concurrently": false,
           "method": "btree",
           "with": {}
@@ -1768,7 +1741,16 @@
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
+      "uniqueConstraints": {
+        "organization_role_organization_id_id_unique": {
+          "name": "organization_role_organization_id_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "organization_id",
+            "id"
+          ]
+        }
+      },
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false

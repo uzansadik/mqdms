@@ -1,0 +1,43 @@
+# Cloudflare Tunnel (cloudflared) — MQDMS.
+#"9-6+"
+# Deploy as a third Coolify Docker Compose resource. The tunnel container
+# joins the same external network (`mqdms-net`) as the auth and app stacks and
+# publishes both hostnames:
+#
+#   auth.mqdms.com → http://auth:3000
+#   app.mqdms.com  → http://app:3000
+#
+# The tunnel token is issued by Cloudflare (Zero Trust → Networks → Tunnels →
+# <tunnel> → Configure → Install connector). It carries the tunnel credentials,
+# so it is a secret: it belongs in Coolify's environment, not in this file.
+#
+# The ingress rules (hostname → service) live in the Cloudflare dashboard,
+# because the tunnel is remotely managed. The container only needs the token.
+#
+# The token is passed through the `TUNNEL_TOKEN` environment variable instead
+# of `--token <value>`, so it does not show up in `docker inspect` or in the
+# container's process arguments.
+
+services:
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN:?CLOUDFLARE_TUNNEL_TOKEN is required}
+    healthcheck:
+      # `tunnel ready` 20241 portundaki ready endpoint'ine bakar ve bağlı
+      # değilse sıfırdan farklı bir kodla çıkar.
+      test: ["CMD", "cloudflared", "tunnel", "ready"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    networks:
+      - mqdms
+
+# Paylaşımlı ağ: auth stack, app stack ve tunnel aynı ağa bağlanır.
+networks:
+  mqdms:
+    name: mqdms-net
+    external: true

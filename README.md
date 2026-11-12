@@ -419,12 +419,22 @@ to be registered there as well (see [Deployment](#deployment)).
 
 ## Deployment
 
-The production stack runs on Coolify as **two** Docker Compose Applications:
+The production stack runs on Coolify as **three** Docker Compose Applications:
 
-| Compose file                       | Coolify resource | Services                                |
-| ---------------------------------- | ---------------- | --------------------------------------- |
-| `docker-compose.coolify.yml`       | auth stack       | postgres, redis, migrate, auth, worker |
-| `docker-compose.coolify.app.yml`   | app stack        | app                                     |
+| Compose file                          | Coolify resource | Services                                |
+| ------------------------------------- | ---------------- | --------------------------------------- |
+| `docker-compose.coolify.yml`          | auth stack       | postgres, redis, migrate, auth, worker |
+| `docker-compose.coolify.app.yml`      | app stack        | app                                     |
+| `docker-compose.coolify.tunnel.yml`   | tunnel           | cloudflared                             |
+
+All three attach to the same external Docker network (`mqdms-net`), created on
+the host with `docker network create mqdms-net`. That network is how the app
+stack reaches the database and how the Cloudflare Tunnel reaches both web
+applications; the database and the origin ports are never published.
+
+A step-by-step guide — host preparation, the shared Docker network, the
+Cloudflare Tunnel, the environment variables per resource and the first
+organization — is in [docs/deploy-on-server.md](docs/deploy-on-server.md).
 
 Both pull the published images (never build them) and share the same database
 over the private network. The auth stack applies pending migrations through the
