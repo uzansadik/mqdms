@@ -1,4 +1,4 @@
-import { env } from "@mqdms/env/server";
+import { redisEnv } from "@mqdms/env/redis";
 import IORedis from "ioredis";
 
 const globalForRedis = globalThis as unknown as {
@@ -7,7 +7,7 @@ const globalForRedis = globalThis as unknown as {
 
 export const redisProducer =
   globalForRedis.redisProducer ??
-  new IORedis(env.REDIS_URL, {
+  new IORedis(redisEnv.REDIS_URL, {
     maxRetriesPerRequest: 1,
     enableOfflineQueue: false,
     lazyConnect: true,
