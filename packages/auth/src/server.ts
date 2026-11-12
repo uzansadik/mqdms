@@ -33,13 +33,15 @@ export const auth = betterAuth({
 
   advanced: {
     /*
-     * Oturum cookie'si iki subdomain arasında paylaşılır. `domain` verilmezse
-     * better-auth kök domain'i `BETTER_AUTH_URL`'den türetir; `localhost`
-     * üzerinde kök domain bulunamadığı için geliştirmede `domain` tanımlanmaz
-     * ve cookie host'a özel yazılır.
+     * Oturum cookie'si iki subdomain arasında paylaşılır.
+     *
+     * Paylaşım yalnızca `AUTH_COOKIE_DOMAIN` tanımlıysa açılır. Alan adı
+     * verilmediğinde better-auth kök domain'i `BETTER_AUTH_URL`'den türetir
+     * (üretimde `auth.mqdms.com`, yerelde `localhost`); `Domain=localhost`
+     * tarayıcılarca reddedildiği için yerelde cookie host'a özel yazılmalıdır.
      */
     crossSubDomainCookies: {
-      enabled: true,
+      enabled: Boolean(authEnv.AUTH_COOKIE_DOMAIN),
       ...(authEnv.AUTH_COOKIE_DOMAIN ? { domain: authEnv.AUTH_COOKIE_DOMAIN } : {}),
     },
 
