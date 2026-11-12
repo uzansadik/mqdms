@@ -9,9 +9,7 @@ type AuthLayoutProps = {
 
 export default async function AuthLayout({ children }: AuthLayoutProps) {
   /*
-   * Oturumu olan kullanıcının yönlendirilmesi sayfa bazında yapılır:
-   * OAuth provider akışında giriş ekranı, kullanıcı zaten giriş yapmış olsa
-   * bile akışın devam etmesi için yönlendirme yapmamalıdır.
+   * Oturumu olan kullanıcının yönlendirilmesi sayfa bazında yapılır.
    */
   const t = await getTranslations();
 

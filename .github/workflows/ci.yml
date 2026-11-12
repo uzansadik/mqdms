@@ -85,6 +85,14 @@ jobs:
             type=raw,value=latest
             type=sha,format=short
 
+      - id: meta-app
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/mqdms/app
+          tags: |
+            type=raw,value=latest
+            type=sha,format=short
+
       - id: meta-worker
         uses: docker/metadata-action@v5
         with:
@@ -118,7 +126,7 @@ jobs:
       # `next build` route handler'ları yüklerken `@mqdms/env` şemasını
       # doğruladığı için build sırasında da env gerekiyor. Gerçek sırlar
       # image'a gömülmez; secret yoksa build-only placeholder kullanılır.
-      # NEXT_PUBLIC_APP_URL istisnadır: client bundle'a işlendiği için repo
+      # NEXT_PUBLIC_* istisnadır: client bundle'a işlendiği için repo
       # variable'ı tanımlanmalı (Settings -> Variables).
       - name: auth imajı
         uses: docker/build-push-action@v6
@@ -134,8 +142,12 @@ jobs:
             REDIS_URL=redis://localhost:6379
             QUEUE_PREFIX=mqdms
             NEXT_PUBLIC_APP_URL=${{ vars.NEXT_PUBLIC_APP_URL || 'http://localhost:3000' }}
+            NEXT_PUBLIC_AUTH_URL=${{ vars.NEXT_PUBLIC_AUTH_URL || 'http://localhost:3000' }}
+            NEXT_PUBLIC_BUSINESS_APP_URL=${{ vars.NEXT_PUBLIC_BUSINESS_APP_URL || 'http://localhost:3001' }}
             BETTER_AUTH_URL=${{ vars.BETTER_AUTH_URL || 'http://localhost:3000' }}
             BETTER_AUTH_SECRET=${{ secrets.BETTER_AUTH_SECRET || 'ci-build-placeholder-secret-000000000000' }}
+            AUTH_TRUSTED_ORIGINS=${{ vars.AUTH_TRUSTED_ORIGINS || 'http://localhost:3000' }}
+            AUTH_COOKIE_DOMAIN=${{ vars.AUTH_COOKIE_DOMAIN || '' }}
             RESEND_API_KEY=${{ secrets.RESEND_API_KEY || 're_ci_build_placeholder' }}
             RESEND_FROM_EMAIL=${{ secrets.RESEND_FROM_EMAIL || 'build@example.com' }}
             STORAGE_BUCKET=${{ vars.STORAGE_BUCKET || 'build' }}
@@ -146,6 +158,37 @@ jobs:
             STORAGE_PUBLIC_URL=${{ vars.STORAGE_PUBLIC_URL || 'http://localhost:3000' }}
           cache-from: type=gha,scope=auth
           cache-to: type=gha,scope=auth,mode=max
+
+      - name: app imajı
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/app.Dockerfile
+          push: true
+          tags: ${{ steps.meta-app.outputs.tags }}
+          labels: ${{ steps.meta-app.outputs.labels }}
+          provenance: false
+          build-args: |
+            DATABASE_URL=postgresql://postgres:postgres@localhost:5432/mqdms
+            REDIS_URL=redis://localhost:6379
+            QUEUE_PREFIX=mqdms
+            NEXT_PUBLIC_APP_URL=${{ vars.NEXT_PUBLIC_BUSINESS_APP_URL || 'http://localhost:3001' }}
+            NEXT_PUBLIC_AUTH_URL=${{ vars.NEXT_PUBLIC_AUTH_URL || 'http://localhost:3000' }}
+            NEXT_PUBLIC_BUSINESS_APP_URL=${{ vars.NEXT_PUBLIC_BUSINESS_APP_URL || 'http://localhost:3001' }}
+            BETTER_AUTH_URL=${{ vars.BETTER_AUTH_URL || 'http://localhost:3000' }}
+            BETTER_AUTH_SECRET=${{ secrets.BETTER_AUTH_SECRET || 'ci-build-placeholder-secret-000000000000' }}
+            AUTH_TRUSTED_ORIGINS=${{ vars.AUTH_TRUSTED_ORIGINS || 'http://localhost:3000' }}
+            AUTH_COOKIE_DOMAIN=${{ vars.AUTH_COOKIE_DOMAIN || '' }}
+            RESEND_API_KEY=${{ secrets.RESEND_API_KEY || 're_ci_build_placeholder' }}
+            RESEND_FROM_EMAIL=${{ secrets.RESEND_FROM_EMAIL || 'build@example.com' }}
+            STORAGE_BUCKET=${{ vars.STORAGE_BUCKET || 'build' }}
+            STORAGE_REGION=${{ vars.STORAGE_REGION || 'auto' }}
+            STORAGE_ACCESS_KEY_ID=${{ secrets.STORAGE_ACCESS_KEY_ID || 'build' }}
+            STORAGE_SECRET_ACCESS_KEY=${{ secrets.STORAGE_SECRET_ACCESS_KEY || 'build' }}
+            STORAGE_ENDPOINT=${{ vars.STORAGE_ENDPOINT || 'http://localhost:3000' }}
+            STORAGE_PUBLIC_URL=${{ vars.STORAGE_PUBLIC_URL || 'http://localhost:3000' }}
+          cache-from: type=gha,scope=app
+          cache-to: type=gha,scope=app,mode=max
 
       - name: worker imajı
         uses: docker/build-push-action@v6
@@ -165,6 +208,7 @@ jobs:
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"
           echo "${{ steps.meta-auth.outputs.tags }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "${{ steps.meta-app.outputs.tags }}" >> "$GITHUB_STEP_SUMMARY"
           echo "${{ steps.meta-worker.outputs.tags }}" >> "$GITHUB_STEP_SUMMARY"
           echo "${{ steps.meta-migrate.outputs.tags }}" >> "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"
@@ -184,7 +228,11 @@ jobs:
     env:
       # Coolify'nin "Deploy Webhook" adresi (Application -> Deploy Webhook).
       # Secret tanımlı değilse deploy tetiklenmez.
-      COOLIFY_DEPLOY_WEBHOOK: ${{ secrets.COOLIFY_DEPLOY_WEBHOOK }}
+      #
+      # İki ayrı web deploy var: `auth.mqdms.com` ve `app.mqdms.com`. Her biri
+      # kendi Coolify resource'ına aittir ve kendi webhook'unu alır.
+      COOLIFY_AUTH_DEPLOY_WEBHOOK: ${{ secrets.COOLIFY_AUTH_DEPLOY_WEBHOOK }}
+      COOLIFY_APP_DEPLOY_WEBHOOK: ${{ secrets.COOLIFY_APP_DEPLOY_WEBHOOK }}
       # Coolify API token'ı (Keys & Tokens -> API Tokens, `deploy` izni).
       # Deploy webhook'u Bearer token ile doğrulanır; token olmadan istek
       # 401 (Unauthorized) ile reddedilir.
@@ -192,8 +240,29 @@ jobs:
 
     steps:
       - name: Coolify deploy webhook'ini çağır
-        if: env.COOLIFY_DEPLOY_WEBHOOK != '' && env.COOLIFY_API_TOKEN != ''
+        if: env.COOLIFY_API_TOKEN != ''
         run: |
-          curl --fail-with-body --silent --show-error --retry 3 --retry-delay 5 \
-            --header "Authorization: Bearer $COOLIFY_API_TOKEN" \
-            --request POST "$COOLIFY_DEPLOY_WEBHOOK"
+          status=0
+
+          for name in auth app; do
+            case "$name" in
+              auth) webhook="$COOLIFY_AUTH_DEPLOY_WEBHOOK" ;;
+              app)  webhook="$COOLIFY_APP_DEPLOY_WEBHOOK" ;;
+            esac
+
+            if [ -z "$webhook" ]; then
+              echo "::warning::$name deploy webhook tanımlı değil, atlanıyor."
+              continue
+            fi
+
+            echo "==> $name deploy tetikleniyor"
+
+            if ! curl --fail-with-body --silent --show-error --retry 3 --retry-delay 5 \
+              --header "Authorization: Bearer $COOLIFY_API_TOKEN" \
+              --request POST "$webhook"; then
+              echo "::error::$name deploy webhook çağrısı başarısız."
+              status=1
+            fi
+          done
+
+          exit $status

@@ -3,7 +3,6 @@ import { Badge } from "@mqdms/ui/components/badge";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@mqdms/ui/components/card";

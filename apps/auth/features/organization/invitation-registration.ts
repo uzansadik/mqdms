@@ -25,8 +25,9 @@ const invitationRegistrationSchema = z.object({
 /**
  * Davet bağlantısıyla hesap açar.
  *
- * Genel kayıt kapalı olduğu için hesap yalnızca iki kaynaktan oluşur: superadmin
- * ve geçerli bir davet. Bu aksiyon ikinci kaynağı uygular:
+ * Genel kayıt kapalı olduğu için hesap yalnızca iki kaynaktan oluşur: ilk
+ * kurulum (bootstrap) ve geçerli bir davet. Bu aksiyon ikinci kaynağı
+ * uygular:
  *
  * - Davet gerçek, `pending` ve süresi dolmamış olmalı.
  * - Hesap **davet edilen e-posta adresiyle** açılır; e-posta form üzerinden

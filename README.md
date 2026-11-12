@@ -22,8 +22,9 @@ MQDMS is a reusable SaaS starter built for creating new applications without reb
 
 ```text
 apps/
-  auth/
-  worker/
+  auth/      → auth.mqdms.com (kimlik, organizasyon yönetimi)
+  app/       → app.mqdms.com  (iş uygulaması: FMEA, sinoptik, ...)
+  worker/    → e-posta / BullMQ işleri
 
 packages/
   audit/
@@ -40,7 +41,16 @@ packages/
   ui/
 ```
 
-Application-specific features live inside `apps/auth/features`.
+There are exactly **two web deployments**. They share the same database, the
+same Better Auth secret and the same session cookie, so a single login covers
+both:
+
+| Deploy            | App          | Responsibility                                                              |
+| ----------------- | ------------ | --------------------------------------------------------------------------- |
+| `auth.mqdms.com`  | `apps/auth`  | Login, dashboard, profile, organization, member, role, permission, invitation |
+| `app.mqdms.com`   | `apps/app`   | The business application: FMEA, synoptic and the other quality modules       |
+
+Application-specific features live inside `apps/<app>/features`.
 
 Infrastructure packages should remain framework-independent where possible.
 
@@ -115,6 +125,7 @@ MQDMS synchronizes it to:
 
 ```text
 apps/auth/.env
+apps/app/.env
 ```
 
 when development starts.
@@ -162,8 +173,12 @@ The root command first synchronizes environment variables and then starts the Tu
 Web application:
 
 ```text
-http://localhost:3000
+http://localhost:3000   → auth
+http://localhost:3001   → app
 ```
+
+Locally both apps run on `localhost`, so they share the same host-only
+session cookie even though the ports differ.
 
 ---
 
@@ -181,16 +196,18 @@ This starts:
 postgres   → localhost:5432 (database: mqdms)
 redis      → localhost:6379
 migrate    → runs Drizzle migrations once, then exits
-auth        → http://localhost:3000
+auth       → http://localhost:3000
+app        → http://localhost:3001
 worker     → queue worker (default,email)
 ```
 
-`migrate` runs before `auth` starts, so the schema is always up to date.
+`migrate` runs before `auth` and `app` start, so the schema is always up to date.
 
 Useful commands:
 
 ```bash
 docker compose logs -f auth      # Uygulama logları
+docker compose logs -f app       # İş uygulaması logları
 docker compose logs -f worker   # Worker logları
 docker compose ps               # Servis durumu
 docker compose down             # Servisleri durdur
@@ -201,7 +218,8 @@ docker compose run --rm migrate # Migration'ları yeniden çalıştır
 The images are built from:
 
 ```text
-docker/auth.Dockerfile      → Next.js standalone sunucusu
+docker/auth.Dockerfile      → Next.js standalone sunucusu (auth.mqdms.com)
+docker/app.Dockerfile       → Next.js standalone sunucusu (app.mqdms.com)
 docker/worker.Dockerfile   → BullMQ worker
 docker/migrate.Dockerfile  → Drizzle migration çalıştırıcı
 ```
@@ -211,10 +229,10 @@ arguments and at runtime through `env_file`. The database and Redis URLs are
 overridden inside `docker-compose.yml` so that the containers use the `postgres`
 and `redis` services instead of the host values.
 
-The application port can be changed with `APP_PORT`:
+The application ports can be changed with `APP_PORT` and `BUSINESS_APP_PORT`:
 
 ```bash
-APP_PORT=3001 docker compose up -d
+APP_PORT=3000 BUSINESS_APP_PORT=3001 docker compose up -d
 ```
 
 ---
@@ -241,6 +259,7 @@ Images:
 
 ```text
 ghcr.io/uzansadik/mqdms/auth
+ghcr.io/uzansadik/mqdms/app
 ghcr.io/uzansadik/mqdms/worker
 ghcr.io/uzansadik/mqdms/migrate
 ```
@@ -298,15 +317,23 @@ at `http://localhost:3000`.
 Settings → Secrets and variables → Actions → Variables:
 
 ```text
-NEXT_PUBLIC_APP_URL=https://app.example.com
+NEXT_PUBLIC_APP_URL=https://auth.mqdms.com
+NEXT_PUBLIC_AUTH_URL=https://auth.mqdms.com
+NEXT_PUBLIC_BUSINESS_APP_URL=https://app.mqdms.com
+BETTER_AUTH_URL=https://auth.mqdms.com
+AUTH_TRUSTED_ORIGINS=https://auth.mqdms.com,https://app.mqdms.com
+AUTH_COOKIE_DOMAIN=.mqdms.com
 ```
+
+`NEXT_PUBLIC_APP_URL` is the deploy's **own** origin: `auth.mqdms.com` for the
+auth image, `app.mqdms.com` for the app image. `NEXT_PUBLIC_AUTH_URL` is the
+canonical auth origin and is identical in both.
 
 Everything else is optional on GitHub. If you do define them, put them in
 **Secrets** (they are masked in logs):
 
 ```text
 BETTER_AUTH_SECRET
-BETTER_AUTH_URL
 RESEND_API_KEY
 RESEND_FROM_EMAIL
 STORAGE_BUCKET
@@ -327,9 +354,13 @@ deployment host. Copy `.env.example` there and fill it in:
 
 ```text
 APP_ENV=production
-NEXT_PUBLIC_APP_URL=https://app.example.com
+NEXT_PUBLIC_APP_URL=https://auth.mqdms.com
+NEXT_PUBLIC_AUTH_URL=https://auth.mqdms.com
+NEXT_PUBLIC_BUSINESS_APP_URL=https://app.mqdms.com
 BETTER_AUTH_SECRET=<openssl rand -base64 32>
-BETTER_AUTH_URL=https://app.example.com
+BETTER_AUTH_URL=https://auth.mqdms.com
+AUTH_TRUSTED_ORIGINS=https://auth.mqdms.com,https://app.mqdms.com
+AUTH_COOKIE_DOMAIN=.mqdms.com
 RESEND_API_KEY=re_...
 RESEND_FROM_EMAIL=...
 STORAGE_BUCKET=...
@@ -340,10 +371,10 @@ STORAGE_ENDPOINT=
 STORAGE_PUBLIC_URL=
 ```
 
-`SUPERADMIN_BOOTSTRAP_ENABLED` and `SUPERADMIN_BOOTSTRAP_KEY` are only needed
-while the first superadmin is created — see
-[Creating the first superadmin](#creating-the-first-superadmin). They are read
-at runtime, so the GitHub build secrets are irrelevant for them.
+`ORG_BOOTSTRAP_ENABLED` and `ORG_BOOTSTRAP_KEY` are only needed while the first
+organization is created — see
+[Creating the first organization](#creating-the-first-organization). They are
+read at runtime, so the GitHub build secrets are irrelevant for them.
 
 `docker-compose.yml` overrides `DATABASE_URL`, `REDIS_URL` and `QUEUE_PREFIX`
 with the in-network service names, so those three are not read from the host
@@ -369,13 +400,21 @@ to be registered there as well (see [Deployment](#deployment)).
 
 ## Deployment
 
-The production stack runs on Coolify with `docker-compose.coolify.yml`. It
-pulls the published images (never builds them) and applies pending migrations
-through the one-shot `migrate` service before `auth` and `worker` start.
+The production stack runs on Coolify as **two** Docker Compose Applications:
+
+| Compose file                       | Coolify resource | Services                                |
+| ---------------------------------- | ---------------- | --------------------------------------- |
+| `docker-compose.coolify.yml`       | auth stack       | postgres, redis, migrate, auth, worker |
+| `docker-compose.coolify.app.yml`   | app stack        | app                                     |
+
+Both pull the published images (never build them) and share the same database
+over the private network. The auth stack applies pending migrations through the
+one-shot `migrate` service before `auth`, `app` and `worker` start.
 
 ```text
 merge into main → CI publishes latest + sha-<short-sha> → CI calls the
-Coolify deploy webhook → Coolify pulls the new images and redeploys
+Coolify deploy webhook of each resource → Coolify pulls the new images and
+redeploys
 ```
 
 The deploy is triggered **by CI**, not by Coolify's push webhook: the webhook
@@ -387,19 +426,21 @@ Coolify side:
 1. **Preview deployments off** — pull requests do not produce images, so a
    preview deployment would always fail.
 2. **Registry credentials** — `ghcr.io` with a token that has `read:packages`.
-3. **Environment variables** — everything `docker-compose.coolify.yml` marks
-   as required (`DATABASE_URL`, `POSTGRES_PASSWORD`, `NEXT_PUBLIC_APP_URL`,
-   `BETTER_AUTH_URL`, `BETTER_AUTH_SECRET`, `RESEND_API_KEY`,
-   `RESEND_FROM_EMAIL`, `STORAGE_*`) plus the optional bootstrap and OAuth
-   variables.
-4. **Deploy webhook** — copy the URL from Application → Deploy Webhook and
-   register it as the repository secret:
+3. **Environment variables** — everything the compose file marks as required
+   (`DATABASE_URL`, `POSTGRES_PASSWORD`, `NEXT_PUBLIC_APP_URL`,
+   `NEXT_PUBLIC_AUTH_URL`, `NEXT_PUBLIC_BUSINESS_APP_URL`, `BETTER_AUTH_URL`,
+   `BETTER_AUTH_SECRET`, `AUTH_TRUSTED_ORIGINS`, `AUTH_COOKIE_DOMAIN`,
+   `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, `STORAGE_*`) plus the optional
+   bootstrap variables.
+4. **Deploy webhooks** — copy the URL from Application → Deploy Webhook of
+   each resource and register both as repository secrets:
 
    ```bash
-   gh secret set COOLIFY_DEPLOY_WEBHOOK
+   gh secret set COOLIFY_AUTH_DEPLOY_WEBHOOK
+   gh secret set COOLIFY_APP_DEPLOY_WEBHOOK
    ```
 
-   The webhook is authenticated with a Coolify API token (Keys & Tokens → API
+   The webhooks are authenticated with a Coolify API token (Keys & Tokens → API
    Tokens, `deploy` permission). Register it as a second secret:
 
    ```bash
@@ -409,6 +450,9 @@ Coolify side:
    Without the secrets the images are still published, but no deployment is
    triggered.
 
+`BETTER_AUTH_SECRET` and `AUTH_COOKIE_DOMAIN` **must** be identical in both
+stacks; otherwise the two deployments do not share a session.
+
 The image tag is `APP_TAG` and defaults to `latest`. Pin it to roll back to a
 previous build:
 
@@ -417,8 +461,8 @@ APP_TAG=sha-1bc322d
 ```
 
 The same images can be run on a plain Docker host instead of Coolify.
-`docker-compose.prod.yml` overrides `migrate`, `auth` and `worker` to use the
-published images instead of building locally:
+`docker-compose.prod.yml` overrides `migrate`, `auth`, `app` and `worker` to
+use the published images instead of building locally:
 
 ```bash
 docker compose -f docker-compose.yml -f docker-compose.prod.yml pull
@@ -446,9 +490,9 @@ Included flows:
 
 Public registration is disabled: `/register` returns 404 and the Better Auth
 `/sign-up/email` endpoint is closed (`disableSignUp: true`). Accounts are created
-either by a superadmin or through an organization invitation link
-(`/accept-invitation`), which is also where a user without an account sets their
-password.
+either during the [first organization setup](#creating-the-first-organization) or
+through an organization invitation link (`/accept-invitation`), which is also
+where a user without an account sets their password.
 
 The `@mqdms/auth` package must not depend on Next.js APIs such as:
 
@@ -461,17 +505,37 @@ redirect()
 Next.js-specific authentication helpers belong in:
 
 ```text
-apps/auth/features/auth
+apps/<app>/features/auth
 ```
 
-## Creating the first superadmin
+## Shared session
+
+The two web deployments share one session:
+
+* `BETTER_AUTH_URL` is the same in both (`https://auth.mqdms.com`); it is where
+  the session cookie is written and where sign-in and sign-out happen.
+* `AUTH_COOKIE_DOMAIN` is the shared cookie domain (`.mqdms.com`). When it is
+  set, the cookie is written for the whole domain and both deployments read it.
+  Left empty, the cookie is host-only — which is what local development uses,
+  where both apps run on `localhost` and therefore share it anyway.
+* `BETTER_AUTH_SECRET` must be identical in both; a different secret means a
+  different session.
+* `AUTH_TRUSTED_ORIGINS` is the exact list of origins Better Auth accepts a
+  `callbackURL` redirect to. Wildcards are not used.
+
+Session cookies are `HttpOnly`, `SameSite=Lax`, `Path=/` and `Secure` in
+production. The session lasts 7 days and is refreshed once a day. The cookie
+cache is **off**: permissions are read from the database on every request, so a
+revoked role takes effect immediately.
+
+## Creating the first organization
 
 The bootstrap flow is disabled by default. It is only enabled by two runtime
 environment variables:
 
 ```text
-SUPERADMIN_BOOTSTRAP_ENABLED=true
-SUPERADMIN_BOOTSTRAP_KEY=<openssl rand -base64 32>
+ORG_BOOTSTRAP_ENABLED=true
+ORG_BOOTSTRAP_KEY=<openssl rand -base64 32>
 ```
 
 Both are read at **runtime**, not at build time: they are not `NEXT_PUBLIC_`
@@ -490,97 +554,15 @@ Where they have to be defined depends on how the stack is deployed:
 The flow itself:
 
 1. Enable both variables and restart (or redeploy) the `auth` container.
-2. Open `/bootstrap-superadmin` and submit the bootstrap key together with the
-   account details.
+2. Open `/bootstrap-org` and submit the bootstrap key together with the
+   organization and owner details.
 3. Verify the email address, then sign in.
-4. Set `SUPERADMIN_BOOTSTRAP_ENABLED=false` again.
+4. Set `ORG_BOOTSTRAP_ENABLED=false` again and remove the key.
 
-The page closes itself once a user with the `superadmin` role exists, and the
-whole flow is refused for every other role — an existing regular user does not
-block it. If the page reports that bootstrap is unavailable, the reason is
-either that the variables above are missing or that a superadmin already
-exists.
-
----
-
-# OAuth provider (central identity provider)
-
-The auth app is the identity provider of the platform. Other applications
-(e.g. `app.example.com`) delegate authentication to it and receive the user's
-roles and permissions as token claims.
-
-It is built on `@better-auth/oauth-provider` (OAuth 2.1 + OpenID Connect) with
-the `jwt` plugin for signing.
-
-## Endpoints
-
-All provider endpoints live under the Better Auth base path (`/api/auth`):
-
-| Endpoint | Purpose |
-| --- | --- |
-| `GET /api/auth/oauth2/authorize` | Authorization request; redirects to the login page when there is no session |
-| `POST /api/auth/oauth2/token` | Code (and refresh token) exchange; PKCE `S256` is required |
-| `GET /api/auth/oauth2/userinfo` | Standard claims plus the published role/permission claims |
-| `POST /api/auth/oauth2/consent` | Approval decision |
-| `POST /api/auth/oauth2/continue` | Resumes the flow after the organization selection |
-| `GET /api/auth/jwks` | Public signing keys for local token verification |
-
-The discovery documents are mounted by hand, because the plugin only provides
-the handlers:
-
-* `GET /.well-known/oauth-authorization-server`
-* `GET /.well-known/openid-configuration`
-
-## Flow
-
-1. The application redirects the user to `/api/auth/oauth2/authorize` with
-   `client_id`, `redirect_uri`, `scope`, `state` and a PKCE `code_challenge`.
-2. Without a session the provider redirects to `/login` with the signed
-   authorization request. The user signs in; the flow continues.
-3. If the user belongs to more than one organization, `/oauth/organizations`
-   asks which organization the token belongs to.
-4. `/oauth/consent` shows the requested scopes; the user approves or denies.
-5. The provider redirects back to the application's `redirect_uri` with
-   `code`, `state` and `iss`.
-6. The application exchanges the code at `/api/auth/oauth2/token` and receives
-   an access token, an ID token and (with `offline_access`) a refresh token.
-
-## Published claims
-
-| Claim | Content |
-| --- | --- |
-| `https://auth.mqdms.com/organization` | Id of the selected organization |
-| `https://auth.mqdms.com/roles` | Role ids of the membership (`owner`, `quality-engineer`, …) |
-| `https://auth.mqdms.com/permissions` | Effective permissions (`fmea:read`, `fmea:submit`, …) |
-| `https://auth.mqdms.com/platform-role` | Platform role (`user` / `superadmin`) |
-
-Permissions are computed from the same RBAC model the app uses internally
-(`packages/auth/src/permissions`): an explicit `deny` grant wins over an
-explicit `allow` grant, and the fixed role catalog is the fallback. The role
-and permission claims are only added when the client requested the
-`permissions:read` scope.
-
-## Registering an application
-
-Superadmins register applications in the admin panel under
-`/admin/oauth-clients`. The panel writes the client id and the client secret;
-the secret is shown only once.
-
-Give the application a **resource** (the URI of its protected API). With a
-resource the access token becomes a JWT whose audience is that resource, so
-the application can verify it locally against `/api/auth/jwks` instead of
-calling the introspection endpoint.
-
-## Configuration
-
-| Variable | Purpose |
-| --- | --- |
-| `OAUTH_TRUSTED_ORIGINS` | Comma separated origins of the consuming applications; Better Auth validates `callbackURL` redirects against this list |
-| `OAUTH_PAIRWISE_SECRET` | Secret for pairwise subject ids (at least 32 characters) |
-| `OAUTH_ISSUER` | Issuer URI; defaults to `BETTER_AUTH_URL` |
-
-`NEXT_PUBLIC_APP_URL` must point at the auth app itself (`auth.mqdms.com`):
-the client bundle talks to `/api/auth/*` on that origin.
+The bootstrap creates the owner account, the organization, the owner
+membership and the factory roles. It is protected by a PostgreSQL advisory
+lock and a durable `bootstrap_state` row, so a second attempt is refused and a
+half-finished setup is resumed rather than duplicated.
 
 ---
 
@@ -590,8 +572,7 @@ Organizations are the primary application workspace / tenant abstraction.
 
 Included functionality:
 
-* Organization onboarding
-* Create organization
+* Create organization (first setup only)
 * Switch active organization
 * Organization name
 * Organization slug
@@ -599,20 +580,47 @@ Included functionality:
 * Invite members
 * Pending invitations
 * Accept invitation
-* Promote member to admin
-* Demote admin to member
-* Remove member
+* Assign and remove member roles
+* Manage member permissions
+* Create, edit and delete custom roles
 * Delete organization
 
-Roles:
+## Roles and permissions
+
+There are two separate layers:
+
+**Better Auth membership roles** are the management roles. They live in
+`member.role` and there are exactly two:
 
 ```text
-owner
-admin
-member
+owner   → full access; manages members, roles and permissions
+member  → access comes from the functional roles assigned to them
 ```
 
-Sensitive organization settings such as organization deletion are owner-only.
+**Functional roles** (Plant Manager, Project Engineer, Quality Engineer, …)
+are per-organization records in `organization_role`. They are seeded from the
+factory catalog in `packages/auth/src/permissions/seeds/factory.ts` when the
+organization is created, and the owner can edit them afterwards. Roles are
+never shared between organizations.
+
+A member can hold several functional roles at once. The evaluation order for
+a single `resource:action` pair is:
+
+1. A resource/action that is not in the catalog fails closed.
+2. The owner has access to every registered business action; the owner's
+   grants cannot be changed.
+3. An explicit `deny` grant on the member rejects the action.
+4. An explicit `allow` grant on the member permits the action.
+5. Otherwise the union of the member's assigned roles decides.
+6. A member without a role and without an explicit grant has **no** access.
+
+The permission catalog is code, not configuration
+(`packages/auth/src/permissions/resources.ts`): adding a module means adding
+its resources and actions there.
+
+Every server action and every repository query performs this check. The
+layout is not a security boundary on its own, and hiding a menu item is never
+authorization.
 
 Application resources should generally belong to an organization rather than directly to a user.
 
@@ -855,6 +863,7 @@ MQDMS currently provides a working reference for:
 Authentication
 Organizations
 Memberships
+Roles and permissions
 Invitations
 Profiles
 Password management
@@ -864,4 +873,4 @@ Storage
 Organization branding
 ```
 
-The goal is to provide a clean SaaS foundation while leaving product-specific domain logic to the application built on top of it.
+The goal is to provide a clean SaaS foundation while leaving product-specific domain logic to the application built on top of it. The business modules of `apps/app` (FMEA, synoptic, …) are route and guard shells: the access control is in place, the domain behaviour is developed as separate features.

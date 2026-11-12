@@ -1,6 +1,12 @@
-# MQDMS production stack, deploy via Coolify Git-based Docker Compose Application.
+# MQDMS auth stack (auth.mqdms.com), deploy via Coolify Git-based Docker
+# Compose Application.
+#
 # GH Actions builds auth/worker/migrate and pushes them to GHCR.
 # This Compose file only PULLS the application images.
+#
+# The business application (app.mqdms.com) lives in its own Coolify resource
+# (`docker-compose.coolify.app.yml`) and connects to the same database over
+# the private network. The HTTP auth handler exists only in this stack.
 
 x-runtime-env: &runtime-env
   NODE_ENV: production
@@ -9,8 +15,15 @@ x-runtime-env: &runtime-env
   REDIS_URL: redis://redis:6379
   QUEUE_PREFIX: ${QUEUE_PREFIX:-mqdms}
   NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:?NEXT_PUBLIC_APP_URL is required}
+  NEXT_PUBLIC_AUTH_URL: ${NEXT_PUBLIC_AUTH_URL:?NEXT_PUBLIC_AUTH_URL is required}
+  NEXT_PUBLIC_BUSINESS_APP_URL: ${NEXT_PUBLIC_BUSINESS_APP_URL:?NEXT_PUBLIC_BUSINESS_APP_URL is required}
   BETTER_AUTH_URL: ${BETTER_AUTH_URL:?BETTER_AUTH_URL is required}
   BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?BETTER_AUTH_SECRET is required}
+  # Kesin origin listesi; wildcard kullanılmaz.
+  AUTH_TRUSTED_ORIGINS: ${AUTH_TRUSTED_ORIGINS:?AUTH_TRUSTED_ORIGINS is required}
+  # Paylaşımlı oturum cookie'sinin alan adı (ör. `.mqdms.com`). İki deploy'un
+  # aynı oturumu paylaşması için zorunludur.
+  AUTH_COOKIE_DOMAIN: ${AUTH_COOKIE_DOMAIN:?AUTH_COOKIE_DOMAIN is required}
   RESEND_API_KEY: ${RESEND_API_KEY:?RESEND_API_KEY is required}
   RESEND_FROM_EMAIL: ${RESEND_FROM_EMAIL:?RESEND_FROM_EMAIL is required}
   STORAGE_BUCKET: ${STORAGE_BUCKET:?STORAGE_BUCKET is required}
@@ -23,13 +36,8 @@ x-runtime-env: &runtime-env
   # sayfa `force-dynamic` ve bu değişkenler `NEXT_PUBLIC_` önekli olmadığı
   # için sunucuda container ortamından gelir. Varsayılan kapalı; açmak için
   # Coolify'da iki değişkeni de tanımla.
-  SUPERADMIN_BOOTSTRAP_ENABLED: ${SUPERADMIN_BOOTSTRAP_ENABLED:-false}
-  SUPERADMIN_BOOTSTRAP_KEY: ${SUPERADMIN_BOOTSTRAP_KEY:-}
-  # OAuth provider (merkezi kimlik yöneticisi) ayarları. Tüketen uygulamaların
-  # origin'leri burada virgülle ayrılmış olarak tanımlanır.
-  OAUTH_TRUSTED_ORIGINS: ${OAUTH_TRUSTED_ORIGINS:-}
-  OAUTH_PAIRWISE_SECRET: ${OAUTH_PAIRWISE_SECRET:-}
-  OAUTH_ISSUER: ${OAUTH_ISSUER:-}
+  ORG_BOOTSTRAP_ENABLED: ${ORG_BOOTSTRAP_ENABLED:-false}
+  ORG_BOOTSTRAP_KEY: ${ORG_BOOTSTRAP_KEY:-}
 
 services:
   postgres:
@@ -57,7 +65,7 @@ services:
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
-      timeout: 3s
+      timeout: 5s
       retries: 10
 
   migrate:

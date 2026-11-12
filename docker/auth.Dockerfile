@@ -17,6 +17,7 @@ WORKDIR /app
 FROM base AS deps
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
+COPY apps/app/package.json ./apps/app/package.json
 COPY apps/auth/package.json ./apps/auth/package.json
 COPY apps/worker/package.json ./apps/worker/package.json
 
@@ -34,8 +35,12 @@ ARG DATABASE_URL
 ARG REDIS_URL
 ARG QUEUE_PREFIX
 ARG NEXT_PUBLIC_APP_URL
+ARG NEXT_PUBLIC_AUTH_URL
+ARG NEXT_PUBLIC_BUSINESS_APP_URL
 ARG BETTER_AUTH_URL
 ARG BETTER_AUTH_SECRET
+ARG AUTH_TRUSTED_ORIGINS
+ARG AUTH_COOKIE_DOMAIN
 ARG RESEND_API_KEY
 ARG RESEND_FROM_EMAIL
 ARG STORAGE_BUCKET
@@ -49,8 +54,12 @@ ENV DATABASE_URL=$DATABASE_URL
 ENV REDIS_URL=$REDIS_URL
 ENV QUEUE_PREFIX=$QUEUE_PREFIX
 ENV NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL
+ENV NEXT_PUBLIC_AUTH_URL=$NEXT_PUBLIC_AUTH_URL
+ENV NEXT_PUBLIC_BUSINESS_APP_URL=$NEXT_PUBLIC_BUSINESS_APP_URL
 ENV BETTER_AUTH_URL=$BETTER_AUTH_URL
 ENV BETTER_AUTH_SECRET=$BETTER_AUTH_SECRET
+ENV AUTH_TRUSTED_ORIGINS=$AUTH_TRUSTED_ORIGINS
+ENV AUTH_COOKIE_DOMAIN=$AUTH_COOKIE_DOMAIN
 ENV RESEND_API_KEY=$RESEND_API_KEY
 ENV RESEND_FROM_EMAIL=$RESEND_FROM_EMAIL
 ENV STORAGE_BUCKET=$STORAGE_BUCKET
@@ -62,6 +71,7 @@ ENV STORAGE_PUBLIC_URL=$STORAGE_PUBLIC_URL
 
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/apps/auth/node_modules ./apps/auth/node_modules
+COPY --from=deps /app/apps/app/node_modules ./apps/app/node_modules
 COPY --from=deps /app/apps/worker/node_modules ./apps/worker/node_modules
 COPY --from=deps /app/packages ./packages
 
