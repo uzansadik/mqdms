@@ -245,17 +245,20 @@ jobs:
       - name: Coolify deploy webhook'ini çağır
         if: env.COOLIFY_API_TOKEN != ''
         run: |
-          status=0
-
-          for name in auth app; do
-            case "$name" in
-              auth) webhook="$COOLIFY_AUTH_DEPLOY_WEBHOOK" ;;
-              app)  webhook="$COOLIFY_APP_DEPLOY_WEBHOOK" ;;
-            esac
+          # Sıra önemlidir: auth deploy'u başarısız olursa app deploy'u
+          # tetiklenmez. Aksi halde app, migration'ı uygulamamış ya da
+          # oturum secret'ı eski olan bir auth deploy'una bağlanır.
+          #
+          # Webhook çağrısının kabul edilmesi deploy'un tamamlandığı anlamına
+          # gelmez; Coolify asıl deploy'u başlatır. Buradaki sıralama yalnızca
+          # "auth tetiklenemediyse app tetiklenmesin" garantisini verir.
+          deploy() {
+            name="$1"
+            webhook="$2"
 
             if [ -z "$webhook" ]; then
               echo "::warning::$name deploy webhook tanımlı değil, atlanıyor."
-              continue
+              return 0
             fi
 
             echo "==> $name deploy tetikleniyor"
@@ -264,8 +267,17 @@ jobs:
               --header "Authorization: Bearer $COOLIFY_API_TOKEN" \
               --request POST "$webhook"; then
               echo "::error::$name deploy webhook çağrısı başarısız."
-              status=1
+              return 1
             fi
-          done
 
-          exit $status
+            return 0
+          }
+
+          if ! deploy auth "$COOLIFY_AUTH_DEPLOY_WEBHOOK"; then
+            echo "::error::auth deploy tetiklenemedi; app deploy'u iptal ediliyor."
+            exit 1
+          fi
+
+          if ! deploy app "$COOLIFY_APP_DEPLOY_WEBHOOK"; then
+            exit 1
+          fi
