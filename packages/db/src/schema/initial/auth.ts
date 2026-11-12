@@ -1,6 +1,6 @@
 import { relations } from "drizzle-orm";
 import * as t from "drizzle-orm/pg-core";
-import { boolean, index, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import { boolean, index, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 
 export const user = pgTable("user", {
   id: text("id").primaryKey(),
@@ -13,10 +13,6 @@ export const user = pgTable("user", {
     .defaultNow()
     .$onUpdate(() => /* @__PURE__ */ new Date())
     .notNull(),
-  role: text("role"),
-  banned: boolean("banned").default(false),
-  banReason: text("ban_reason"),
-  banExpires: timestamp("ban_expires"),
 });
 
 export const session = pgTable(
@@ -34,7 +30,6 @@ export const session = pgTable(
     userId: text("user_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
-    impersonatedBy: text("impersonated_by"),
     activeOrganizationId: text("active_organization_id"),
   },
   (table) => [index("session_userId_idx").on(table.userId)],
@@ -105,6 +100,18 @@ export const member = pgTable(
   (table) => [
     index("member_organizationId_idx").on(table.organizationId),
     index("member_userId_idx").on(table.userId),
+
+    /*
+     * Bir kullanıcının aynı organizasyonda iki üye kaydı olamaz.
+     */
+    uniqueIndex("member_organization_id_user_id_uidx").on(table.organizationId, table.userId),
+
+    /*
+     * Composite unique: `member_permission` ve `member_role` tablolarının
+     * (organization_id, member_id) yabancı anahtarını destekler. Bu sayede
+     * grant'ın ait olduğu üye, grant'ın organizasyonuna ait olmak zorundadır.
+     */
+    uniqueIndex("member_organization_id_id_uidx").on(table.organizationId, table.id),
   ],
 );
 
