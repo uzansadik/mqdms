@@ -159,4 +159,32 @@ export const tr = {
     "Workspace'in tam sahibi. Organizasyonu silebilir, üye ve yetki yönetebilir.",
   "roles.member.label": "Üye",
   "roles.member.description": "Erişimi, bu üyeye atanmış fonksiyonel rollerden gelir.",
+
+  "app.nav.modules": "Modüller",
+  "app.nav.dashboard": "Kontrol Paneli",
+  "app.nav.fmea": "FMEA",
+  "app.nav.synoptic": "Sinoptik",
+  "app.nav.account": "Hesap ayarları",
+
+  "app.dashboard.welcome": "Tekrar hoş geldin, {name}",
+  "app.dashboard.description": "{organization} için genel bakış.",
+
+  "app.modules.available": "Erişilebilir",
+  "app.modules.noAccess": "Erişim yok",
+  "app.modules.fmea.title": "FMEA",
+  "app.modules.fmea.description": "Hata türü ve etki analizi kayıtları.",
+  "app.modules.fmea.detail": "FMEA kaydı",
+  "app.modules.fmea.placeholder.title": "Modül iskeleti",
+  "app.modules.fmea.placeholder.description":
+    "Rota ve erişim koruması hazır; FMEA kayıtlarının kendisi henüz uygulanmadı.",
+  "app.modules.fmea.placeholder.note":
+    "Kayıtlar aktif organizasyona kapsanacak ve aynı yetki motoruyla korunacaktır.",
+  "app.modules.synoptic.title": "Sinoptik",
+  "app.modules.synoptic.description": "Proses sinoptik şemaları.",
+  "app.modules.synoptic.detail": "Sinoptik şeması",
+  "app.modules.synoptic.placeholder.title": "Modül iskeleti",
+  "app.modules.synoptic.placeholder.description":
+    "Rota ve erişim koruması hazır; sinoptik düzenleyicisi henüz uygulanmadı.",
+  "app.modules.synoptic.placeholder.note":
+    "Güncelleme synoptic:update yetkisi ister; okuma synoptic:read yetkisi ister.",
 } satisfies Record<MessageKey, string>;

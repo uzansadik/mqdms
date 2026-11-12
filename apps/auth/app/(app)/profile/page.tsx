@@ -1,4 +1,4 @@
-import { LanguageSelect } from "@/components/language-switcher";
+import { LanguageSelect } from "@mqdms/i18n/language-select";
 import { ChangePasswordForm } from "@/features/profile/change-password-form";
 import { ProfileForm } from "@/features/profile/profile-form";
 import { SessionsSection } from "@/features/profile/sessions-section";

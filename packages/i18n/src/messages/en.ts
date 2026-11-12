@@ -159,6 +159,34 @@ export const en = {
   "roles.member.label": "Member",
   "roles.member.description":
     "Access comes from the functional roles assigned to this member.",
+
+  "app.nav.modules": "Modules",
+  "app.nav.dashboard": "Dashboard",
+  "app.nav.fmea": "FMEA",
+  "app.nav.synoptic": "Synoptic",
+  "app.nav.account": "Account settings",
+
+  "app.dashboard.welcome": "Welcome back, {name}",
+  "app.dashboard.description": "Here is an overview of {organization}.",
+
+  "app.modules.available": "Available",
+  "app.modules.noAccess": "No access",
+  "app.modules.fmea.title": "FMEA",
+  "app.modules.fmea.description": "Failure mode and effect analysis records.",
+  "app.modules.fmea.detail": "FMEA record",
+  "app.modules.fmea.placeholder.title": "Module shell",
+  "app.modules.fmea.placeholder.description":
+    "The route and its access guard are in place; the FMEA records themselves are not implemented yet.",
+  "app.modules.fmea.placeholder.note":
+    "Records will be scoped to the active organization and guarded by the same permission engine.",
+  "app.modules.synoptic.title": "Synoptic",
+  "app.modules.synoptic.description": "Process synoptic diagrams.",
+  "app.modules.synoptic.detail": "Synoptic diagram",
+  "app.modules.synoptic.placeholder.title": "Module shell",
+  "app.modules.synoptic.placeholder.description":
+    "The route and its access guard are in place; the synoptic editor itself is not implemented yet.",
+  "app.modules.synoptic.placeholder.note":
+    "Updates will require the synoptic:update permission; reading requires synoptic:read.",
 } as const;
 
 export type MessageKey = keyof typeof en;

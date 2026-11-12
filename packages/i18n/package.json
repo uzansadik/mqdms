@@ -9,11 +9,15 @@
   "exports": {
     ".": "./src/index.ts",
     "./server": "./src/server.ts",
-    "./actions": "./src/actions.ts"
+    "./actions": "./src/actions.ts",
+    "./language-select": "./src/language-select.tsx"
   },
   "peerDependencies": {
     "next": "^16.2.6",
     "react": "^19.0.0"
+  },
+  "dependencies": {
+    "@mqdms/ui": "workspace:*"
   },
   "devDependencies": {
     "@mqdms/typescript-config": "workspace:*",

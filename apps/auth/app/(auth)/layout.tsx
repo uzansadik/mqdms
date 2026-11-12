@@ -1,7 +1,7 @@
 import { appConfig } from "@mqdms/config";
 import { getTranslations } from "@mqdms/i18n/server";
 import type { ReactNode } from "react";
-import { LanguageSelect } from "@/components/language-switcher";
+import { LanguageSelect } from "@mqdms/i18n/language-select";
 
 type AuthLayoutProps = {
   children: ReactNode;
