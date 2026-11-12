@@ -1,6 +1,6 @@
 import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import { env } from "@mqdms/env/server";
+import { storageEnv as env } from "@mqdms/env/storage";
 
 import { storageClient } from "./client";
 import { createObjectKey } from "./keys";

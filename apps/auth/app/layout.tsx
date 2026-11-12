@@ -6,7 +6,7 @@ import { getLocale } from "@mqdms/i18n/server";
 import { Toaster } from "@mqdms/ui/components/sonner";
 import { TooltipProvider } from "@mqdms/ui/components/tooltip";
 import { cn } from "@mqdms/ui/lib/utils";
-import { ThemeProvider } from "@/components/theme-provider";
+import { ThemeProvider } from "@mqdms/ui/theme-provider";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 

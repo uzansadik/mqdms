@@ -2,13 +2,21 @@ name: mqdms
 
 # Build sırasında `@mqdms/env` şeması doğrulanıyor; bu değerler image'a
 # gömülmez, sadece build ortamına verilir.
+#
+# `NEXT_PUBLIC_*` değerleri client bundle'a işlenir, bu yüzden build-time'da
+# doğru olmalıdır. `NEXT_PUBLIC_AUTH_URL` her iki deploy'ta aynıdır
+# (oturum cookie'si ve auth yönlendirmeleri bu adrese gider).
 x-build-args: &build-args
   DATABASE_URL: postgres://postgres:root@postgres:5432/mqdms
   REDIS_URL: redis://redis:6379
   QUEUE_PREFIX: ${QUEUE_PREFIX:-mqdms}
   NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
+  NEXT_PUBLIC_AUTH_URL: ${NEXT_PUBLIC_AUTH_URL:-http://localhost:3000}
+  NEXT_PUBLIC_BUSINESS_APP_URL: ${NEXT_PUBLIC_BUSINESS_APP_URL:-http://localhost:3001}
   BETTER_AUTH_URL: ${BETTER_AUTH_URL:-http://localhost:3000}
   BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?BETTER_AUTH_SECRET is required}
+  AUTH_TRUSTED_ORIGINS: ${AUTH_TRUSTED_ORIGINS:-http://localhost:3000,http://localhost:3001}
+  AUTH_COOKIE_DOMAIN: ${AUTH_COOKIE_DOMAIN:-}
   RESEND_API_KEY: ${RESEND_API_KEY:?RESEND_API_KEY is required}
   RESEND_FROM_EMAIL: ${RESEND_FROM_EMAIL:?RESEND_FROM_EMAIL is required}
   STORAGE_BUCKET: ${STORAGE_BUCKET:?STORAGE_BUCKET is required}
@@ -69,7 +77,7 @@ services:
       timeout: 3s
       retries: 5
 
-  # Şema kurulumu. `auth` bu servisin başarıyla bitmesini bekler.
+  # Şema kurulumu. `auth` ve `app` bu servisin başarıyla bitmesini bekler.
   #
   # Bu servis kendi (ince) image'ını kullanıyor; build sırasında env
   # doğrulaması yapılmadığı için build argümanına ihtiyaç duymuyor.
@@ -87,6 +95,8 @@ services:
       REDIS_URL: redis://redis:6379
       QUEUE_PREFIX: ${QUEUE_PREFIX:-mqdms}
       NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
+      NEXT_PUBLIC_AUTH_URL: ${NEXT_PUBLIC_AUTH_URL:-http://localhost:3000}
+      NEXT_PUBLIC_BUSINESS_APP_URL: ${NEXT_PUBLIC_BUSINESS_APP_URL:-http://localhost:3001}
       BETTER_AUTH_URL: ${BETTER_AUTH_URL:-http://localhost:3000}
 
     depends_on:
@@ -95,6 +105,7 @@ services:
 
     restart: "no"
 
+  # Kimlik yönetimi: auth.mqdms.com
   auth:
     build:
       context: .
@@ -112,10 +123,56 @@ services:
       REDIS_URL: redis://redis:6379
       QUEUE_PREFIX: ${QUEUE_PREFIX:-mqdms}
       NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
+      NEXT_PUBLIC_AUTH_URL: ${NEXT_PUBLIC_AUTH_URL:-http://localhost:3000}
+      NEXT_PUBLIC_BUSINESS_APP_URL: ${NEXT_PUBLIC_BUSINESS_APP_URL:-http://localhost:3001}
       BETTER_AUTH_URL: ${BETTER_AUTH_URL:-http://localhost:3000}
+      AUTH_TRUSTED_ORIGINS: ${AUTH_TRUSTED_ORIGINS:-http://localhost:3000,http://localhost:3001}
+      AUTH_COOKIE_DOMAIN: ${AUTH_COOKIE_DOMAIN:-}
+      ORG_BOOTSTRAP_ENABLED: ${ORG_BOOTSTRAP_ENABLED:-false}
+      ORG_BOOTSTRAP_KEY: ${ORG_BOOTSTRAP_KEY:-}
 
     ports:
       - "${APP_PORT:-3000}:3000"
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+
+    restart: unless-stopped
+
+  # İş uygulaması: app.mqdms.com
+  #
+  # Aynı veritabanını, aynı Better Auth config'ini ve aynı oturum cookie'sini
+  # paylaşır; HTTP auth handler'ı yalnızca `auth` servisindedir.
+  app:
+    build:
+      context: .
+      dockerfile: docker/app.Dockerfile
+
+      args: *build-args
+
+    env_file:
+      - .env
+
+    environment:
+      NODE_ENV: production
+      APP_ENV: ${APP_ENV:-local}
+      DATABASE_URL: postgres://postgres:root@postgres:5432/mqdms
+      REDIS_URL: redis://redis:6379
+      QUEUE_PREFIX: ${QUEUE_PREFIX:-mqdms}
+      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_BUSINESS_APP_URL:-http://localhost:3001}
+      NEXT_PUBLIC_AUTH_URL: ${NEXT_PUBLIC_AUTH_URL:-http://localhost:3000}
+      NEXT_PUBLIC_BUSINESS_APP_URL: ${NEXT_PUBLIC_BUSINESS_APP_URL:-http://localhost:3001}
+      BETTER_AUTH_URL: ${BETTER_AUTH_URL:-http://localhost:3000}
+      AUTH_TRUSTED_ORIGINS: ${AUTH_TRUSTED_ORIGINS:-http://localhost:3000,http://localhost:3001}
+      AUTH_COOKIE_DOMAIN: ${AUTH_COOKIE_DOMAIN:-}
+
+    ports:
+      - "${BUSINESS_APP_PORT:-3001}:3000"
 
     depends_on:
       postgres:
@@ -143,6 +200,8 @@ services:
       QUEUE_PREFIX: ${QUEUE_PREFIX:-mqdms}
       WORKER_QUEUES: default,email
       NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
+      NEXT_PUBLIC_AUTH_URL: ${NEXT_PUBLIC_AUTH_URL:-http://localhost:3000}
+      NEXT_PUBLIC_BUSINESS_APP_URL: ${NEXT_PUBLIC_BUSINESS_APP_URL:-http://localhost:3001}
       BETTER_AUTH_URL: ${BETTER_AUTH_URL:-http://localhost:3000}
 
     depends_on:

@@ -10,8 +10,8 @@ import { useEffect, useRef, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 
 import { uploadFile } from "@/features/storage/upload-file";
-
 import { type OrganizationSettingsValues, organizationSettingsSchema } from "./schemas";
+import { updateOrganizationAction } from "./settings-actions";
 
 type OrganizationSettingsFormProps = {
   organization: {
@@ -72,27 +72,17 @@ export function OrganizationSettingsForm({ organization }: OrganizationSettingsF
         logoKey = uploaded.key;
       }
 
-      const response = await fetch("/api/organization", {
-        method: "PATCH",
-
-        headers: {
-          "Content-Type": "application/json",
-        },
-
-        body: JSON.stringify({
-          ...values,
-          ...(logoKey
-            ? {
-                logoKey,
-              }
-            : {}),
-        }),
+      const result = await updateOrganizationAction({
+        ...values,
+        ...(logoKey
+          ? {
+              logoKey,
+            }
+          : {}),
       });
 
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error ?? "Unable to update organization.");
+      if (!result.success) {
+        throw new Error(result.error);
       }
 
       setLogoFile(null);

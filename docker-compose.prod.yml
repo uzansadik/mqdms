@@ -18,6 +18,11 @@ services:
     pull_policy: always
     build: !reset null
 
+  app:
+    image: ghcr.io/uzansadik/mqdms/app:${APP_TAG:-latest}
+    pull_policy: always
+    build: !reset null
+
   worker:
     image: ghcr.io/uzansadik/mqdms/worker:${APP_TAG:-latest}
     pull_policy: always

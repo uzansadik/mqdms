@@ -3,7 +3,7 @@ import { type ResourceKey, resourceKeys, resources } from "./resources";
 /**
  * better-auth organization plugin'in kontrol ettiği statement kaynakları.
  *
- * Bu liste better-auth 1.7.1 kaynağından birebir alınmıştır
+ * Bu liste better-auth 1.7.20 kaynağından birebir alınmıştır
  * (`better-auth/dist/plugins/organization/access/statement.mjs`). Plugin'in
  * endpoint'leri yetkiyi bu kaynak adları üzerinden kontrol eder; liste
  * değiştirilirse plugin ile senkron tutulmalıdır.
@@ -37,8 +37,10 @@ export const organizationActions = {
 export type OrganizationAction = keyof typeof organizationActions;
 
 /**
- * Platformun kendi capability'leri. Bunlar better-auth'e ait değildir;
- * uygulama katmanında `evaluate.ts` üzerinden değerlendirilir.
+ * Organizasyon yönetimi capability'leri.
+ *
+ * Bunlar better-auth'e ait değildir; uygulama katmanında `evaluate.ts`
+ * üzerinden değerlendirilir.
  */
 export const capabilities = ["managePermissions"] as const;
 
@@ -55,26 +57,26 @@ export type OrganizationRoleStatements = {
 };
 
 /**
- * Bir rolün davranışsal tanımı.
+ * Bir yönetim rolünün davranışsal tanımı.
  *
- * Katalog yalnızca *politikayı* taşır: hangi statement'lara, capability'lere ve
- * kaynak yetkilerine sahip olduğu. Kullanıcıya gösterilen metin (rol adı,
- * açıklaması) burada değil, uygulamanın i18n katmanında tutulur; böylece
- * katalog sunum dilinden bağımsız kalır.
+ * Katalog yalnızca *politikayı* taşır: hangi statement'lara ve capability'lere
+ * sahip olduğu. Kullanıcıya gösterilen metin (rol adı, açıklama) burada
+ * değil, uygulamanın i18n katmanında tutulur.
+ *
+ * Fonksiyonel roller (Fabrika Müdürü, Proje Mühendisi, ...) bu katalogda
+ * **yoktur**: onlar organizasyona özel kayıtlardır (`organization_role`
+ * tablosu) ve seed katalogundan üretilir.
  */
-export type RoleDefinition = {
+export type ManagementRoleDefinition = {
   /** better-auth organization plugin statement'ları. */
   organizationStatements: OrganizationRoleStatements;
 
-  /** Platform capability'leri. */
+  /** Yönetim capability'leri. */
   capabilities: readonly Capability[];
-
-  /** MQDMS kaynak yetkileri: kaynak -> izinli aksiyonlar. */
-  permissions: Partial<Record<ResourceKey, readonly string[]>>;
 };
 
 /**
- * Tüm kaynaklarda tüm aksiyonlar (owner/admin için).
+ * Tüm kaynaklarda tüm aksiyonlar (owner için).
  *
  * `Object.fromEntries` yerine döngü kullanılıyor: `fromEntries` çıktısı
  * `Record<ResourceKey, ...>` olarak ancak zorlayıcı (as) dönüşümle
@@ -99,13 +101,7 @@ const ownerStatements = {
   ac: ["create", "read", "update", "delete"],
 } as const;
 
-/** Admin: owner'ın tümü, organizasyon silme hariç. */
-const adminStatements = {
-  ...ownerStatements,
-  organization: ["update"],
-} as const;
-
-/** Kullanıcı rolleri: organizasyon yönetimi yok, yalnızca okuma. */
+/** Kullanıcı rolleri: organizasyon yönetimi yok. */
 const memberStatements = {
   organization: [],
   member: [],
@@ -115,69 +111,47 @@ const memberStatements = {
 } as const;
 
 /**
- * Sabit rol kataloğu.
+ * Yönetim rol kataloğu.
  *
- * Roller kod içinde tanımlıdır ve çalışma zamanında değiştirilemez. MQDMS
- * alanı genişledikçe buraya yeni rol veya yeni kaynak eklenir.
+ * better-auth `member.role` alanı **yalnızca** bu iki rolü taşır:
+ *
+ * - `owner`: organizasyonun sahibi. Tüm kayıtlı iş aksiyonlarına erişir ve
+ *   rol/üye/izin yönetimi yapar. Bu yetkiler member grant ile değiştirilemez.
+ * - `member`: normal üye. İş yetkileri yalnızca atanmış fonksiyonel rollerden
+ *   ve üye bazlı grant'lardan gelir; varsayılanı boştur.
+ *
+ * Roller kod içinde tanımlıdır ve çalışma zamanında değiştirilemez.
  */
-export const roleDefinitions = {
+export const managementRoleDefinitions = {
   owner: {
     organizationStatements: ownerStatements,
     capabilities: ["managePermissions"],
-    permissions: allResourceActions(),
-  },
-
-  admin: {
-    organizationStatements: adminStatements,
-    capabilities: ["managePermissions"],
-    permissions: allResourceActions(),
   },
 
   member: {
     organizationStatements: memberStatements,
     capabilities: [],
-    permissions: {
-      fmea: ["read"],
-    },
   },
+} as const satisfies Record<string, ManagementRoleDefinition>;
 
-  "project-engineer": {
-    organizationStatements: memberStatements,
-    capabilities: [],
-    permissions: {
-      fmea: ["create", "read", "update", "save", "submit"],
-    },
-  },
+export const managementRoleIds = Object.keys(managementRoleDefinitions) as ManagementRoleId[];
 
-  "quality-engineer": {
-    organizationStatements: memberStatements,
-    capabilities: [],
-    permissions: {
-      fmea: ["read", "approve", "reject"],
-    },
-  },
-} as const satisfies Record<string, RoleDefinition>;
+/** Davet ve rol atama ekranlarında gösterilebilen yönetim rolleri. */
+export const assignableManagementRoleIds = managementRoleIds.filter((roleId) => roleId !== "owner");
 
-export const roleIds = Object.keys(roleDefinitions) as RoleId[];
-
-export type RoleId = keyof typeof roleDefinitions;
-
-/** Davet ve rol atama ekranlarında gösterilebilen roller. */
-export const assignableRoleIds = roleIds.filter((roleId) => roleId !== "owner");
-
-export function isRoleId(value: string): value is RoleId {
-  return value in roleDefinitions;
-}
+export type ManagementRoleId = keyof typeof managementRoleDefinitions;
 
 /**
- * Bir rolün atanabilir olup olmadığı.
- *
- * "owner" katalogda var ama atanamaz: owner rolü yalnızca organizasyonu açan
- * superadmin tarafından, oluşturma anında verilir. Böylece bir organizasyonun
- * sahibi sonradan değiştirilemez ve admin'ler kendilerini owner yapamaz.
+ * `owner` katalogda var ama atanamaz: owner rolü yalnızca organizasyonu açan
+ * bootstrap sırasında verilir. Böylece bir organizasyonun sahibi sonradan
+ * değiştirilemez ve üyeler kendilerini owner yapamaz.
  */
-export function isAssignableRoleId(value: string): value is RoleId {
-  return isRoleId(value) && value !== "owner";
+export function isAssignableManagementRoleId(value: string): value is ManagementRoleId {
+  return isManagementRoleId(value) && value !== "owner";
+}
+
+export function isManagementRoleId(value: string): value is ManagementRoleId {
+  return Object.hasOwn(managementRoleDefinitions, value);
 }
 
 /**
@@ -186,22 +160,27 @@ export function isAssignableRoleId(value: string): value is RoleId {
  * better-auth birden fazla rolü virgülle ayrılmış olarak saklar
  * (`member.role`). Katalogda olmayan roller yetkisiz sayılır.
  */
-export function parseRoles(role: string | string[] | null | undefined): RoleId[] {
+export function parseRoles(role: string | string[] | null | undefined): ManagementRoleId[] {
   const raw = Array.isArray(role) ? role : (role ?? "").split(",");
 
   const parsed = raw.map((item) => item.trim());
 
-  return parsed.filter((item): item is RoleId => isRoleId(item));
+  return parsed.filter((item): item is ManagementRoleId => isManagementRoleId(item));
 }
 
-/** Bir rolün MQDMS kaynak yetkileri. */
-export function getRolePermissions(
-  roleId: RoleId,
-): Partial<Record<ResourceKey, readonly string[]>> {
-  return roleDefinitions[roleId].permissions;
+/** Üye `owner` mı? */
+export function isOwnerRole(role: string | string[] | null | undefined): boolean {
+  return parseRoles(role).includes("owner");
+}
+
+/** Bir rolün MQDMS kaynak yetkileri (owner tüm kaynaklara erişir). */
+export function getOwnerResourceActions(): Record<ResourceKey, readonly string[]> {
+  return allResourceActions();
 }
 
 /** Bir rolün better-auth statement haritası. */
-export function getRoleOrganizationStatements(roleId: RoleId): OrganizationRoleStatements {
-  return roleDefinitions[roleId].organizationStatements;
+export function getRoleOrganizationStatements(
+  roleId: ManagementRoleId,
+): OrganizationRoleStatements {
+  return managementRoleDefinitions[roleId].organizationStatements;
 }

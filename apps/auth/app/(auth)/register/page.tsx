@@ -3,9 +3,9 @@
  *
  * Hesaplar artık yalnızca iki kaynaktan oluşur:
  *
- * 1. Davet bağlantısı — `/accept-invitation` (`features/organization/
+ * 1. İlk kurulum — `/bootstrap-org` (`features/bootstrap/service.ts`).
+ * 2. Davet bağlantısı — `/accept-invitation` (`features/organization/
  *    invitation-registration.ts`).
- * 2. Superadmin — `/bootstrap-superadmin` ve admin paneli.
  *
  * better-auth'in `/sign-up/email` endpoint'i de kapalıdır
  * (`packages/auth/src/server.ts` → `disableSignUp: true`), bu yüzden formu

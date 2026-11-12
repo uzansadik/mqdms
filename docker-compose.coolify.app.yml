@@ -1,0 +1,50 @@
+# MQDMS business application stack (app.mqdms.com), deploy via Coolify
+# Git-based Docker Compose Application.
+#
+# This is a separate Coolify resource from the auth stack
+# (`docker-compose.coolify.yml`). It runs the business application only and
+# connects to the same PostgreSQL database over the private network.
+#
+# The HTTP auth handler lives in the auth stack. Both deployments share the
+# same Better Auth secret and the same session cookie, so a single login
+# covers both.
+
+x-runtime-env: &runtime-env
+  NODE_ENV: production
+  APP_ENV: production
+  DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
+  REDIS_URL: ${REDIS_URL:?REDIS_URL is required}
+  QUEUE_PREFIX: ${QUEUE_PREFIX:-mqdms}
+  # This deployment's own origin.
+  NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_BUSINESS_APP_URL:?NEXT_PUBLIC_BUSINESS_APP_URL is required}
+  # Canonical auth origin; identical in both deployments.
+  NEXT_PUBLIC_AUTH_URL: ${NEXT_PUBLIC_AUTH_URL:?NEXT_PUBLIC_AUTH_URL is required}
+  NEXT_PUBLIC_BUSINESS_APP_URL: ${NEXT_PUBLIC_BUSINESS_APP_URL:?NEXT_PUBLIC_BUSINESS_APP_URL is required}
+  BETTER_AUTH_URL: ${BETTER_AUTH_URL:?BETTER_AUTH_URL is required}
+  BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?BETTER_AUTH_SECRET is required}
+  AUTH_TRUSTED_ORIGINS: ${AUTH_TRUSTED_ORIGINS:?AUTH_TRUSTED_ORIGINS is required}
+  # Shared session cookie domain; must match the auth stack.
+  AUTH_COOKIE_DOMAIN: ${AUTH_COOKIE_DOMAIN:?AUTH_COOKIE_DOMAIN is required}
+  RESEND_API_KEY: ${RESEND_API_KEY:?RESEND_API_KEY is required}
+  RESEND_FROM_EMAIL: ${RESEND_FROM_EMAIL:?RESEND_FROM_EMAIL is required}
+  STORAGE_BUCKET: ${STORAGE_BUCKET:?STORAGE_BUCKET is required}
+  STORAGE_REGION: ${STORAGE_REGION:-auto}
+  STORAGE_ACCESS_KEY_ID: ${STORAGE_ACCESS_KEY_ID:?STORAGE_ACCESS_KEY_ID is required}
+  STORAGE_SECRET_ACCESS_KEY: ${STORAGE_SECRET_ACCESS_KEY:?STORAGE_SECRET_ACCESS_KEY is required}
+  STORAGE_ENDPOINT: ${STORAGE_ENDPOINT:-}
+  STORAGE_PUBLIC_URL: ${STORAGE_PUBLIC_URL:-}
+
+services:
+  app:
+    image: ghcr.io/uzansadik/mqdms/app:${APP_TAG:-latest}
+    pull_policy: always
+    restart: unless-stopped
+    environment: *runtime-env
+    expose:
+      - "3000"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s

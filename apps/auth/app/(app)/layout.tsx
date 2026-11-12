@@ -2,8 +2,7 @@ import { Separator } from "@mqdms/ui/components/separator";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@mqdms/ui/components/sidebar";
 import type { ReactNode } from "react";
 
-import { requireSession } from "@/features/auth/session";
-import { requireOrganization } from "@/features/organization/server";
+import { requireRequestContext } from "@/features/auth/context";
 import { AppSidebar } from "@/features/shell/app-sidebar";
 
 type AppLayoutProps = {
@@ -11,15 +10,26 @@ type AppLayoutProps = {
 };
 
 export default async function AppLayout({ children }: AppLayoutProps) {
-  const session = await requireSession();
-  const organization = await requireOrganization();
+  /*
+   * Oturum ve organizasyon erişimi burada doğrulanır. Bu birinci güvenlik
+   * katmanıdır; her server action kendi yetki kontrolünü ayrıca yapar.
+   */
+  const context = await requireRequestContext();
 
   return (
     <SidebarProvider>
       <AppSidebar
-        isSuperadmin={session.user.role === "superadmin"}
-        organization={organization}
-        user={session.user}
+        isOwner={context.isOwner}
+        organization={{
+          id: context.organization.id,
+          name: context.organization.name,
+          slug: context.organization.slug,
+        }}
+        user={{
+          id: context.user.id,
+          name: context.user.name,
+          email: context.user.email,
+        }}
       />
 
       <SidebarInset>
@@ -28,7 +38,7 @@ export default async function AppLayout({ children }: AppLayoutProps) {
 
           <Separator className="mr-2 h-4" orientation="vertical" />
 
-          <span className="text-sm font-medium">{organization?.name}</span>
+          <span className="text-sm font-medium">{context.organization.name}</span>
         </header>
 
         <main className="flex flex-1 flex-col p-4 md:p-6">{children}</main>

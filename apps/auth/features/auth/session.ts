@@ -3,6 +3,12 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { cache } from "react";
 
+/**
+ * Oturumu okur.
+ *
+ * Cookie cache ilk sürümde kapalıdır; oturum her çağrıda veritabanından
+ * okunur. Bir üyenin yetkisi düşürüldüğü anda karar eski kalmaz.
+ */
 export const getSession = cache(async () => {
   return auth.api.getSession({
     headers: await headers(),
@@ -10,34 +16,19 @@ export const getSession = cache(async () => {
 });
 
 /**
- * Oturumu cookie cache'i atlayarak veritabanından okur.
+ * Oturum zorunluluğu.
  *
- * better-auth `cookieCache` etkin olduğunda oturumu 60 saniye boyunca
- * cookie içinden döner. Bir kullanıcının rolü düşürüldüğü veya oturumu
- * düşürüldüğü anda cache geçersiz kalır; yetki kontrolü yapan çağrılar bu
- * fonksiyonu kullanmalıdır.
+ * Oturum yoksa giriş ekranına yönlendirir. `returnTo` hedefi korunur ki
+ * kullanıcı girişten sonra kaldığı yere dönsün.
  */
-export const getFreshSession = cache(async () => {
-  return auth.api.getSession({
-    headers: await headers(),
-    query: { disableCookieCache: true },
-  });
-});
-
-export async function requireSession() {
+export async function requireSession(returnTo?: string) {
   const session = await getSession();
 
   if (!session) {
-    redirect("/login");
-  }
+    if (returnTo) {
+      redirect(`/login?returnTo=${encodeURIComponent(returnTo)}`);
+    }
 
-  return session;
-}
-
-export async function requireFreshSession() {
-  const session = await getFreshSession();
-
-  if (!session) {
     redirect("/login");
   }
 

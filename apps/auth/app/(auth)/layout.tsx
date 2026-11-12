@@ -1,7 +1,7 @@
 import { appConfig } from "@mqdms/config";
+import { LanguageSelect } from "@mqdms/i18n/language-select";
 import { getTranslations } from "@mqdms/i18n/server";
 import type { ReactNode } from "react";
-import { LanguageSelect } from "@/components/language-switcher";
 
 type AuthLayoutProps = {
   children: ReactNode;
@@ -9,9 +9,7 @@ type AuthLayoutProps = {
 
 export default async function AuthLayout({ children }: AuthLayoutProps) {
   /*
-   * Oturumu olan kullanıcının yönlendirilmesi sayfa bazında yapılır:
-   * OAuth provider akışında giriş ekranı, kullanıcı zaten giriş yapmış olsa
-   * bile akışın devam etmesi için yönlendirme yapmamalıdır.
+   * Oturumu olan kullanıcının yönlendirilmesi sayfa bazında yapılır.
    */
   const t = await getTranslations();
 

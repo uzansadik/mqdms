@@ -1,24 +1,28 @@
 import { apiKey } from "@better-auth/api-key";
-import { oauthProvider } from "@better-auth/oauth-provider";
 import { appConfig } from "@mqdms/config";
 import { db } from "@mqdms/db";
 import * as schema from "@mqdms/db/schema";
-import { env } from "@mqdms/env/server";
+import { invitationRole, memberRole } from "@mqdms/db/schema";
+import { authEnv } from "@mqdms/env/auth";
 import { addJob } from "@mqdms/queue";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { APIError } from "better-auth/api";
-import { admin, jwt, organization } from "better-auth/plugins";
-import { getTrustedOrigins, oauthProviderOptions } from "./oauth";
-import { platformAc, platformRoles } from "./permissions/platform";
-import { isAssignableRoleId } from "./permissions/roles";
+import { organization } from "better-auth/plugins";
+import { and, eq } from "drizzle-orm";
+import { getTrustedOrigins } from "./origins";
 import { ac, roles } from "./permissions/statements";
 
 export const auth = betterAuth({
   appName: appConfig.name,
 
-  baseURL: env.BETTER_AUTH_URL,
-  secret: env.BETTER_AUTH_SECRET,
+  /*
+   * Oturum cookie'si `auth.mqdms.com` üzerinde yazılır. İki web deploy
+   * (auth ve app) aynı config, aynı secret ve aynı veritabanını paylaştığı
+   * için `app.mqdms.com` da aynı oturumu okuyabilir.
+   */
+  baseURL: authEnv.BETTER_AUTH_URL,
+  secret: authEnv.BETTER_AUTH_SECRET,
 
   /*
    * Tüketen uygulamaların origin'leri. better-auth `callbackURL` ve
@@ -27,11 +31,36 @@ export const auth = betterAuth({
    */
   trustedOrigins: getTrustedOrigins(),
 
-  /*
-   * JWT plugin'inin kendi `/token` ucu OAuth provider'ın `/oauth2/token` ucu
-   * ile karışmasın diye kapatılır.
-   */
-  disabledPaths: ["/token"],
+  advanced: {
+    /*
+     * Oturum cookie'si iki subdomain arasında paylaşılır.
+     *
+     * Paylaşım yalnızca `AUTH_COOKIE_DOMAIN` tanımlıysa açılır. Alan adı
+     * verilmediğinde better-auth kök domain'i `BETTER_AUTH_URL`'den türetir
+     * (üretimde `auth.mqdms.com`, yerelde `localhost`); `Domain=localhost`
+     * tarayıcılarca reddedildiği için yerelde cookie host'a özel yazılmalıdır.
+     */
+    crossSubDomainCookies: {
+      enabled: Boolean(authEnv.AUTH_COOKIE_DOMAIN),
+      ...(authEnv.AUTH_COOKIE_DOMAIN ? { domain: authEnv.AUTH_COOKIE_DOMAIN } : {}),
+    },
+
+    /*
+     * Ortak cookie adı ön eki. İki deploy aynı cookie adını kullanmalıdır;
+     * ön ek farklı olursa session paylaşılmaz.
+     */
+    cookiePrefix: "mqdms",
+
+    /* Üretimde cookie'ler yalnızca HTTPS üzerinden gönderilir. */
+    useSecureCookies: authEnv.BETTER_AUTH_URL.startsWith("https://"),
+
+    defaultCookieAttributes: {
+      httpOnly: true,
+      sameSite: "lax",
+      path: "/",
+      secure: authEnv.BETTER_AUTH_URL.startsWith("https://"),
+    },
+  },
 
   database: drizzleAdapter(db, {
     provider: "pg",
@@ -39,11 +68,17 @@ export const auth = betterAuth({
   }),
 
   session: {
-    maxAge: 60 * 60 * 24 * 30, // 30 days
-    updateAge: 60 * 60 * 24, // 1 day
+    /* Oturum 7 gün geçerli; her gün bir kez uzatılır. */
+    expiresIn: 60 * 60 * 24 * 7,
+    updateAge: 60 * 60 * 24,
+
+    /*
+     * Cookie cache ilk sürümde kapalı: izin her istekte veritabanından
+     * okunur. Cookie cache açıkken bir üyenin yetkisi düşürüldüğü anda
+     * karar eski kalabilir.
+     */
     cookieCache: {
-      enabled: true,
-      maxAge: 1 * 60, // 5 minutes
+      enabled: false,
     },
   },
 
@@ -68,8 +103,8 @@ export const auth = betterAuth({
      * Genel kayıt kapalı: `/register` sayfası ve `/sign-up/email` endpoint'i
      * kullanılamaz. Hesaplar yalnızca iki yoldan oluşur:
      *
-     * 1. Superadmin (`/bootstrap-superadmin` veya admin paneli) — admin plugin'in
-     *    sunucu tarafı `createUser` çağrısı.
+     * 1. İlk kurulum — `/bootstrap-org` ekranı; owner hesabı ve organizasyon
+     *    sunucu tarafında oluşturulur.
      * 2. Davet — `features/organization/invitation-registration.ts` sunucu
      *    aksiyonu; davet bağlantısı geçerliyse davet edilen e-posta adresiyle
      *    hesap açar.
@@ -92,33 +127,27 @@ export const auth = betterAuth({
   },
 
   plugins: [
-    admin({
-      defaultRole: "user",
-      ac: platformAc,
-      roles: platformRoles,
-    }),
-
     organization({
       ac,
       roles,
 
       /*
-       * Organizasyonu yalnızca superadmin açabilir; public endpoint kapalıdır.
+       * Organizasyonu yalnızca bootstrap yolu açabilir; public endpoint kapalıdır.
        *
-       * Superadmin'in sunucu aksiyonu (`features/admin/actions.ts`) bu endpoint'i
-       * `userId` vererek "system action" olarak çağırır ve oturum taşımaz.
-       * Normal kullanıcı için endpoint tamamen kapalı kalır.
+       * Bootstrap sunucu aksiyonu (`features/bootstrap/service.ts`) bu
+       * endpoint'i `userId` vererek "system action" olarak çağırır ve oturum
+       * taşımaz. Normal kullanıcı için endpoint tamamen kapalı kalır.
        */
       allowUserToCreateOrganization: false,
       requireEmailVerificationOnInvitation: true,
 
       /*
        * Rol kataloğu better-auth tarafından doğrulanmaz: "owner" da geçerli bir
-       * better-auth rolüdür. Bu hook olmadan bir organizasyon admin'i ham API'yi
-       * çağırarak kendini (ya da başka bir üyeyi) "owner" yapabilirdi.
+       * better-auth rolüdür. Bu hook olmadan bir organizasyon üyesi ham API'yi
+       * çağırarak kendisini (ya da başka bir üyeyi) "owner" yapabilirdi.
        *
-       * "owner" yalnızca organizasyonu açan superadmin tarafından, oluşturma
-       * anında verilir; geri kalan roller katalogdan seçilir.
+       * Owner yalnızca organizasyonu açan bootstrap sırasında verilir; geri
+       * kalan roller katalogdan seçilir.
        */
       organizationHooks: {
         beforeUpdateMemberRole: async ({ newRole }) => {
@@ -127,7 +156,7 @@ export const auth = betterAuth({
             .map((role) => role.trim())
             .filter(Boolean);
 
-          const invalid = roles.filter((role) => !isAssignableRoleId(role));
+          const invalid = roles.filter((role) => role !== "member");
 
           if (invalid.length > 0) {
             throw new APIError("FORBIDDEN", {
@@ -143,7 +172,7 @@ export const auth = betterAuth({
             .map((role) => role.trim())
             .filter(Boolean);
 
-          const invalid = roles.filter((role) => !isAssignableRoleId(role));
+          const invalid = roles.filter((role) => role !== "member");
 
           if (invalid.length > 0) {
             throw new APIError("FORBIDDEN", {
@@ -152,10 +181,47 @@ export const auth = betterAuth({
             });
           }
         },
+
+        /*
+         * Davet kabul edildiğinde, davete atanmış fonksiyonel roller üyeye
+         * verilir. Rol id'leri sunucu tarafında (`invitation_role` tablosu)
+         * saklanır; istemci rol seçemez.
+         *
+         * Hook, better-auth'ın üyelik transaction'ı tamamlandıktan **sonra**
+         * çağrılır; bu yüzden doğrudan veritabanına yazmak güvenlidir.
+         */
+        afterAcceptInvitation: async ({ invitation, member }) => {
+          const assignments = await db
+            .select({ roleId: invitationRole.roleId })
+            .from(invitationRole)
+            .where(
+              and(
+                eq(invitationRole.organizationId, invitation.organizationId),
+                eq(invitationRole.invitationId, invitation.id),
+              ),
+            );
+
+          if (assignments.length === 0) {
+            return;
+          }
+
+          await db
+            .insert(memberRole)
+            .values(
+              assignments.map((assignment) => ({
+                organizationId: invitation.organizationId,
+                memberId: member.id,
+                roleId: assignment.roleId,
+              })),
+            )
+            .onConflictDoNothing({
+              target: [memberRole.memberId, memberRole.roleId],
+            });
+        },
       },
 
       async sendInvitationEmail(data) {
-        const url = new URL("/accept-invitation", env.BETTER_AUTH_URL);
+        const url = new URL("/accept-invitation", authEnv.BETTER_AUTH_URL);
 
         url.searchParams.set("id", data.id);
 
@@ -174,29 +240,6 @@ export const auth = betterAuth({
         defaultPrefix: "up_",
       },
     ]),
-
-    /*
-     * JWT plugin'i OAuth provider'ın imzalama katmanıdır: access/id token'ları
-     * bu plugin'in anahtarlarıyla imzalanır ve `/jwks` ucu tüketen
-     * uygulamaların doğrulaması için yayınlanır.
-     *
-     * `issuer` bilgisi keşif metadata'sında ve token'ların `iss` claim'inde
-     * kullanılır; `OAUTH_ISSUER` tanımlıysa o, değilse auth adresi kullanılır.
-     */
-    jwt({
-      disableSettingJwtHeader: true,
-      jwt: {
-        issuer: env.OAUTH_ISSUER ?? env.BETTER_AUTH_URL,
-      },
-    }),
-
-    /*
-     * Merkezi kimlik yöneticisi. Tüketen uygulamalar
-     * `/api/auth/oauth2/authorize` adresine yönlendirilir; kullanıcı giriş
-     * yapar, organizasyonunu seçer, onay verir ve uygulamaya `code` ile
-     * döner. Roller ve izinler token claim'leri olarak yayınlanır.
-     */
-    oauthProvider(oauthProviderOptions),
   ],
 });
 export type Session = typeof auth.$Infer.Session;

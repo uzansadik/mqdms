@@ -1,0 +1,46 @@
+{
+  "name": "@mqdms/app",
+  "version": "0.0.1",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "biome check .",
+    "format": "biome format --write .",
+    "check": "biome check --write .",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@base-ui/react": "^1.7.0",
+    "@hookform/resolvers": "^5.9.1",
+    "@mqdms/auth": "workspace:*",
+    "@mqdms/config": "workspace:*",
+    "@mqdms/db": "workspace:*",
+    "@mqdms/env": "workspace:*",
+    "@mqdms/i18n": "workspace:*",
+    "@mqdms/ui": "workspace:*",
+    "@shadcn/react": "^0.3.0",
+    "cmdk": "^1.1.1",
+    "drizzle-orm": "^0.45.2",
+    "embla-carousel-react": "^8.6.0",
+    "lucide-react": "^1.33.0",
+    "next": "16.2.6",
+    "next-themes": "^0.4.6",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "react-hook-form": "^7.86.0",
+    "server-only": "^0.0.1",
+    "sonner": "^2.0.8",
+    "zod": "^4.0.0"
+  },
+  "devDependencies": {
+    "@mqdms/typescript-config": "workspace:*",
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "typescript": "^5"
+  }
+}

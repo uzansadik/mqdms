@@ -19,21 +19,20 @@ type UserMenuProps = {
     name: string;
     email: string;
   };
-  /**
-   * Platform (superadmin) menüsünde organizasyon bağımlı bağlantılar
-   * gösterilmez. Superadmin'in bir organizasyon üyesi olması gerekmez;
-   * `/settings/*` sayfaları kurum gerektirdiği için erişilemez.
-   */
-  variant?: "organization" | "platform";
 };
 
-export function UserMenu({ user, variant = "organization" }: UserMenuProps) {
+export function UserMenu({ user }: UserMenuProps) {
   const router = useRouter();
   const [isSigningOut, setIsSigningOut] = useState(false);
 
   async function handleSignOut() {
     setIsSigningOut(true);
 
+    /*
+     * Çıkış merkezidir: oturum revoke edilir ve cookie temizlenir. Cookie
+     * `.mqdms.com` alan adında yazıldığı için her iki deploy'ta da geçersiz
+     * olur.
+     */
     await authClient.signOut();
 
     router.replace("/login");
@@ -54,9 +53,9 @@ export function UserMenu({ user, variant = "organization" }: UserMenuProps) {
               </div>
 
               <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-medium">{user.name}</span>
+                <span className="truncate font-semibold">{user.name}</span>
 
-                <span className="truncate text-xs text-muted-foreground">{user.email}</span>
+                <span className="truncate text-xs">{user.email}</span>
               </div>
 
               <ChevronsUpDown className="ml-auto" />
@@ -74,21 +73,15 @@ export function UserMenu({ user, variant = "organization" }: UserMenuProps) {
 
             <DropdownMenuSeparator />
 
-            <DropdownMenuItem
-              onClick={() =>
-                router.push(variant === "platform" ? "/admin/profile" : "/settings/profile")
-              }
-            >
+            <DropdownMenuItem onClick={() => router.push("/profile")}>
               <User />
               Profile
             </DropdownMenuItem>
 
-            {variant === "organization" && (
-              <DropdownMenuItem onClick={() => router.push("/settings")}>
-                <Settings />
-                Settings
-              </DropdownMenuItem>
-            )}
+            <DropdownMenuItem onClick={() => router.push("/organization")}>
+              <Settings />
+              Settings
+            </DropdownMenuItem>
 
             <DropdownMenuSeparator />
 

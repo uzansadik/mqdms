@@ -1,11 +1,11 @@
 "use server";
 
 import { bootstrapSchema } from "./schema";
-import { createSuperadmin, getBootstrapStatus, InvalidBootstrapKeyError } from "./service";
+import { bootstrapOrganization, getBootstrapStatus, InvalidBootstrapKeyError } from "./service";
 
 type BootstrapResult = { success: true } | { success: false; error: string };
 
-export async function bootstrapSuperadminAction(input: unknown): Promise<BootstrapResult> {
+export async function bootstrapOrganizationAction(input: unknown): Promise<BootstrapResult> {
   const parsed = bootstrapSchema.safeParse(input);
 
   if (!parsed.success) {
@@ -23,12 +23,12 @@ export async function bootstrapSuperadminAction(input: unknown): Promise<Bootstr
         success: false,
         error:
           status.reason === "already-initialized"
-            ? "A superadmin account already exists"
-            : "Bootstrap is disabled on this server",
+            ? "This instance is already initialized."
+            : "Bootstrap is disabled on this server.",
       };
     }
 
-    await createSuperadmin(parsed.data);
+    await bootstrapOrganization(parsed.data);
 
     return { success: true };
   } catch (error) {

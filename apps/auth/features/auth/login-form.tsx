@@ -21,18 +21,11 @@ import { Controller, useForm } from "react-hook-form";
 import { type LoginValues, loginSchema } from "./schemas";
 
 type LoginFormProps = {
-  next: string;
-
-  /**
-   * Sayfa, OAuth provider akışının parçası mı?
-   *
-   * Akışta better-auth sunucusu bir sonraki adımın adresini döner
-   * (organizasyon seçimi ya da onay ekranı) ve istemci o adrese yönlendirir.
-   */
-  isOAuthFlow?: boolean;
+  /** Girişten sonra dönülecek güvenli hedef. */
+  returnTo: string;
 };
 
-export function LoginForm({ next, isOAuthFlow = false }: LoginFormProps) {
+export function LoginForm({ returnTo }: LoginFormProps) {
   const router = useRouter();
   const { t } = useI18n();
 
@@ -47,23 +40,21 @@ export function LoginForm({ next, isOAuthFlow = false }: LoginFormProps) {
   async function onSubmit(values: LoginValues) {
     form.clearErrors("root");
 
-    const { data, error } = await authClient.signIn.email({
+    const { error } = await authClient.signIn.email({
       email: values.email,
       password: values.password,
       /*
-       * OAuth akışında `callbackURL` authorize adresidir: e-posta doğrulaması
-       * gerektiğinde gönderilen doğrulama e-postası bu adrese döner ve akış
-       * kaldığı yerden devam eder. Başarılı girişte ise sunucu akışın bir
-       * sonraki adımını (organizasyon seçimi ya da onay ekranı) döner.
+       * E-posta doğrulaması gerektiğinde gönderilen doğrulama e-postası bu
+       * adrese döner ve kullanıcı kaldığı yerden devam eder.
        */
-      callbackURL: next,
+      callbackURL: returnTo,
     });
 
     if (error) {
       if (error.status === 403) {
         const params = new URLSearchParams({
           email: values.email,
-          next,
+          returnTo,
         });
 
         router.push(`/verify-email?${params.toString()}`);
@@ -78,38 +69,45 @@ export function LoginForm({ next, isOAuthFlow = false }: LoginFormProps) {
       return;
     }
 
-    if (isOAuthFlow) {
-      /*
-       * OAuth akışı devam ediyor. Organizasyon seçimi kullanıcıya bırakıldığı
-       * için aktif organizasyon burada değiştirilmez.
-       */
-      if (data?.redirect && data?.url) {
-        window.location.href = data.url;
-      }
+    /*
+     * Aktif organizasyon körlemesine seçilmez: kullanıcının üyeliği varsa
+     * tek organizasyon seçilir, birden fazlaysa seçim ekranına gidilir,
+     * hiç yoksa davet beklenir.
+     */
+    const { data: organizations } = await authClient.organization.list();
+
+    if (!organizations?.length) {
+      router.replace("/no-access");
+      router.refresh();
 
       return;
     }
 
-    const organizations = await authClient.organization.list();
-    if (organizations.data?.length) {
-      await authClient.organization.setActive({
-        organizationId: organizations.data[0]?.id,
-      });
+    if (organizations.length > 1) {
+      router.replace("/select-organization");
+      router.refresh();
+
+      return;
+    }
+
+    const organizationId = organizations[0]?.id;
+
+    if (organizationId) {
+      await authClient.organization.setActive({ organizationId });
     }
 
     /*
-     * Superadmin organizasyon üyesi olmayabilir; dashboard yerine platform
-     * paneline yönlendirilir.
+     * `returnTo` iş uygulamasının mutlak adresi olabilir (deep link). Next
+     * router yalnızca aynı origin'deki yolları yönlendirir; farklı origin'e
+     * tam sayfa navigasyonu gerekir.
      */
-    const { data: sessionData } = await authClient.getSession({
-      fetchOptions: {
-        cache: "no-store",
-      },
-    });
+    if (returnTo.startsWith("http")) {
+      window.location.assign(returnTo);
 
-    const isSuperadmin = sessionData?.user?.role === "superadmin";
+      return;
+    }
 
-    router.replace(isSuperadmin ? "/admin" : next);
+    router.replace(returnTo);
     router.refresh();
   }
 

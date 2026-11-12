@@ -15,7 +15,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { type BootstrapValues, bootstrapSchema } from "../schema";
-import { bootstrapSuperadminAction } from "../server";
+import { bootstrapOrganizationAction } from "../server";
 
 export function BootstrapForm() {
   const [completed, setCompleted] = useState(false);
@@ -23,6 +23,8 @@ export function BootstrapForm() {
   const form = useForm<BootstrapValues>({
     resolver: zodResolver(bootstrapSchema),
     defaultValues: {
+      organizationName: "",
+      organizationSlug: "",
       name: "",
       email: "",
       password: "",
@@ -34,7 +36,7 @@ export function BootstrapForm() {
   async function onSubmit(values: BootstrapValues) {
     form.clearErrors("root");
 
-    const result = await bootstrapSuperadminAction(values);
+    const result = await bootstrapOrganizationAction(values);
 
     if (!result.success) {
       form.setError("root", {
@@ -51,7 +53,7 @@ export function BootstrapForm() {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Superadmin created</CardTitle>
+          <CardTitle>Organization created</CardTitle>
           <CardDescription>
             Your account was created successfully. Verify your email before signing in.
           </CardDescription>
@@ -71,7 +73,7 @@ export function BootstrapForm() {
       <CardHeader>
         <CardTitle>Initialize mQDMS</CardTitle>
         <CardDescription>
-          Create the first platform superadmin. This setup is available only once.
+          Create the first organization and its owner. This setup is available only once.
         </CardDescription>
       </CardHeader>
 
@@ -82,10 +84,45 @@ export function BootstrapForm() {
 
             <Controller
               control={form.control}
+              name="organizationName"
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid}>
+                  <FieldLabel htmlFor="organizationName">Organization Name</FieldLabel>
+                  <Input
+                    {...field}
+                    id="organizationName"
+                    autoComplete="organization"
+                    aria-invalid={fieldState.invalid}
+                  />
+                  {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+                </Field>
+              )}
+            />
+
+            <Controller
+              control={form.control}
+              name="organizationSlug"
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid}>
+                  <FieldLabel htmlFor="organizationSlug">Organization Slug</FieldLabel>
+                  <Input
+                    {...field}
+                    id="organizationSlug"
+                    autoComplete="off"
+                    placeholder="acme-factory"
+                    aria-invalid={fieldState.invalid}
+                  />
+                  {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+                </Field>
+              )}
+            />
+
+            <Controller
+              control={form.control}
               name="name"
               render={({ field, fieldState }) => (
                 <Field data-invalid={fieldState.invalid}>
-                  <FieldLabel htmlFor="name">Full Name</FieldLabel>
+                  <FieldLabel htmlFor="name">Owner Full Name</FieldLabel>
                   <Input
                     {...field}
                     id="name"
@@ -102,7 +139,7 @@ export function BootstrapForm() {
               name="email"
               render={({ field, fieldState }) => (
                 <Field data-invalid={fieldState.invalid}>
-                  <FieldLabel htmlFor="email">Email Address</FieldLabel>
+                  <FieldLabel htmlFor="email">Owner Email Address</FieldLabel>
                   <Input
                     {...field}
                     id="email"
@@ -170,7 +207,7 @@ export function BootstrapForm() {
             />
 
             <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
-              {form.formState.isSubmitting ? "Initializing..." : "Create Superadmin"}
+              {form.formState.isSubmitting ? "Initializing..." : "Create Organization"}
             </Button>
           </FieldGroup>
         </form>

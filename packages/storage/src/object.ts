@@ -1,5 +1,5 @@
 import { DeleteObjectCommand, HeadObjectCommand } from "@aws-sdk/client-s3";
-import { env } from "@mqdms/env/server";
+import { storageEnv as env } from "@mqdms/env/storage";
 
 import { storageClient } from "./client";
 import type { UploadPurpose } from "./types";

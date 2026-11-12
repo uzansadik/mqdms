@@ -7,22 +7,27 @@
     "./client": "./src/client.ts",
     "./server": "./src/server.ts",
     "./next": "./src/next.ts",
+    "./origins": "./src/origins.ts",
+    "./provisioning": "./src/provisioning.ts",
+    "./session": "./src/session.ts",
     "./permissions": "./src/permissions/index.ts",
-    "./permissions/publish": "./src/permissions/publish.ts"
+    "./permissions/server": "./src/permissions/server.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@better-auth/api-key": "1.7.20",
-    "@better-auth/oauth-provider": "1.7.20",
+    "@mqdms/audit": "workspace:*",
     "@mqdms/config": "workspace:*",
     "@mqdms/db": "workspace:*",
     "@mqdms/email": "workspace:*",
     "@mqdms/queue": "workspace:*",
     "@mqdms/env": "workspace:*",
     "better-auth": "1.7.20",
-    "drizzle-orm": "^0.45.2"
+    "drizzle-orm": "^0.45.2",
+    "server-only": "^0.0.1",
+    "zod": "^4.0.0"
   },
   "devDependencies": {
     "@mqdms/typescript-config": "workspace:*",

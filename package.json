@@ -17,14 +17,17 @@
     "db:push": "dotenv -e .env -- pnpm --filter @mqdms/db db:push",
     "db:studio": "dotenv -e .env -- pnpm --filter @mqdms/db db:studio",
     "db:reset": "dotenv -e .env -- node ./packages/db/scripts/reset.mjs && pnpm db:migrate",
-    "db:reset:hard": "dotenv -e .env -- node ./packages/db/scripts/reset.mjs && dotenv -e .env -- node ./packages/db/scripts/reset-migrations.mjs && pnpm db:generate && pnpm db:migrate"
+    "db:reset:hard": "dotenv -e .env -- node ./packages/db/scripts/reset.mjs && dotenv -e .env -- node ./packages/db/scripts/reset-migrations.mjs && pnpm db:generate && pnpm db:migrate",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.9",
     "@mqdms/typescript-config": "workspace:*",
     "dotenv-cli": "^11.0.0",
     "turbo": "^2.9.18",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^3.2.7"
   },
   "packageManager": "pnpm@11.23.0",
   "engines": {

@@ -24,6 +24,7 @@ import { Controller, useForm } from "react-hook-form";
 
 import { uploadFile } from "@/features/storage/upload-file";
 
+import { updateProfileAction } from "./profile-actions";
 import { type ProfileValues, profileSchema } from "./schemas";
 
 type ProfileFormProps = {
@@ -82,23 +83,13 @@ export function ProfileForm({ user }: ProfileFormProps) {
         avatarKey = uploaded.key;
       }
 
-      const response = await fetch("/api/profile", {
-        method: "PATCH",
-
-        headers: {
-          "content-type": "application/json",
-        },
-
-        body: JSON.stringify({
-          name: values.name,
-          avatarKey,
-        }),
+      const result = await updateProfileAction({
+        name: values.name,
+        avatarKey,
       });
 
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error ?? "Unable to update profile.");
+      if (!result.success) {
+        throw new Error(result.error);
       }
 
       form.reset({

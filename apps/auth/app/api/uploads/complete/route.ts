@@ -1,9 +1,8 @@
 import { verifyUploadedObject } from "@mqdms/storage/server";
 import { NextResponse } from "next/server";
 import { z } from "zod";
-
+import { requireRequestContext } from "@/features/auth/context";
 import { getSession } from "@/features/auth/session";
-import { requireOrganization } from "@/features/organization/server";
 
 const schema = z.object({
   purpose: z.enum(["user-avatar", "organization-logo"]),
@@ -42,9 +41,9 @@ export async function POST(request: Request) {
   if (parsed.data.purpose === "user-avatar") {
     ownerId = session.user.id;
   } else {
-    const organization = await requireOrganization();
+    const context = await requireRequestContext();
 
-    ownerId = organization.id;
+    ownerId = context.organizationId;
   }
 
   try {

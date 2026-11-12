@@ -14,7 +14,7 @@ import {
   SidebarMenuItem,
   SidebarRail,
 } from "@mqdms/ui/components/sidebar";
-import { LayoutDashboard, Settings, Shield } from "lucide-react";
+import { KeyRound, LayoutDashboard, ScrollText, Settings, ShieldCheck, Users } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -28,28 +28,53 @@ type AppSidebarProps = {
     slug: string;
   };
   user: {
+    id: string;
     name: string;
     email: string;
   };
-  isSuperadmin: boolean;
+  /** Kullanıcı organizasyonun sahibi mi? Yönetim ekranları yalnızca owner'a açıktır. */
+  isOwner: boolean;
 };
 
-const navigation = [
-  {
-    title: "Dashboard",
-    href: "/dashboard",
-    icon: LayoutDashboard,
-  },
-  {
-    title: "Settings",
-    href: "/settings",
-    icon: Settings,
-  },
-];
-
-export function AppSidebar({ organization, user, isSuperadmin }: AppSidebarProps) {
+export function AppSidebar({ organization, user, isOwner }: AppSidebarProps) {
   const pathname = usePathname();
   const { t } = useI18n();
+
+  const navigation = [
+    {
+      title: t("navigation.dashboard"),
+      href: "/dashboard",
+      icon: LayoutDashboard,
+    },
+    {
+      title: t("navigation.organization"),
+      href: "/organization",
+      icon: Settings,
+    },
+  ];
+
+  const ownerNavigation = [
+    {
+      title: t("settings.nav.members"),
+      href: "/organization/members",
+      icon: Users,
+    },
+    {
+      title: t("settings.nav.roles"),
+      href: "/organization/roles",
+      icon: ShieldCheck,
+    },
+    {
+      title: t("settings.nav.permissions"),
+      href: "/organization/permissions",
+      icon: KeyRound,
+    },
+    {
+      title: t("settings.nav.activity"),
+      href: "/organization/activity",
+      icon: ScrollText,
+    },
+  ];
 
   return (
     <Sidebar collapsible="icon">
@@ -85,24 +110,30 @@ export function AppSidebar({ organization, user, isSuperadmin }: AppSidebarProps
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {isSuperadmin && (
+        {isOwner && (
           <SidebarGroup>
-            <SidebarGroupLabel>{t("admin.nav.platform")}</SidebarGroupLabel>
+            <SidebarGroupLabel>{t("organization.management")}</SidebarGroupLabel>
 
             <SidebarGroupContent>
               <SidebarMenu>
-                <SidebarMenuItem>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={pathname === "/admin" || pathname.startsWith("/admin/")}
-                    tooltip={t("admin.nav.platform")}
-                  >
-                    <Link href="/admin">
-                      <Shield />
-                      <span>{t("admin.nav.platform")}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
+                {ownerNavigation.map((item) => {
+                  const Icon = item.icon;
+
+                  return (
+                    <SidebarMenuItem key={item.href}>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={pathname === item.href || pathname.startsWith(`${item.href}/`)}
+                        tooltip={item.title}
+                      >
+                        <Link href={item.href}>
+                          <Icon />
+                          <span>{item.title}</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                })}
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
