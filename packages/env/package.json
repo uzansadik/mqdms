@@ -6,6 +6,10 @@
   "exports": {
     "./client": "./src/client.ts",
     "./server": "./src/server.ts",
+    "./auth": "./src/auth.ts",
+    "./app": "./src/app.ts",
+    "./storage": "./src/storage.ts",
+    "./redis": "./src/redis.ts",
     "./queue": "./src/queue.ts",
     "./worker": "./src/worker.ts",
     "./email": "./src/email.ts"
