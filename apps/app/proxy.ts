@@ -29,7 +29,20 @@ export function proxy(request: NextRequest) {
 
   const loginUrl = new URL("/login", env.NEXT_PUBLIC_AUTH_URL);
 
-  loginUrl.searchParams.set("returnTo", `${request.nextUrl.pathname}${request.nextUrl.search}`);
+  /*
+   * `returnTo` mutlak adres olmalıdır: giriş auth deploy'unda yapılır, iş
+   * uygulamasındaki sayfaya dönmek için hedefin origin'i bilinmelidir. Auth
+   * uygulaması bu origin'i izin listesinde doğrular.
+   *
+   * Origin `NEXT_PUBLIC_BUSINESS_APP_URL`'den alınır: istek başlıkları ters
+   * proxy arkasında iç host'u gösterebilir.
+   */
+  const target = new URL(
+    `${request.nextUrl.pathname}${request.nextUrl.search}`,
+    env.NEXT_PUBLIC_BUSINESS_APP_URL,
+  );
+
+  loginUrl.searchParams.set("returnTo", target.toString());
 
   return NextResponse.redirect(loginUrl);
 }

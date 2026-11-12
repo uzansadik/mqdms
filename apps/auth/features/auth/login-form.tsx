@@ -96,6 +96,17 @@ export function LoginForm({ returnTo }: LoginFormProps) {
       await authClient.organization.setActive({ organizationId });
     }
 
+    /*
+     * `returnTo` iş uygulamasının mutlak adresi olabilir (deep link). Next
+     * router yalnızca aynı origin'deki yolları yönlendirir; farklı origin'e
+     * tam sayfa navigasyonu gerekir.
+     */
+    if (returnTo.startsWith("http")) {
+      window.location.assign(returnTo);
+
+      return;
+    }
+
     router.replace(returnTo);
     router.refresh();
   }

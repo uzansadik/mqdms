@@ -13,10 +13,17 @@ import { env } from "@mqdms/env/client";
  * eğik çizgi, yanlış şema ve kodlanmış kaçış denemeleri reddedilir.
  */
 
-/** İzin verilen origin'ler (auth ve app deploy'ları). */
+/**
+ * İzin verilen origin'ler.
+ *
+ * Auth deploy'unun kendi origin'i, iş uygulamasının origin'i ve canonical
+ * auth origin'i. İş uygulamasından gelen deep link'ler mutlak adres olarak
+ * döner; bu origin reddedilirse kullanıcı girişten sonra panele düşer.
+ */
 export const allowedReturnOrigins: string[] = [
-  originOf(env.NEXT_PUBLIC_AUTH_URL),
   originOf(env.NEXT_PUBLIC_APP_URL),
+  originOf(env.NEXT_PUBLIC_AUTH_URL),
+  originOf(env.NEXT_PUBLIC_BUSINESS_APP_URL),
 ].filter((origin): origin is string => Boolean(origin));
 
 /** Kontrol karakterleri yönlendirme hedeflerinde kabul edilmez. */
