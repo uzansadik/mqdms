@@ -137,9 +137,7 @@ export const managementRoleDefinitions = {
 export const managementRoleIds = Object.keys(managementRoleDefinitions) as ManagementRoleId[];
 
 /** Davet ve rol atama ekranlarında gösterilebilen yönetim rolleri. */
-export const assignableManagementRoleIds = managementRoleIds.filter(
-  (roleId) => roleId !== "owner",
-);
+export const assignableManagementRoleIds = managementRoleIds.filter((roleId) => roleId !== "owner");
 
 export type ManagementRoleId = keyof typeof managementRoleDefinitions;
 

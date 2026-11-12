@@ -198,9 +198,7 @@ function RoleDialog({ mode, role }: RoleDialogProps) {
       <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>
-            {mode === "create"
-              ? t("organization.roles.create")
-              : t("organization.roles.edit")}
+            {mode === "create" ? t("organization.roles.create") : t("organization.roles.edit")}
           </DialogTitle>
 
           <DialogDescription>{t("organization.roles.description")}</DialogDescription>
@@ -225,11 +223,7 @@ function RoleDialog({ mode, role }: RoleDialogProps) {
           <Field>
             <FieldLabel htmlFor="role-name">{t("organization.roles.name")}</FieldLabel>
 
-            <Input
-              id="role-name"
-              onChange={(event) => setName(event.target.value)}
-              value={name}
-            />
+            <Input id="role-name" onChange={(event) => setName(event.target.value)} value={name} />
           </Field>
 
           <Field>

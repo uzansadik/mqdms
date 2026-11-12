@@ -57,10 +57,7 @@ export async function requireRequestContext(
 
 /** Kullanıcının üye olduğu organizasyon sayısı. */
 export const countMemberships = cache(async (userId: string) => {
-  const rows = await db
-    .select({ id: member.id })
-    .from(member)
-    .where(eq(member.userId, userId));
+  const rows = await db.select({ id: member.id }).from(member).where(eq(member.userId, userId));
 
   return rows.length;
 });

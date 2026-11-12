@@ -262,9 +262,7 @@ export async function isBootstrapCompleted(): Promise<boolean> {
   const rows = await db
     .select({ id: bootstrapState.id })
     .from(bootstrapState)
-    .where(
-      and(eq(bootstrapState.id, BOOTSTRAP_ROW_ID), eq(bootstrapState.status, "completed")),
-    )
+    .where(and(eq(bootstrapState.id, BOOTSTRAP_ROW_ID), eq(bootstrapState.status, "completed")))
     .limit(1);
 
   return rows.length > 0;

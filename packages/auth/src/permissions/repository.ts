@@ -115,10 +115,7 @@ export async function getOrganizationRole(
     })
     .from(organizationRole)
     .where(
-      and(
-        eq(organizationRole.organizationId, organizationId),
-        eq(organizationRole.id, roleId),
-      ),
+      and(eq(organizationRole.organizationId, organizationId), eq(organizationRole.id, roleId)),
     )
     .limit(1);
 
@@ -141,12 +138,7 @@ export async function getMemberRoleIds(
   const rows = await db
     .select({ roleId: memberRole.roleId })
     .from(memberRole)
-    .where(
-      and(
-        eq(memberRole.organizationId, organizationId),
-        eq(memberRole.memberId, memberId),
-      ),
-    );
+    .where(and(eq(memberRole.organizationId, organizationId), eq(memberRole.memberId, memberId)));
 
   return rows.map((row) => row.roleId);
 }
@@ -190,9 +182,7 @@ export async function getMemberGrants(
 }
 
 /** Organizasyondaki tüm yetki kayıtları. */
-export async function getOrganizationGrants(
-  organizationId: string,
-): Promise<PermissionGrant[]> {
+export async function getOrganizationGrants(organizationId: string): Promise<PermissionGrant[]> {
   const rows = await db
     .select({
       resource: memberPermission.resource,

@@ -61,9 +61,7 @@ export async function getOrganizationMember(organizationId: string) {
   const rows = await db
     .select({ id: member.id, userId: member.userId, role: member.role })
     .from(member)
-    .where(
-      and(eq(member.organizationId, organizationId), eq(member.userId, context.userId)),
-    )
+    .where(and(eq(member.organizationId, organizationId), eq(member.userId, context.userId)))
     .limit(1);
 
   return rows[0] ?? null;

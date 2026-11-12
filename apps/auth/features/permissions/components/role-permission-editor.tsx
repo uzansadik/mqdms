@@ -51,9 +51,7 @@ export function RolePermissionEditor({
                     checked={checked}
                     disabled={disabled}
                     id={`permission-${key}`}
-                    onCheckedChange={(value) =>
-                      toggle(resourceKey, action, value === true)
-                    }
+                    onCheckedChange={(value) => toggle(resourceKey, action, value === true)}
                   />
 
                   <label className="cursor-pointer" htmlFor={`permission-${key}`}>

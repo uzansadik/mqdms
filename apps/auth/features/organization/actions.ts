@@ -126,9 +126,7 @@ export async function inviteMemberAction(input: unknown): Promise<OrganizationAc
 }
 
 /** Üyenin fonksiyonel rollerini değiştirir. */
-export async function assignMemberRolesAction(
-  input: unknown,
-): Promise<OrganizationActionResult> {
+export async function assignMemberRolesAction(input: unknown): Promise<OrganizationActionResult> {
   const parsed = assignMemberRolesSchema.safeParse(input);
 
   if (!parsed.success) {
@@ -154,9 +152,11 @@ export async function assignMemberRolesAction(
   } catch (error) {
     console.error("Failed to assign the member roles:", error);
 
-    return { success: false, error: error instanceof Error ? error.message : "Unable to update the member roles." };
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unable to update the member roles.",
+    };
   }
-
 
   return { success: true };
 }

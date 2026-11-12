@@ -432,10 +432,7 @@ export async function getRoleAssignmentPreview(
     .from(memberRole)
     .innerJoin(member, eq(memberRole.memberId, member.id))
     .where(
-      and(
-        eq(memberRole.organizationId, context.organizationId),
-        eq(memberRole.roleId, roleId),
-      ),
+      and(eq(memberRole.organizationId, context.organizationId), eq(memberRole.roleId, roleId)),
     );
 
   return rows;
@@ -460,10 +457,7 @@ export async function deleteRole(context: AuthContext, roleId: string): Promise<
     await tx
       .delete(memberRole)
       .where(
-        and(
-          eq(memberRole.organizationId, context.organizationId),
-          eq(memberRole.roleId, roleId),
-        ),
+        and(eq(memberRole.organizationId, context.organizationId), eq(memberRole.roleId, roleId)),
       );
 
     await tx
@@ -530,7 +524,10 @@ export async function assignMemberRoles(
       );
 
     if (roles.length !== uniqueRoleIds.length) {
-      throw new PermissionError("One or more roles do not belong to this organization.", "INVALID_INPUT");
+      throw new PermissionError(
+        "One or more roles do not belong to this organization.",
+        "INVALID_INPUT",
+      );
     }
   }
 
@@ -719,12 +716,7 @@ async function getMemberInOrganization(
   const rows = await db
     .select({ id: member.id, userId: member.userId, role: member.role })
     .from(member)
-    .where(
-      and(
-        eq(member.organizationId, organizationId),
-        eq(member.id, memberId),
-      ),
-    )
+    .where(and(eq(member.organizationId, organizationId), eq(member.id, memberId)))
     .limit(1);
 
   return rows[0] ?? null;

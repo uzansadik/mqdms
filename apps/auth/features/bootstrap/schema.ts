@@ -16,10 +16,7 @@ export const bootstrapSchema = z
       .trim()
       .min(2)
       .max(63)
-      .regex(
-        /^[a-z0-9]+(?:-[a-z0-9]+)*$/,
-        "Use lowercase letters, numbers, and hyphens only.",
-      ),
+      .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "Use lowercase letters, numbers, and hyphens only."),
 
     name: z.string().trim().min(2).max(100),
 

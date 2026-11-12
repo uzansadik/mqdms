@@ -29,10 +29,7 @@ export function proxy(request: NextRequest) {
 
   const loginUrl = new URL("/login", env.NEXT_PUBLIC_AUTH_URL);
 
-  loginUrl.searchParams.set(
-    "returnTo",
-    `${request.nextUrl.pathname}${request.nextUrl.search}`,
-  );
+  loginUrl.searchParams.set("returnTo", `${request.nextUrl.pathname}${request.nextUrl.search}`);
 
   return NextResponse.redirect(loginUrl);
 }

@@ -13,9 +13,7 @@ import { z } from "zod";
 const appEnvSchema = z.object({
   NEXT_PUBLIC_APP_URL: z.url().min(1, "NEXT_PUBLIC_APP_URL is required and must be a valid URL"),
 
-  NEXT_PUBLIC_AUTH_URL: z
-    .url()
-    .min(1, "NEXT_PUBLIC_AUTH_URL is required and must be a valid URL"),
+  NEXT_PUBLIC_AUTH_URL: z.url().min(1, "NEXT_PUBLIC_AUTH_URL is required and must be a valid URL"),
 
   NEXT_PUBLIC_BUSINESS_APP_URL: z
     .url()

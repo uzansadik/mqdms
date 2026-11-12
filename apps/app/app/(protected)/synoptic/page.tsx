@@ -23,9 +23,7 @@ export default async function SynopticPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">
-          {t("app.modules.synoptic.title")}
-        </h1>
+        <h1 className="text-2xl font-semibold tracking-tight">{t("app.modules.synoptic.title")}</h1>
 
         <p className="mt-1 text-sm text-muted-foreground">
           {t("app.modules.synoptic.description")}
@@ -34,9 +32,7 @@ export default async function SynopticPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">
-            {t("app.modules.synoptic.placeholder.title")}
-          </CardTitle>
+          <CardTitle className="text-base">{t("app.modules.synoptic.placeholder.title")}</CardTitle>
 
           <CardDescription>{t("app.modules.synoptic.placeholder.description")}</CardDescription>
         </CardHeader>

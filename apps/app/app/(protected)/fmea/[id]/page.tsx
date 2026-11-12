@@ -38,17 +38,13 @@ export default async function FmeaDetailPage({ params }: PageProps) {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">
-            {t("app.modules.fmea.placeholder.title")}
-          </CardTitle>
+          <CardTitle className="text-base">{t("app.modules.fmea.placeholder.title")}</CardTitle>
 
           <CardDescription>{t("app.modules.fmea.placeholder.description")}</CardDescription>
         </CardHeader>
 
         <CardContent>
-          <p className="text-sm text-muted-foreground">
-            {t("app.modules.fmea.placeholder.note")}
-          </p>
+          <p className="text-sm text-muted-foreground">{t("app.modules.fmea.placeholder.note")}</p>
         </CardContent>
       </Card>
     </div>

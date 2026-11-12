@@ -91,8 +91,7 @@ export const factoryRoleTemplates: readonly FactoryRoleTemplate[] = [
   {
     slug: "project-engineer",
     name: "Proje Mühendisi",
-    description:
-      "FMEA ve proses akışı kayıtlarını hazırlar, gönderir; kontrol planını okur.",
+    description: "FMEA ve proses akışı kayıtlarını hazırlar, gönderir; kontrol planını okur.",
     permissions: {
       fmea: ["read", "create", "update", "save", "submit"],
       synoptic: ["read"],
@@ -122,8 +121,7 @@ export const factoryRoleTemplates: readonly FactoryRoleTemplate[] = [
   {
     slug: "quality-engineer",
     name: "Kalite Mühendisi",
-    description:
-      "FMEA kaydı hazırlar ve gönderir; kontrol planı oluşturur; NCR açar ve günceller.",
+    description: "FMEA kaydı hazırlar ve gönderir; kontrol planı oluşturur; NCR açar ve günceller.",
     permissions: {
       fmea: ["read", "create", "update", "save", "submit"],
       synoptic: ["read"],

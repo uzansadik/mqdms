@@ -56,10 +56,7 @@ export const organizationRole = pgTable(
       .notNull(),
   },
   (table) => [
-    uniqueIndex("organization_role_organization_id_slug_uidx").on(
-      table.organizationId,
-      table.slug,
-    ),
+    uniqueIndex("organization_role_organization_id_slug_uidx").on(table.organizationId, table.slug),
 
     /*
      * Composite unique: alt tabloların (organization_id, role_id) yabancı
@@ -220,10 +217,7 @@ export const memberPermission = pgTable(
      * Etiket yalnızca `allow` veya `deny` olabilir. Geçersiz bir değer
      * yazılırsa değerlendirme fail closed uygulanır.
      */
-    check(
-      "member_permission_effect_check",
-      sql`${table.effect} in ('allow', 'deny')`,
-    ),
+    check("member_permission_effect_check", sql`${table.effect} in ('allow', 'deny')`),
 
     /*
      * Üye ve organizasyon eşleşmesi: grant'ın ait olduğu üye, grant'ın
@@ -269,10 +263,7 @@ export const invitationRole = pgTable(
       .notNull(),
   },
   (table) => [
-    uniqueIndex("invitation_role_invitation_id_role_id_uidx").on(
-      table.invitationId,
-      table.roleId,
-    ),
+    uniqueIndex("invitation_role_invitation_id_role_id_uidx").on(table.invitationId, table.roleId),
 
     foreignKey({
       columns: [table.organizationId, table.roleId],

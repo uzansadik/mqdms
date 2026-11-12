@@ -26,9 +26,7 @@ export default async function FmeaPage() {
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">{t("app.modules.fmea.title")}</h1>
 
-        <p className="mt-1 text-sm text-muted-foreground">
-          {t("app.modules.fmea.description")}
-        </p>
+        <p className="mt-1 text-sm text-muted-foreground">{t("app.modules.fmea.description")}</p>
       </div>
 
       <Card>
@@ -39,9 +37,7 @@ export default async function FmeaPage() {
         </CardHeader>
 
         <CardContent>
-          <p className="text-sm text-muted-foreground">
-            {t("app.modules.fmea.placeholder.note")}
-          </p>
+          <p className="text-sm text-muted-foreground">{t("app.modules.fmea.placeholder.note")}</p>
         </CardContent>
       </Card>
     </div>

@@ -40,9 +40,7 @@ export default async function SynopticDetailPage({ params }: PageProps) {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">
-            {t("app.modules.synoptic.placeholder.title")}
-          </CardTitle>
+          <CardTitle className="text-base">{t("app.modules.synoptic.placeholder.title")}</CardTitle>
 
           <CardDescription>{t("app.modules.synoptic.placeholder.description")}</CardDescription>
         </CardHeader>

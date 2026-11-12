@@ -57,7 +57,9 @@ export function OrganizationNav({ isOwner }: OrganizationNavProps) {
     <nav className="flex flex-wrap gap-4">
       {visibleItems.map((item) => {
         const active =
-          item.href === "/organization" ? pathname === "/organization" : pathname.startsWith(item.href);
+          item.href === "/organization"
+            ? pathname === "/organization"
+            : pathname.startsWith(item.href);
 
         return (
           <Link

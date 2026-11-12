@@ -157,8 +157,7 @@ export const en = {
   "roles.owner.description":
     "Full owner of the workspace. Can delete the organization and manage members and permissions.",
   "roles.member.label": "Member",
-  "roles.member.description":
-    "Access comes from the functional roles assigned to this member.",
+  "roles.member.description": "Access comes from the functional roles assigned to this member.",
 
   "app.nav.modules": "Modules",
   "app.nav.dashboard": "Dashboard",

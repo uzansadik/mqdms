@@ -67,9 +67,7 @@ export function InviteMemberForm({ organizationId, roles }: InviteMemberFormProp
           name="email"
           render={({ field, fieldState }) => (
             <Field data-invalid={fieldState.invalid}>
-              <FieldLabel htmlFor={field.name}>
-                {t("organization.members.invite.email")}
-              </FieldLabel>
+              <FieldLabel htmlFor={field.name}>{t("organization.members.invite.email")}</FieldLabel>
 
               <Input
                 {...field}
@@ -120,9 +118,7 @@ export function InviteMemberForm({ organizationId, roles }: InviteMemberFormProp
                           <span className="block font-medium">{role.name}</span>
 
                           {role.description && (
-                            <span className="block text-muted-foreground">
-                              {role.description}
-                            </span>
+                            <span className="block text-muted-foreground">{role.description}</span>
                           )}
                         </span>
                       </div>

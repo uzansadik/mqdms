@@ -1,11 +1,6 @@
 import "server-only";
 
-import {
-  type AuthContext,
-  hasPermission,
-  PermissionError,
-  requireAuthContext,
-} from "./service";
+import { type AuthContext, hasPermission, PermissionError, requireAuthContext } from "./service";
 
 /**
  * Yetki korumaları.
@@ -33,10 +28,7 @@ export async function requirePermission(
   action: string,
 ): Promise<AuthContext> {
   if (!(await hasPermission(context, resource, action))) {
-    throw new PermissionError(
-      `Missing permission: ${resource}:${action}`,
-      "FORBIDDEN",
-    );
+    throw new PermissionError(`Missing permission: ${resource}:${action}`, "FORBIDDEN");
   }
 
   return context;

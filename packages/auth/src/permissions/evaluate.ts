@@ -106,9 +106,7 @@ export function evaluatePermission(
     return true;
   }
 
-  return input.roleGrants.some(
-    (grant) => grant.resource === resource && grant.action === action,
-  );
+  return input.roleGrants.some((grant) => grant.resource === resource && grant.action === action);
 }
 
 /**

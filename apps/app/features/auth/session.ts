@@ -1,8 +1,4 @@
-import {
-  type AuthContext,
-  getAuthContext,
-  hasPermission,
-} from "@mqdms/auth/permissions/server";
+import { type AuthContext, getAuthContext, hasPermission } from "@mqdms/auth/permissions/server";
 import { env } from "@mqdms/env/client";
 import { headers } from "next/headers";
 import { forbidden, redirect } from "next/navigation";
@@ -42,10 +38,7 @@ export async function requireAuthContext(): Promise<AuthContext> {
  * sorgusu bu kontrolü kendisi uygular. Yetki yoksa Next.js 403 sayfası
  * gösterilir.
  */
-export async function requirePermission(
-  resource: string,
-  action: string,
-): Promise<AuthContext> {
+export async function requirePermission(resource: string, action: string): Promise<AuthContext> {
   const context = await requireAuthContext();
 
   if (!(await hasPermission(context, resource, action))) {

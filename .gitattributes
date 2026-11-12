@@ -1,0 +1,16 @@
+# Satır sonları depoda LF olarak tutulur.
+#
+# Biome `formatter.lineEnding` varsayılanı LF'tir ve CI `biome format .`
+# kontrolünü bloklayıcı olarak çalıştırır. `core.autocrlf=true` olan bir
+# Windows istemcisinde dosyalar CRLF olarak çözülür ve format kontrolü yerelde
+# gürültü üretir. Bu dosya çözme davranışını açıkça tanımlar.
+* text=auto eol=lf
+
+# Binary dosyalar.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.woff binary
+*.woff2 binary

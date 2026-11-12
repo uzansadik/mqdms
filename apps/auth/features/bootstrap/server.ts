@@ -1,11 +1,7 @@
 "use server";
 
 import { bootstrapSchema } from "./schema";
-import {
-  bootstrapOrganization,
-  getBootstrapStatus,
-  InvalidBootstrapKeyError,
-} from "./service";
+import { bootstrapOrganization, getBootstrapStatus, InvalidBootstrapKeyError } from "./service";
 
 type BootstrapResult = { success: true } | { success: false; error: string };
 

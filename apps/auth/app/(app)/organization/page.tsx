@@ -1,11 +1,6 @@
 import { getTranslations } from "@mqdms/i18n/server";
 import { Badge } from "@mqdms/ui/components/badge";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@mqdms/ui/components/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@mqdms/ui/components/card";
 
 import { requireRequestContext } from "@/features/auth/context";
 import { DeleteOrganization } from "@/features/organization/delete-organization";
@@ -22,9 +17,7 @@ export default async function OrganizationPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">
-          {t("organization.general.title")}
-        </h1>
+        <h1 className="text-2xl font-semibold tracking-tight">{t("organization.general.title")}</h1>
 
         <p className="mt-1 text-sm text-muted-foreground">
           {t("organization.general.description")}
@@ -46,7 +39,9 @@ export default async function OrganizationPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm font-medium">{t("organization.general.members")}</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              {t("organization.general.members")}
+            </CardTitle>
           </CardHeader>
 
           <CardContent>
