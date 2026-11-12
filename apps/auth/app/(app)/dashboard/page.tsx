@@ -1,5 +1,8 @@
+import { listOrganizationMembers } from "@mqdms/auth/permissions/server";
+import { env } from "@mqdms/env/client";
 import { getTranslations } from "@mqdms/i18n/server";
 import { Badge } from "@mqdms/ui/components/badge";
+import { Button } from "@mqdms/ui/components/button";
 import {
   Card,
   CardContent,
@@ -7,20 +10,16 @@ import {
   CardHeader,
   CardTitle,
 } from "@mqdms/ui/components/card";
-import { Building2, CalendarDays, ShieldCheck, Users } from "lucide-react";
+import { ArrowRight, Building2, ShieldCheck, Users } from "lucide-react";
 
-import { requireSession } from "@/features/auth/session";
-import { getOrganizationDetails, requireOrganization } from "@/features/organization/server";
+import { requireRequestContext } from "@/features/auth/context";
 
 export default async function DashboardPage() {
   const t = await getTranslations();
 
-  const session = await requireSession();
-  const organization = await requireOrganization();
+  const context = await requireRequestContext();
 
-  const details = await getOrganizationDetails(organization.id);
-
-  const currentMember = details?.members.find((member) => member.userId === session.user.id);
+  const members = await listOrganizationMembers(context.organizationId);
 
   return (
     <div className="space-y-8">
@@ -28,12 +27,12 @@ export default async function DashboardPage() {
         <h1 className="text-2xl font-semibold tracking-tight">
           {" "}
           {t("dashboard.welcome", {
-            name: session.user.name ?? session.user.email,
+            name: context.user.name ?? context.user.email,
           })}
         </h1>
 
         <p className="mt-1 text-muted-foreground">
-          Here&apos;s an overview of {organization.name}.
+          Here&apos;s an overview of {context.organization.name}.
         </p>
       </div>
 
@@ -46,7 +45,7 @@ export default async function DashboardPage() {
           </CardHeader>
 
           <CardContent>
-            <div className="text-2xl font-semibold">{details?.members.length ?? 0}</div>
+            <div className="text-2xl font-semibold">{members.length}</div>
 
             <p className="text-xs text-muted-foreground">Workspace members</p>
           </CardContent>
@@ -60,9 +59,7 @@ export default async function DashboardPage() {
           </CardHeader>
 
           <CardContent>
-            <div className="text-2xl font-semibold capitalize">
-              {currentMember?.role ?? "Member"}
-            </div>
+            <div className="text-2xl font-semibold capitalize">{context.member.role}</div>
 
             <p className="text-xs text-muted-foreground">Organization access level</p>
           </CardContent>
@@ -76,29 +73,28 @@ export default async function DashboardPage() {
           </CardHeader>
 
           <CardContent>
-            <div className="truncate text-2xl font-semibold">{organization.slug}</div>
+            <div className="truncate text-2xl font-semibold">{context.organization.slug}</div>
 
             <p className="text-xs text-muted-foreground">Workspace identifier</p>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Created</CardTitle>
-
-            <CalendarDays className="size-4 text-muted-foreground" />
+          <CardHeader>
+            <CardTitle className="text-sm font-medium">mQDMS</CardTitle>
           </CardHeader>
 
-          <CardContent>
-            <div className="text-2xl font-semibold">
-              {organization.createdAt.toLocaleDateString("en-US", {
-                month: "short",
-                day: "numeric",
-                year: "numeric",
-              })}
-            </div>
+          <CardContent className="space-y-3">
+            <p className="text-xs text-muted-foreground">
+              Open the quality management modules (FMEA, synoptic, control plan).
+            </p>
 
-            <p className="text-xs text-muted-foreground">Workspace creation date</p>
+            <Button asChild size="sm">
+              <a href={env.NEXT_PUBLIC_BUSINESS_APP_URL}>
+                Open the app
+                <ArrowRight className="ml-2 size-4" />
+              </a>
+            </Button>
           </CardContent>
         </Card>
       </div>
@@ -135,20 +131,20 @@ export default async function DashboardPage() {
             <div>
               <p className="text-sm text-muted-foreground">Name</p>
 
-              <p className="font-medium">{organization.name}</p>
+              <p className="font-medium">{context.organization.name}</p>
             </div>
 
             <div>
               <p className="text-sm text-muted-foreground">Slug</p>
 
-              <p className="font-medium">{organization.slug}</p>
+              <p className="font-medium">{context.organization.slug}</p>
             </div>
 
             <div>
               <p className="text-sm text-muted-foreground">Your role</p>
 
               <Badge className="mt-1 capitalize" variant="secondary">
-                {currentMember?.role ?? "member"}
+                {context.member.role}
               </Badge>
             </div>
           </CardContent>

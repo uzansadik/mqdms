@@ -1,6 +1,5 @@
 "use client";
 
-import { assignableRoleIds } from "@mqdms/auth/permissions";
 import { useI18n } from "@mqdms/i18n";
 import {
   AlertDialog,
@@ -13,50 +12,51 @@ import {
   AlertDialogTitle,
 } from "@mqdms/ui/components/alert-dialog";
 import { Button } from "@mqdms/ui/components/button";
+import { Checkbox } from "@mqdms/ui/components/checkbox";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@mqdms/ui/components/dropdown-menu";
-import { MoreHorizontal, ShieldCheck, UserRound, UserX } from "lucide-react";
+import { MoreHorizontal, ShieldCheck, UserX } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-import { removeMemberAction, updateMemberRoleAction } from "./actions";
+import { assignMemberRolesAction, removeMemberAction } from "./actions";
 
 type MemberActionsProps = {
   memberId: string;
   memberName: string;
-  organizationId: string;
-  role: string;
+
+  /** Üyeye atanmış fonksiyonel rollerin id'leri. */
+  roleIds: string[];
+
+  /** Organizasyondaki seçilebilir roller. */
+  roles: {
+    id: string;
+    name: string;
+  }[];
 };
 
-export function MemberActions({ memberId, memberName, organizationId, role }: MemberActionsProps) {
+export function MemberActions({ memberId, memberName, roleIds, roles }: MemberActionsProps) {
   const router = useRouter();
   const { t } = useI18n();
 
   const [isPending, setIsPending] = useState(false);
   const [removeOpen, setRemoveOpen] = useState(false);
+  const [rolesOpen, setRolesOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const currentRoles = role.split(",").map((item) => item.trim());
-
-  const availableRoles = assignableRoleIds.filter((roleId) => !currentRoles.includes(roleId));
-
-  async function updateRole(nextRole: string) {
+  async function updateRoles(nextRoleIds: string[]) {
     setIsPending(true);
     setError(null);
 
-    const result = await updateMemberRoleAction({
-      organizationId,
+    const result = await assignMemberRolesAction({
       memberId,
-      role: nextRole,
+      roleIds: nextRoleIds,
     });
 
     if (!result.success) {
@@ -65,6 +65,8 @@ export function MemberActions({ memberId, memberName, organizationId, role }: Me
 
       return;
     }
+
+    setRolesOpen(false);
 
     router.refresh();
     setIsPending(false);
@@ -75,7 +77,6 @@ export function MemberActions({ memberId, memberName, organizationId, role }: Me
     setError(null);
 
     const result = await removeMemberAction({
-      organizationId,
       memberId,
     });
 
@@ -105,25 +106,10 @@ export function MemberActions({ memberId, memberName, organizationId, role }: Me
           </DropdownMenuTrigger>
 
           <DropdownMenuContent align="end">
-            {availableRoles.length > 0 ? (
-              <DropdownMenuSub>
-                <DropdownMenuSubTrigger>
-                  <ShieldCheck />
-                  {t("organization.members.changeRole")}
-                </DropdownMenuSubTrigger>
-
-                <DropdownMenuSubContent>
-                  {availableRoles.map((roleId) => (
-                    <DropdownMenuItem key={roleId} onClick={() => updateRole(roleId)}>
-                      <UserRound />
-                      {t(`roles.${roleId}.label`)}
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuSubContent>
-              </DropdownMenuSub>
-            ) : (
-              <DropdownMenuLabel>{t("organization.members.allRolesAssigned")}</DropdownMenuLabel>
-            )}
+            <DropdownMenuItem onSelect={() => setRolesOpen(true)}>
+              <ShieldCheck />
+              {t("organization.members.changeRole")}
+            </DropdownMenuItem>
 
             <DropdownMenuSeparator />
 
@@ -139,6 +125,50 @@ export function MemberActions({ memberId, memberName, organizationId, role }: Me
 
         {error && <p className="max-w-48 text-right text-xs text-destructive">{error}</p>}
       </div>
+
+      <AlertDialog onOpenChange={setRolesOpen} open={rolesOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {t("organization.members.changeRoleTitle", { name: memberName })}
+            </AlertDialogTitle>
+
+            <AlertDialogDescription>
+              {t("organization.members.changeRoleDescription")}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          <div className="grid gap-2 sm:grid-cols-2">
+            {roles.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                {t("organization.roles.empty.description")}
+              </p>
+            ) : (
+              roles.map((role) => (
+                <div className="flex items-center gap-2 text-sm" key={role.id}>
+                  <Checkbox
+                    checked={roleIds.includes(role.id)}
+                    disabled={isPending}
+                    onCheckedChange={(value) => {
+                      void updateRoles(
+                        value === true
+                          ? [...roleIds, role.id]
+                          : roleIds.filter((item) => item !== role.id),
+                      );
+                    }}
+                  />
+
+                  <span>{role.name}</span>
+                </div>
+              ))
+            )}
+          </div>
+
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isPending}>{t("common.cancel")}</AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AlertDialog onOpenChange={setRemoveOpen} open={removeOpen}>
         <AlertDialogContent>

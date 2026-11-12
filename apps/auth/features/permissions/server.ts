@@ -1,119 +1,80 @@
-import { evaluatePermission, hasCapability, type PermissionGrant } from "@mqdms/auth/permissions";
-import { db } from "@mqdms/db";
-import { memberPermission } from "@mqdms/db/schema";
-import { eq } from "drizzle-orm";
+import {
+  type AuthContext,
+  getMemberPermissionDetails,
+  hasPermission as hasContextPermission,
+  listOrganizationMembers,
+} from "@mqdms/auth/permissions/server";
+
 import { redirect } from "next/navigation";
 
-import {
-  getActiveOrganizationMember,
-  getOrganizationMember,
-  requireOrganization,
-} from "@/features/organization/server";
-
-function toGrant(row: {
-  resource: string;
-  action: string;
-  effect: string;
-  memberId?: string;
-}): PermissionGrant {
-  return {
-    resource: row.resource,
-    action: row.action,
-    effect: row.effect === "deny" ? "deny" : "allow",
-    memberId: row.memberId,
-  };
-}
-
-/** Bir üyeye verilmiş yetki kayıtları. */
-export async function getMemberGrants(memberId: string): Promise<PermissionGrant[]> {
-  const rows = await db
-    .select({
-      resource: memberPermission.resource,
-      action: memberPermission.action,
-      effect: memberPermission.effect,
-      memberId: memberPermission.memberId,
-    })
-    .from(memberPermission)
-    .where(eq(memberPermission.memberId, memberId));
-
-  return rows.map(toGrant);
-}
-
-/** Organizasyondaki tüm yetki kayıtları. */
-export async function getOrganizationGrants(organizationId: string): Promise<PermissionGrant[]> {
-  const rows = await db
-    .select({
-      resource: memberPermission.resource,
-      action: memberPermission.action,
-      effect: memberPermission.effect,
-      memberId: memberPermission.memberId,
-    })
-    .from(memberPermission)
-    .where(eq(memberPermission.organizationId, organizationId));
-
-  return rows.map(toGrant);
-}
+import { requireRequestContext } from "@/features/auth/context";
 
 /**
- * Oturumdaki kullanıcının aktif organizasyondaki üye kaydı.
+ * Yetki yardımcıları.
  *
- * Aktif organizasyon henüz oturuma yazılmamışsa organizasyon üzerinden
- * bulunur; böylece sayfa ile yerleşim bileşenleri farklı sırada çizilse de
- * yetki kontrolü doğru sonucu verir.
+ * Yetki kararı `@mqdms/auth/permissions/server` tarafından verilir; bu
+ * modül yalnızca uygulama düzeyindeki yönlendirme davranışını ekler.
+ *
+ * UI gizleme yalnızca UX'tir: gerçek kontrol her server action ve repository
+ * sorgusunda ayrıca yapılır.
  */
-async function getCurrentMember(): Promise<{ id: string; role: string } | null> {
-  const activeMember = await getActiveOrganizationMember();
-
-  if (activeMember) {
-    return { id: activeMember.id, role: activeMember.role };
-  }
-
-  const organization = await requireOrganization();
-
-  const member = await getOrganizationMember(organization.id);
-
-  return member ? { id: member.id, role: member.role } : null;
-}
 
 /** Aktif üyenin belirli bir kaynak/aksiyon yetkisi var mı? */
-export async function hasPermission(resource: string, action: string): Promise<boolean> {
-  const member = await getCurrentMember();
+export async function hasPermission(
+  resource: string,
+  action: string,
+  context?: AuthContext,
+): Promise<boolean> {
+  const authContext = context ?? (await requireRequestContext());
 
-  if (!member) {
-    return false;
-  }
-
-  const grants = await getMemberGrants(member.id);
-
-  return evaluatePermission({
-    role: member.role,
-    grants,
-    resource,
-    action,
-  });
+  return hasContextPermission(authContext, resource, action);
 }
 
-/** Aktif üye yetki yönetebilir mi? (owner / admin) */
-export async function canManagePermissions(): Promise<boolean> {
-  const member = await getCurrentMember();
+/** Aktif üye yetki yönetebilir mi? (owner) */
+export async function canManagePermissions(context?: AuthContext): Promise<boolean> {
+  const authContext = context ?? (await requireRequestContext());
 
-  if (!member) {
-    return false;
-  }
-
-  return hasCapability({ role: member.role, capability: "managePermissions" });
+  return authContext.isOwner;
 }
 
 /** Sayfa koruması: yetki yoksa dashboard'a yönlendirir. */
-export async function requirePermission(resource: string, action: string): Promise<void> {
-  if (!(await hasPermission(resource, action))) {
+export async function requirePermission(
+  resource: string,
+  action: string,
+  context?: AuthContext,
+): Promise<void> {
+  if (!(await hasPermission(resource, action, context))) {
     redirect("/dashboard");
   }
 }
 
 /** Sayfa koruması: yetki yönetemiyorsa dashboard'a yönlendirir. */
-export async function requirePermissionManager(): Promise<void> {
-  if (!(await canManagePermissions())) {
+export async function requirePermissionManager(context?: AuthContext): Promise<void> {
+  if (!(await canManagePermissions(context))) {
     redirect("/dashboard");
   }
+}
+
+/** Organizasyondaki üyeler ve her birinin rol/grant detayları. */
+export async function getMemberPermissionMatrix(context: AuthContext) {
+  const members = await listOrganizationMembers(context.organizationId);
+
+  const details = await Promise.all(
+    members.map(async (member) => {
+      const memberDetails = await getMemberPermissionDetails(context, member.id);
+
+      return {
+        memberId: member.id,
+        userId: member.userId,
+        name: member.name,
+        email: member.email,
+        role: member.role,
+        roleIds: memberDetails.roleIds,
+        grants: memberDetails.grants,
+        roleGrants: memberDetails.roleGrants,
+      };
+    }),
+  );
+
+  return details;
 }

@@ -1,36 +1,36 @@
 "use server";
 
-import {
-  assignableRoleIds,
-  hasOrganizationStatement,
-  parseRoles,
-  type RoleId,
-} from "@mqdms/auth/permissions";
+import { assignMemberRoles } from "@mqdms/auth/permissions/server";
 import { auth } from "@mqdms/auth/server";
+import { db } from "@mqdms/db";
+import { invitationRole, organizationRole } from "@mqdms/db/schema";
+import { and, eq, inArray } from "drizzle-orm";
 import { headers } from "next/headers";
 import { z } from "zod";
 
 import { audit } from "@/features/audit/server";
-import { getOrganizationMember, getOrganizationMemberById } from "@/features/organization/server";
+import { requireRequestContext } from "@/features/auth/context";
 
 export type OrganizationActionResult = { success: true } | { success: false; error: string };
 
-const assignableRoleSchema = z.enum(assignableRoleIds as [RoleId, ...RoleId[]]);
-
 const inviteMemberSchema = z.object({
-  organizationId: z.string().trim().min(1),
   email: z.string().trim().email("Enter a valid email address."),
-  role: assignableRoleSchema,
+
+  /**
+   * Davet edilen üyeye verilecek fonksiyonel roller.
+   *
+   * Roller sunucu tarafında saklanır; istemci yalnızca organizasyona ait
+   * rollerin id'lerini gönderebilir.
+   */
+  roleIds: z.array(z.string().trim().min(1)).max(20).default([]),
 });
 
-const updateMemberRoleSchema = z.object({
-  organizationId: z.string().trim().min(1),
+const assignMemberRolesSchema = z.object({
   memberId: z.string().trim().min(1),
-  role: assignableRoleSchema,
+  roleIds: z.array(z.string().trim().min(1)).max(20).default([]),
 });
 
 const removeMemberSchema = z.object({
-  organizationId: z.string().trim().min(1),
   memberId: z.string().trim().min(1),
 });
 
@@ -38,7 +38,9 @@ const removeMemberSchema = z.object({
  * Üye daveti.
  *
  * Davet better-auth'in organizasyon plugin'i üzerinden gönderilir; e-posta
- * kuyruğa `email.organization-invitation` işi olarak düşer.
+ * kuyruğa `email.organization-invitation` işi olarak düşer. Fonksiyonel
+ * roller `invitation_role` tablosunda saklanır ve davet kabul edildiğinde
+ * üyeye atanır.
  */
 export async function inviteMemberAction(input: unknown): Promise<OrganizationActionResult> {
   const parsed = inviteMemberSchema.safeParse(input);
@@ -47,36 +49,64 @@ export async function inviteMemberAction(input: unknown): Promise<OrganizationAc
     return { success: false, error: "Invalid invitation data." };
   }
 
-  const { organizationId, email, role } = parsed.data;
+  const { email, roleIds } = parsed.data;
 
-  const member = await getOrganizationMember(organizationId);
+  const context = await requireRequestContext();
 
-  if (!member || !hasOrganizationStatement({ role: member.role, statement: "inviteMember" })) {
+  if (!context.isOwner) {
     return { success: false, error: "You are not allowed to invite members." };
   }
 
+  const validRoleIds = await validateRoleIds(context.organizationId, roleIds);
+
+  if (!validRoleIds) {
+    return { success: false, error: "One or more roles do not belong to this organization." };
+  }
+
+  let invitationId: string;
+
   try {
     /*
-     * better-auth 1.7.1'de davet endpoint'i `/organization/invite-member`
+     * better-auth 1.7.20'de davet endpoint'i `/organization/invite-member`
      * olsa da sunucu API adı `createInvitation`; istemci tarafındaki karşılığı
      * `authClient.organization.inviteMember`.
+     *
+     * better-auth yönetim rolü yalnızca `member` olabilir; fonksiyonel
+     * roller `invitation_role` tablosunda tutulur.
      */
-    await auth.api.createInvitation({
+    const invitation = await auth.api.createInvitation({
       body: {
         email,
-        role,
-        organizationId,
+        role: "member",
+        organizationId: context.organizationId,
       },
       headers: await headers(),
     });
+
+    invitationId = invitation.id;
   } catch (error) {
     console.error("Failed to invite the member:", error);
 
     return { success: false, error: "Unable to send the invitation." };
   }
 
+  if (validRoleIds.length > 0) {
+    await db
+      .insert(invitationRole)
+      .values(
+        validRoleIds.map((roleId) => ({
+          organizationId: context.organizationId,
+          invitationId,
+          roleId,
+        })),
+      )
+      .onConflictDoNothing({
+        target: [invitationRole.invitationId, invitationRole.roleId],
+      });
+  }
+
   await audit({
-    organizationId,
+    organizationId: context.organizationId,
 
     action: "member.invited",
 
@@ -87,73 +117,46 @@ export async function inviteMemberAction(input: unknown): Promise<OrganizationAc
 
     metadata: {
       email,
-      role,
-      invitedById: member.id,
+      roleIds: validRoleIds,
+      invitedById: context.member.id,
     },
   });
 
   return { success: true };
 }
 
-/** Üyenin rolünü değiştirir. Roller katalogdan gelir, `owner` atanamaz. */
-export async function updateMemberRoleAction(input: unknown): Promise<OrganizationActionResult> {
-  const parsed = updateMemberRoleSchema.safeParse(input);
+/** Üyenin fonksiyonel rollerini değiştirir. */
+export async function assignMemberRolesAction(
+  input: unknown,
+): Promise<OrganizationActionResult> {
+  const parsed = assignMemberRolesSchema.safeParse(input);
 
   if (!parsed.success) {
     return { success: false, error: "Invalid role data." };
   }
 
-  const { organizationId, memberId, role } = parsed.data;
+  const { memberId, roleIds } = parsed.data;
 
-  const member = await getOrganizationMember(organizationId);
+  const context = await requireRequestContext();
 
-  if (!member || !hasOrganizationStatement({ role: member.role, statement: "updateMemberRole" })) {
+  if (!context.isOwner) {
     return { success: false, error: "You are not allowed to change member roles." };
   }
 
-  const target = await getOrganizationMemberById(organizationId, memberId);
+  const validRoleIds = await validateRoleIds(context.organizationId, roleIds);
 
-  if (!target) {
-    return { success: false, error: "Member not found in this organization." };
-  }
-
-  /*
-   * Owner rolü bu ekrandan değiştirilemez: organizasyonun sahibi başka bir
-   * üyeye devredilmeden korunur.
-   */
-  if (parseRoles(target.role).includes("owner")) {
-    return { success: false, error: "The owner role cannot be changed here." };
+  if (!validRoleIds) {
+    return { success: false, error: "One or more roles do not belong to this organization." };
   }
 
   try {
-    await auth.api.updateMemberRole({
-      body: {
-        memberId,
-        organizationId,
-        role,
-      },
-      headers: await headers(),
-    });
+    await assignMemberRoles(context, memberId, validRoleIds);
   } catch (error) {
-    console.error("Failed to update the member role:", error);
+    console.error("Failed to assign the member roles:", error);
 
-    return { success: false, error: "Unable to update the member role." };
+    return { success: false, error: error instanceof Error ? error.message : "Unable to update the member roles." };
   }
 
-  await audit({
-    organizationId,
-
-    action: "member.role_changed",
-
-    target: {
-      type: "member",
-      id: memberId,
-    },
-
-    metadata: {
-      role,
-    },
-  });
 
   return { success: true };
 }
@@ -166,21 +169,15 @@ export async function removeMemberAction(input: unknown): Promise<OrganizationAc
     return { success: false, error: "Invalid member data." };
   }
 
-  const { organizationId, memberId } = parsed.data;
+  const { memberId } = parsed.data;
 
-  const member = await getOrganizationMember(organizationId);
+  const context = await requireRequestContext();
 
-  if (!member || !hasOrganizationStatement({ role: member.role, statement: "removeMember" })) {
+  if (!context.isOwner) {
     return { success: false, error: "You are not allowed to remove members." };
   }
 
-  const target = await getOrganizationMemberById(organizationId, memberId);
-
-  if (!target) {
-    return { success: false, error: "Member not found in this organization." };
-  }
-
-  if (parseRoles(target.role).includes("owner")) {
+  if (memberId === context.member.id) {
     return { success: false, error: "The owner cannot be removed." };
   }
 
@@ -188,7 +185,7 @@ export async function removeMemberAction(input: unknown): Promise<OrganizationAc
     await auth.api.removeMember({
       body: {
         memberIdOrEmail: memberId,
-        organizationId,
+        organizationId: context.organizationId,
       },
       headers: await headers(),
     });
@@ -199,7 +196,7 @@ export async function removeMemberAction(input: unknown): Promise<OrganizationAc
   }
 
   await audit({
-    organizationId,
+    organizationId: context.organizationId,
 
     action: "member.removed",
 
@@ -210,4 +207,37 @@ export async function removeMemberAction(input: unknown): Promise<OrganizationAc
   });
 
   return { success: true };
+}
+
+/**
+ * Rol id'lerinin organizasyona ait olduğunu doğrular.
+ *
+ * Geçersiz bir id varsa `null` döner: başka bir organizasyonun rolü
+ * atanamaz.
+ */
+async function validateRoleIds(
+  organizationId: string,
+  roleIds: readonly string[],
+): Promise<string[] | null> {
+  const uniqueRoleIds = [...new Set(roleIds)];
+
+  if (uniqueRoleIds.length === 0) {
+    return [];
+  }
+
+  const rows = await db
+    .select({ id: organizationRole.id })
+    .from(organizationRole)
+    .where(
+      and(
+        eq(organizationRole.organizationId, organizationId),
+        inArray(organizationRole.id, uniqueRoleIds),
+      ),
+    );
+
+  if (rows.length !== uniqueRoleIds.length) {
+    return null;
+  }
+
+  return rows.map((row) => row.id);
 }

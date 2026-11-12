@@ -1,6 +1,6 @@
 "use client";
 
-import { hasRolePermission, resources } from "@mqdms/auth/permissions";
+import { resources } from "@mqdms/auth/permissions";
 import { useI18n } from "@mqdms/i18n";
 import { Badge } from "@mqdms/ui/components/badge";
 import {
@@ -21,12 +21,18 @@ type MemberGrant = {
   effect: "allow" | "deny";
 };
 
+type RoleGrant = {
+  resource: string;
+  action: string;
+};
+
 type MatrixMember = {
   memberId: string;
   name: string;
   email: string;
   role: string;
   grants: MemberGrant[];
+  roleGrants: RoleGrant[];
 };
 
 type PermissionMatrixProps = {
@@ -109,11 +115,13 @@ export function PermissionMatrix({ members }: PermissionMatrixProps) {
 
                     const state: CellState = grant?.effect ?? "inherit";
 
-                    const inherited = hasRolePermission({
-                      role: member.role,
-                      resource: resourceKey,
-                      action,
-                    });
+                    /*
+                     * `inherit` durumunda yetki üyeye atanmış rollerden gelir.
+                     * Rol vermiyorsa izin yoktur.
+                     */
+                    const inherited = member.roleGrants.some(
+                      (item) => item.resource === resourceKey && item.action === action,
+                    );
 
                     return (
                       <div className="flex items-center justify-between gap-2" key={action}>

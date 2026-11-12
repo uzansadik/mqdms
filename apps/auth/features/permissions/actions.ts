@@ -1,16 +1,16 @@
 "use server";
 
-import { isResourceActionKey, parseRoles } from "@mqdms/auth/permissions";
-import { db } from "@mqdms/db";
-import { member, memberPermission } from "@mqdms/db/schema";
-import { and, eq } from "drizzle-orm";
+import {
+  createRole,
+  deleteRole,
+  setMemberPermission,
+  updateRole,
+} from "@mqdms/auth/permissions/server";
 import { z } from "zod";
 
-import { audit } from "@/features/audit/server";
-import { getSession } from "@/features/auth/session";
-import { requireOrganization } from "@/features/organization/server";
+import { requireRequestContext } from "@/features/auth/context";
 
-import { canManagePermissions } from "./server";
+export type SetPermissionResult = { success: true } | { success: false; error: string };
 
 const setPermissionSchema = z.object({
   memberId: z.string().trim().min(1),
@@ -22,8 +22,46 @@ const setPermissionSchema = z.object({
   effect: z.enum(["allow", "deny", "inherit"]),
 });
 
-export type SetPermissionResult = { success: true } | { success: false; error: string };
+const permissionSchema = z.object({
+  resource: z.string().trim().min(1),
+  action: z.string().trim().min(1),
+});
 
+const createRoleSchema = z.object({
+  slug: z
+    .string()
+    .trim()
+    .min(2)
+    .max(64)
+    .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "Slug must be lowercase kebab-case."),
+
+  name: z.string().trim().min(2).max(120),
+
+  description: z.string().trim().max(500).optional(),
+
+  permissions: z.array(permissionSchema).max(500).default([]),
+});
+
+const updateRoleSchema = z.object({
+  roleId: z.string().trim().min(1),
+
+  name: z.string().trim().min(2).max(120).optional(),
+
+  description: z.string().trim().max(500).nullable().optional(),
+
+  permissions: z.array(permissionSchema).max(500).optional(),
+});
+
+const deleteRoleSchema = z.object({
+  roleId: z.string().trim().min(1),
+});
+
+/**
+ * Üyenin bir kaynak/aksiyon grant'ını ayarlar.
+ *
+ * `inherit` grant kaydını siler ve üye rolünün iznine döner. Engelleme
+ * (`deny`) her zaman izinin önünde gelir.
+ */
 export async function setMemberPermissionAction(input: unknown): Promise<SetPermissionResult> {
   const parsed = setPermissionSchema.safeParse(input);
 
@@ -33,90 +71,96 @@ export async function setMemberPermissionAction(input: unknown): Promise<SetPerm
 
   const { memberId, resource, action, effect } = parsed.data;
 
-  if (!isResourceActionKey(`${resource}:${action}`)) {
-    return { success: false, error: "Unknown resource or action." };
-  }
+  const context = await requireRequestContext();
 
-  if (!(await canManagePermissions())) {
+  if (!context.isOwner) {
     return { success: false, error: "You are not allowed to manage permissions." };
   }
 
-  const organization = await requireOrganization();
+  try {
+    await setMemberPermission(context, memberId, resource, action, effect);
+  } catch (error) {
+    console.error("Failed to set the member permission:", error);
 
-  const target = await db
-    .select({ id: member.id, userId: member.userId, role: member.role })
-    .from(member)
-    .where(and(eq(member.id, memberId), eq(member.organizationId, organization.id)))
-    .limit(1);
-
-  const targetMember = target[0];
-
-  if (!targetMember) {
-    return { success: false, error: "Member not found in this organization." };
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unable to update the permission.",
+    };
   }
 
-  /*
-   * Owner'ın yetkileri değiştirilemez. Rol değiştirme ve üye silme aksiyonları
-   * owner hedefini zaten reddediyor; `deny` kaydı rolün üzerine yazdığı için
-   * izin yönetimi de aynı korumayı taşımalı.
-   */
-  if (parseRoles(targetMember.role).includes("owner")) {
-    return { success: false, error: "The owner's permissions cannot be changed." };
+  return { success: true };
+}
+
+/** Yeni rol oluşturur. */
+export async function createRoleAction(input: unknown): Promise<SetPermissionResult> {
+  const parsed = createRoleSchema.safeParse(input);
+
+  if (!parsed.success) {
+    return { success: false, error: "Invalid role data." };
   }
 
-  const existing = await db
-    .select({ id: memberPermission.id })
-    .from(memberPermission)
-    .where(
-      and(
-        eq(memberPermission.memberId, memberId),
-        eq(memberPermission.resource, resource),
-        eq(memberPermission.action, action),
-      ),
-    )
-    .limit(1);
+  const context = await requireRequestContext();
 
-  const existingGrant = existing[0];
+  try {
+    await createRole(context, parsed.data);
+  } catch (error) {
+    console.error("Failed to create the role:", error);
 
-  if (effect === "inherit") {
-    if (existingGrant) {
-      await db.delete(memberPermission).where(eq(memberPermission.id, existingGrant.id));
-    }
-  } else if (existingGrant) {
-    await db
-      .update(memberPermission)
-      .set({ effect })
-      .where(eq(memberPermission.id, existingGrant.id));
-  } else {
-    const session = await getSession();
-
-    await db.insert(memberPermission).values({
-      organizationId: organization.id,
-      memberId,
-      resource,
-      action,
-      effect,
-      createdById: session?.user.id,
-    });
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unable to create the role.",
+    };
   }
 
-  await audit({
-    organizationId: organization.id,
+  return { success: true };
+}
 
-    action: effect === "inherit" ? "permission.revoked" : "permission.granted",
+/** Rolün adını, açıklamasını ve izinlerini günceller. */
+export async function updateRoleAction(input: unknown): Promise<SetPermissionResult> {
+  const parsed = updateRoleSchema.safeParse(input);
 
-    target: {
-      type: "member",
-      id: targetMember.userId,
-    },
+  if (!parsed.success) {
+    return { success: false, error: "Invalid role data." };
+  }
 
-    metadata: {
-      memberId,
-      resource,
-      action,
-      effect,
-    },
-  });
+  const { roleId, ...rest } = parsed.data;
+
+  const context = await requireRequestContext();
+
+  try {
+    await updateRole(context, roleId, rest);
+  } catch (error) {
+    console.error("Failed to update the role:", error);
+
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unable to update the role.",
+    };
+  }
+
+  return { success: true };
+}
+
+/** Rolü siler. Bağlı üye atamaları da silinir. */
+export async function deleteRoleAction(input: unknown): Promise<SetPermissionResult> {
+  const parsed = deleteRoleSchema.safeParse(input);
+
+  if (!parsed.success) {
+    return { success: false, error: "Invalid role data." };
+  }
+
+  const context = await requireRequestContext();
+
+  try {
+    await deleteRole(context, parsed.data.roleId);
+  } catch (error) {
+    console.error("Failed to delete the role:", error);
+
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unable to delete the role.",
+    };
+  }
 
   return { success: true };
 }

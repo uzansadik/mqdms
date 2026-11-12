@@ -1,7 +1,7 @@
 "use server";
 
 import { writeAuditLog } from "@mqdms/audit";
-import { auth } from "@mqdms/auth/server";
+import { provisionUserWithPassword } from "@mqdms/auth/provisioning";
 import { db } from "@mqdms/db";
 import { invitation, user } from "@mqdms/db/schema";
 import { eq } from "drizzle-orm";
@@ -83,23 +83,20 @@ export async function registerWithInvitationAction(
   }
 
   /*
-   * `headers` geçilmediği için better-auth bunu "system action" sayar ve
-   * oturum gerektirmez; admin plugin'in sunucu tarafı kullanıcı oluşturma
-   * yolunu kullanır. Genel kayıt endpoint'i kapalı olsa da bu yol açıktır.
+   * Hesap, davet bağlantısının sunucu tarafı provisioning yolundan açılır:
+   * genel kayıt endpoint'i kapalıdır, parola better-auth'ın kendi hash
+   * fonksiyonuyla saklanır.
    */
   let createdUserId: string | undefined;
 
   try {
-    const created = await auth.api.createUser({
-      body: {
-        name,
-        email,
-        password,
-        role: "user",
-      },
+    const created = await provisionUserWithPassword({
+      name,
+      email,
+      password,
     });
 
-    createdUserId = created?.user?.id;
+    createdUserId = created.id;
   } catch (error) {
     console.error("Failed to create the invited account:", error);
 

@@ -1,4 +1,3 @@
-import { assignableRoleIds, type RoleId } from "@mqdms/auth/permissions";
 import { z } from "zod";
 
 export const organizationSettingsSchema = z.object({
@@ -40,10 +39,11 @@ export const inviteMemberSchema = z.object({
   email: z.string().trim().email("Enter a valid email address."),
 
   /*
-   * Roller sabit katalogdan gelir. `owner` bilinçli olarak listede yok:
-   * ikinci bir owner üretmek kazara olmasın.
+   * Fonksiyonel roller organizasyona özel kayıtlardır; id'leri sunucu
+   * tarafında saklanır ve sunucu tarafından doğrulanır. Boş bırakılabilir:
+   * yeni üye varsayılan olarak hiçbir iş yetkisine sahip olmaz.
    */
-  role: z.enum(assignableRoleIds as [RoleId, ...RoleId[]]),
+  roleIds: z.array(z.string().trim().min(1)).max(20),
 });
 
 export type InviteMemberValues = z.infer<typeof inviteMemberSchema>;

@@ -1,17 +1,17 @@
 "use client";
 
-import { authClient } from "@mqdms/auth/client";
 import { Button } from "@mqdms/ui/components/button";
 import { Input } from "@mqdms/ui/components/input";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
+import { deleteOrganizationAction } from "./settings-actions";
+
 type DeleteOrganizationProps = {
-  organizationId: string;
   organizationName: string;
 };
 
-export function DeleteOrganization({ organizationId, organizationName }: DeleteOrganizationProps) {
+export function DeleteOrganization({ organizationName }: DeleteOrganizationProps) {
   const router = useRouter();
 
   const [confirmation, setConfirmation] = useState("");
@@ -30,31 +30,20 @@ export function DeleteOrganization({ organizationId, organizationName }: DeleteO
     setLoading(true);
     setError(null);
 
-    const { error } = await authClient.organization.delete({
-      organizationId,
-    });
+    const result = await deleteOrganizationAction();
 
-    if (error) {
-      setError(error.message ?? "Unable to delete organization.");
+    if (!result.success) {
+      setError(result.error);
 
       setLoading(false);
       return;
     }
 
-    const { data: organizations } = await authClient.organization.list();
-
-    const nextOrganization = organizations?.[0];
-
-    if (nextOrganization) {
-      await authClient.organization.setActive({
-        organizationId: nextOrganization.id,
-      });
-
-      router.replace("/dashboard");
-    } else {
-      router.replace("/onboarding");
-    }
-
+    /*
+     * Organizasyon silindi; kullanıcının başka bir organizasyonu olabilir.
+     * Yoksa artık erişimi yoktur.
+     */
+    router.replace("/no-access");
     router.refresh();
   }
 
