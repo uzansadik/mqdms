@@ -10,9 +10,8 @@ import { useEffect, useRef, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 
 import { uploadFile } from "@/features/storage/upload-file";
-
-import { updateOrganizationAction } from "./settings-actions";
 import { type OrganizationSettingsValues, organizationSettingsSchema } from "./schemas";
+import { updateOrganizationAction } from "./settings-actions";
 
 type OrganizationSettingsFormProps = {
   organization: {

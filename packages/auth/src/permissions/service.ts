@@ -20,11 +20,10 @@ import {
   getEffectivePermissionList,
   getEffectivePermissions,
   type PermissionEffect,
-  type PermissionGrant,
   type PermissionEvaluationInput,
+  type PermissionGrant,
   type RoleGrant,
 } from "./evaluate";
-import { isResourceActionKey } from "./resources";
 import {
   getInvitationRoleIds,
   getMemberGrants,
@@ -34,6 +33,7 @@ import {
   listOrganizationRoles,
   type OrganizationRoleRecord,
 } from "./repository";
+import { isResourceActionKey } from "./resources";
 import { isOwnerRole } from "./roles";
 
 /**

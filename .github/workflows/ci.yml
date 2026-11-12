@@ -44,6 +44,9 @@ jobs:
       - name: Typecheck
         run: pnpm typecheck
 
+      - name: Testler
+        run: pnpm test
+
       - name: Format kontrolü
         run: pnpm exec biome format .
 

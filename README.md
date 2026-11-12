@@ -284,13 +284,24 @@ Before any image is built:
 ```text
 pnpm install --frozen-lockfile
 pnpm typecheck
+pnpm test
 pnpm exec biome format .
 pnpm exec biome lint .
 ```
 
-Typecheck and format are blocking. Lint is currently informational
+Typecheck, tests and format are blocking. Lint is currently informational
 (`continue-on-error`) because the vendored shadcn components and a few legacy
 files carry known findings.
+
+Tests run with Vitest from the repository root:
+
+```bash
+pnpm test          # vitest run
+pnpm test:watch    # vitest
+```
+
+They cover the permission engine (evaluation order, fail-closed behaviour), the
+factory role catalog and the safe `returnTo` handling.
 
 ## Where each environment variable lives
 

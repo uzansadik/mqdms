@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
-
-import { requireRequestContext } from "@/features/auth/context";
 import { getAuditLogs } from "@/features/audit/get-audit-logs";
+import { requireRequestContext } from "@/features/auth/context";
 
 export default async function ActivityPage() {
   const context = await requireRequestContext();

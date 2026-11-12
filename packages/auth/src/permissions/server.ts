@@ -21,8 +21,16 @@ export {
   toEffect,
 } from "./repository";
 export {
-  assignMemberRoles,
+  countFactoryRoles,
+  FACTORY_SEED_VERSION,
+  type FactoryRoleTemplate,
+  factoryRoleTemplates,
+  getTemplateGrants,
+  seedFactoryRoles,
+} from "./seeds/factory";
+export {
   type AuthContext,
+  assignMemberRoles,
   buildEvaluationInput,
   createRole,
   deleteRole,
@@ -39,11 +47,3 @@ export {
   setMemberPermission,
   updateRole,
 } from "./service";
-export {
-  countFactoryRoles,
-  FACTORY_SEED_VERSION,
-  factoryRoleTemplates,
-  type FactoryRoleTemplate,
-  getTemplateGrants,
-  seedFactoryRoles,
-} from "./seeds/factory";

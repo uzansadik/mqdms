@@ -1,11 +1,10 @@
+import { listOrganizationMembers } from "@mqdms/auth/permissions/server";
 import { getTranslations } from "@mqdms/i18n/server";
 import { Badge } from "@mqdms/ui/components/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@mqdms/ui/components/card";
-
 import { requireRequestContext } from "@/features/auth/context";
 import { DeleteOrganization } from "@/features/organization/delete-organization";
 import { OrganizationSettingsForm } from "@/features/organization/organization-settings-form";
-import { listOrganizationMembers } from "@mqdms/auth/permissions/server";
 
 export default async function OrganizationPage() {
   const t = await getTranslations();

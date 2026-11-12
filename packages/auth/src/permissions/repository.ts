@@ -33,7 +33,10 @@ export type OrganizationRoleRecord = {
 };
 
 /** Bir rolün izin satırları. */
-export async function getRolePermissions(roleIds: readonly string[]): Promise<RoleGrant[]> {
+export async function getRolePermissions(
+  organizationId: string,
+  roleIds: readonly string[],
+): Promise<RoleGrant[]> {
   if (roleIds.length === 0) {
     return [];
   }
@@ -44,7 +47,12 @@ export async function getRolePermissions(roleIds: readonly string[]): Promise<Ro
       action: organizationRolePermission.action,
     })
     .from(organizationRolePermission)
-    .where(inArray(organizationRolePermission.roleId, [...roleIds]));
+    .where(
+      and(
+        eq(organizationRolePermission.organizationId, organizationId),
+        inArray(organizationRolePermission.roleId, [...roleIds]),
+      ),
+    );
 
   return rows.map((row) => ({ resource: row.resource, action: row.action }));
 }
@@ -125,7 +133,7 @@ export async function getOrganizationRole(
     return null;
   }
 
-  const permissions = await getRolePermissions([role.id]);
+  const permissions = await getRolePermissions(organizationId, [role.id]);
 
   return { ...role, permissions };
 }
@@ -150,7 +158,7 @@ export async function getMemberRoleGrants(
 ): Promise<RoleGrant[]> {
   const roleIds = await getMemberRoleIds(organizationId, memberId);
 
-  return getRolePermissions(roleIds);
+  return getRolePermissions(organizationId, roleIds);
 }
 
 /** Bir üyeye verilmiş yetki kayıtları (izin override'ları). */

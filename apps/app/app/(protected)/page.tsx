@@ -1,4 +1,5 @@
 import { getTranslations } from "@mqdms/i18n/server";
+import { Badge } from "@mqdms/ui/components/badge";
 import {
   Card,
   CardContent,
@@ -6,7 +7,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@mqdms/ui/components/card";
-import { Badge } from "@mqdms/ui/components/badge";
 
 import { canAccess, requireAuthContext } from "@/features/auth/session";
 

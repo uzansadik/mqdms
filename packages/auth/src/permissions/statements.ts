@@ -2,13 +2,13 @@ import { createAccessControl } from "better-auth/plugins/access";
 
 import {
   betterAuthStatements,
-  getCapabilityStatement,
   type Capability,
+  getCapabilityStatement,
   type ManagementRoleDefinition,
   type ManagementRoleId,
+  managementRoleDefinitions,
   type OrganizationAction,
   organizationActions,
-  managementRoleDefinitions,
 } from "./roles";
 
 /**

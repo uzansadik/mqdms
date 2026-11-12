@@ -1,4 +1,5 @@
 import { getTranslations } from "@mqdms/i18n/server";
+import { Button } from "@mqdms/ui/components/button";
 import {
   Card,
   CardContent,
@@ -6,7 +7,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@mqdms/ui/components/card";
-import { Button } from "@mqdms/ui/components/button";
 import { redirect } from "next/navigation";
 
 import { getSession } from "@/features/auth/session";

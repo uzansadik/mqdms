@@ -5,8 +5,8 @@ import { getMessages, I18nProvider } from "@mqdms/i18n";
 import { getLocale } from "@mqdms/i18n/server";
 import { Toaster } from "@mqdms/ui/components/sonner";
 import { TooltipProvider } from "@mqdms/ui/components/tooltip";
-import { ThemeProvider } from "@mqdms/ui/theme-provider";
 import { cn } from "@mqdms/ui/lib/utils";
+import { ThemeProvider } from "@mqdms/ui/theme-provider";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 

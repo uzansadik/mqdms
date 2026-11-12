@@ -1,9 +1,8 @@
 import { verifyUploadedObject } from "@mqdms/storage/server";
 import { NextResponse } from "next/server";
 import { z } from "zod";
-
-import { getSession } from "@/features/auth/session";
 import { requireRequestContext } from "@/features/auth/context";
+import { getSession } from "@/features/auth/session";
 
 const schema = z.object({
   purpose: z.enum(["user-avatar", "organization-logo"]),

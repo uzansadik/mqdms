@@ -1,5 +1,5 @@
-import { SidebarInset, SidebarProvider, SidebarTrigger } from "@mqdms/ui/components/sidebar";
 import { Separator } from "@mqdms/ui/components/separator";
+import { SidebarInset, SidebarProvider, SidebarTrigger } from "@mqdms/ui/components/sidebar";
 import type { ReactNode } from "react";
 
 import { canAccess, requireAuthContext } from "@/features/auth/session";

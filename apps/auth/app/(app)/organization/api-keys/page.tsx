@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
-
-import { requireRequestContext } from "@/features/auth/context";
 import { ApiKeysSection } from "@/features/api-keys/api-keys-section";
+import { requireRequestContext } from "@/features/auth/context";
 
 export default async function ApiKeysPage() {
   const context = await requireRequestContext();
