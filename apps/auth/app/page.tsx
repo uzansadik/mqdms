@@ -27,7 +27,7 @@ export default function Page() {
 
           <Badge variant="outline" className="border-brand-accent/40 text-brand-accent">
             <ShieldCheck className="mr-1.5 size-3.5" />
-            Kalite Yönetim Sistemi
+            mQDMS - Kalite Yönetim Sistemi
           </Badge>
 
           <div className="space-y-2">
@@ -36,7 +36,9 @@ export default function Page() {
             </CardTitle>
 
             <CardDescription className="text-white/60">
-              Süreç, FMEA, üretim ve stok yönetiminizi tek platformda yönetin.
+              Kalite Yönetim Sistemi Türkiye'nin önde gelen kalite yönetim sistemlerinden biridir.
+              Kullanıcı dostu arayüzü ve güçlü özellikleri ile kalite süreçlerinizi kolayca
+              yönetmenizi sağlar.
             </CardDescription>
           </div>
         </CardHeader>
