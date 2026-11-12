@@ -69,7 +69,8 @@ CREATE TABLE "member" (
 	"organization_id" text NOT NULL,
 	"user_id" text NOT NULL,
 	"role" text DEFAULT 'member' NOT NULL,
-	"created_at" timestamp NOT NULL
+	"created_at" timestamp NOT NULL,
+	CONSTRAINT "member_organization_id_id_unique" UNIQUE("organization_id","id")
 );
 --> statement-breakpoint
 CREATE TABLE "organization" (
@@ -216,7 +217,6 @@ CREATE INDEX "invitation_email_idx" ON "invitation" USING btree ("email");--> st
 CREATE INDEX "member_organizationId_idx" ON "member" USING btree ("organization_id");--> statement-breakpoint
 CREATE INDEX "member_userId_idx" ON "member" USING btree ("user_id");--> statement-breakpoint
 CREATE UNIQUE INDEX "member_organization_id_user_id_uidx" ON "member" USING btree ("organization_id","user_id");--> statement-breakpoint
-CREATE UNIQUE INDEX "member_organization_id_id_uidx" ON "member" USING btree ("organization_id","id");--> statement-breakpoint
 CREATE INDEX "session_userId_idx" ON "session" USING btree ("user_id");--> statement-breakpoint
 CREATE INDEX "verification_identifier_idx" ON "verification" USING btree ("identifier");--> statement-breakpoint
 CREATE UNIQUE INDEX "invitation_role_invitation_id_role_id_uidx" ON "invitation_role" USING btree ("invitation_id","role_id");--> statement-breakpoint
