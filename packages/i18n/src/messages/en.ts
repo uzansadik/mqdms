@@ -847,6 +847,43 @@ export const en = {
   "boms.changeType.ITEM_REVISION_CHANGED": "Component revision changed",
   "boms.changeType.CHILD_BOM_REVISION_CHANGED": "Sub-BOM revision changed",
   "boms.changeType.POSITION_CHANGED": "Position changed",
+
+  "projects.detail.tabs.items": "Items",
+
+  "projectItems.title": "Project items",
+  "projectItems.empty.title": "No items in this project yet",
+  "projectItems.empty.description":
+    "Add the products of this project from the organization's item library.",
+  "projectItems.actions.created": "Item added to the project.",
+
+  "projectItems.list.columns.item": "Item",
+  "projectItems.list.columns.role": "Role",
+  "projectItems.list.columns.customerPartNumber": "Customer part number",
+  "projectItems.list.columns.revision": "Revision",
+  "projectItems.list.columns.supplyType": "Supply type",
+
+  "projectItems.form.title": "Add item to project",
+  "projectItems.form.description":
+    "The item is taken from the organization's own library; adding an item to a project never creates a new item card.",
+  "projectItems.form.item.label": "Item",
+  "projectItems.form.item.placeholder": "Select an item",
+  "projectItems.form.itemRole.label": "Role",
+  "projectItems.form.itemRevision.label": "Item revision",
+  "projectItems.form.itemRevision.none": "Not pinned",
+  "projectItems.form.customerItem.label": "Customer part number",
+  "projectItems.form.customerItem.none": "Not mapped",
+  "projectItems.form.bomRevision.label": "BOM revision",
+  "projectItems.form.bomRevision.none": "Not selected",
+  "projectItems.form.supplyTypeOverride.label": "Supply type override",
+  "projectItems.form.supplyTypeOverride.none": "Use the item default",
+  "projectItems.form.status.label": "Status",
+  "projectItems.form.description.label": "Description",
+  "projectItems.form.submit": "Add to project",
+
+  "projectItems.role.DELIVERABLE": "Deliverable",
+  "projectItems.role.COMPONENT": "Component",
+  "projectItems.role.RAW_MATERIAL": "Raw material",
+  "projectItems.role.AUXILIARY": "Auxiliary",
 } as const;
 
 export type MessageKey = keyof typeof en;

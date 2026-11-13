@@ -848,4 +848,41 @@ export const tr = {
   "boms.changeType.ITEM_REVISION_CHANGED": "Bileşen revision'ı değişti",
   "boms.changeType.CHILD_BOM_REVISION_CHANGED": "Alt BOM revision'ı değişti",
   "boms.changeType.POSITION_CHANGED": "Pozisyon değişti",
+
+  "projects.detail.tabs.items": "Ürünler",
+
+  "projectItems.title": "Proje ürünleri",
+  "projectItems.empty.title": "Bu projede henüz ürün yok",
+  "projectItems.empty.description":
+    "Projenin ürünlerini organizasyonun item kütüphanesinden ekleyin.",
+  "projectItems.actions.created": "Ürün projeye eklendi.",
+
+  "projectItems.list.columns.item": "Ürün",
+  "projectItems.list.columns.role": "Rol",
+  "projectItems.list.columns.customerPartNumber": "Müşteri parça numarası",
+  "projectItems.list.columns.revision": "Revision",
+  "projectItems.list.columns.supplyType": "Tedarik şekli",
+
+  "projectItems.form.title": "Projeye ürün ekle",
+  "projectItems.form.description":
+    "Ürün organizasyonun kendi kütüphanesinden seçilir; projeye ürün eklemek yeni ürün kartı oluşturmaz.",
+  "projectItems.form.item.label": "Ürün",
+  "projectItems.form.item.placeholder": "Ürün seçin",
+  "projectItems.form.itemRole.label": "Rol",
+  "projectItems.form.itemRevision.label": "Ürün revision'ı",
+  "projectItems.form.itemRevision.none": "Sabitlenmedi",
+  "projectItems.form.customerItem.label": "Müşteri parça numarası",
+  "projectItems.form.customerItem.none": "Eşleştirilmedi",
+  "projectItems.form.bomRevision.label": "BOM revision'ı",
+  "projectItems.form.bomRevision.none": "Seçilmedi",
+  "projectItems.form.supplyTypeOverride.label": "Tedarik şekli override'ı",
+  "projectItems.form.supplyTypeOverride.none": "Ürün varsayılanı",
+  "projectItems.form.status.label": "Durum",
+  "projectItems.form.description.label": "Açıklama",
+  "projectItems.form.submit": "Projeye ekle",
+
+  "projectItems.role.DELIVERABLE": "Satılan ürün",
+  "projectItems.role.COMPONENT": "Bileşen",
+  "projectItems.role.RAW_MATERIAL": "Hammadde",
+  "projectItems.role.AUXILIARY": "Yardımcı",
 } satisfies Record<MessageKey, string>;
