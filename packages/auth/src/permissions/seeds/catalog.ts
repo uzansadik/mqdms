@@ -85,13 +85,32 @@ export const factoryRoleTemplates: readonly FactoryRoleTemplate[] = [
       reports: ["read", "export"],
       customers: ["read"],
       plants: ["read", "create", "update", "archive", "restore"],
-      projects: ["read", "create", "update", "archive", "restore", "manageMembers"],
+      projects: ["read", "create", "update", "archive", "restore", "manageMembers", "manageItems"],
+      items: [
+        "read",
+        "create",
+        "update",
+        "archive",
+        "restore",
+        "manageRevisions",
+        "releaseRevision",
+      ],
+      itemGroups: ["read", "create", "update", "archive"],
+      boms: ["read", "create", "update", "submit", "release", "archive", "compare"],
+      imports: ["read", "create", "execute"],
     },
     versionPermissions: {
       "2": {
         customers: ["read"],
         plants: ["read", "create", "update", "archive", "restore"],
         projects: ["create", "update", "archive", "restore", "manageMembers"],
+      },
+      "3": {
+        projects: ["manageItems"],
+        items: ["create", "update", "archive", "restore", "manageRevisions", "releaseRevision"],
+        itemGroups: ["read", "create", "update", "archive"],
+        boms: ["read", "create", "update", "submit", "release", "archive", "compare"],
+        imports: ["read", "create", "execute"],
       },
     },
   },
@@ -106,8 +125,11 @@ export const factoryRoleTemplates: readonly FactoryRoleTemplate[] = [
       processFlow: ["read", "create", "update", "submit"],
       controlPlan: ["read", "create", "update", "submit"],
       ncr: ["read"],
-      projects: ["read", "create", "update", "archive", "restore", "manageMembers"],
-      items: ["read"],
+      projects: ["read", "create", "update", "archive", "restore", "manageMembers", "manageItems"],
+      items: ["read", "create", "update"],
+      itemGroups: ["read"],
+      boms: ["read", "create", "update", "submit"],
+      imports: ["read", "execute"],
       reports: ["read"],
       customers: ["read"],
       plants: ["read"],
@@ -117,6 +139,13 @@ export const factoryRoleTemplates: readonly FactoryRoleTemplate[] = [
         customers: ["read"],
         plants: ["read"],
         projects: ["archive", "restore", "manageMembers"],
+      },
+      "3": {
+        projects: ["manageItems"],
+        items: ["create", "update"],
+        itemGroups: ["read"],
+        boms: ["read", "create", "update", "submit"],
+        imports: ["read", "execute"],
       },
     },
   },
@@ -130,8 +159,12 @@ export const factoryRoleTemplates: readonly FactoryRoleTemplate[] = [
       processFlow: ["read", "create", "update", "submit"],
       controlPlan: ["read"],
       ncr: ["read"],
-      projects: ["read"],
+      projects: ["read", "manageItems"],
       items: ["read"],
+      itemGroups: ["read"],
+      boms: ["read"],
+      imports: ["read"],
+      reports: ["read"],
       customers: ["read"],
       plants: ["read"],
     },
@@ -139,6 +172,12 @@ export const factoryRoleTemplates: readonly FactoryRoleTemplate[] = [
       "2": {
         customers: ["read"],
         plants: ["read"],
+      },
+      "3": {
+        projects: ["manageItems"],
+        itemGroups: ["read"],
+        boms: ["read"],
+        imports: ["read"],
       },
     },
   },
@@ -153,8 +192,11 @@ export const factoryRoleTemplates: readonly FactoryRoleTemplate[] = [
       processFlow: ["read", "approve", "reject"],
       controlPlan: ["read", "approve", "reject"],
       ncr: ["read", "create", "update", "close"],
-      projects: ["read"],
+      projects: ["read", "manageItems"],
       items: ["read"],
+      itemGroups: ["read"],
+      boms: ["read"],
+      imports: ["read"],
       reports: ["read", "export"],
       customers: ["read"],
       plants: ["read"],
@@ -163,6 +205,12 @@ export const factoryRoleTemplates: readonly FactoryRoleTemplate[] = [
       "2": {
         customers: ["read"],
         plants: ["read"],
+      },
+      "3": {
+        projects: ["manageItems"],
+        itemGroups: ["read"],
+        boms: ["read"],
+        imports: ["read"],
       },
     },
   },
@@ -178,6 +226,9 @@ export const factoryRoleTemplates: readonly FactoryRoleTemplate[] = [
       ncr: ["read", "create", "update"],
       projects: ["read"],
       items: ["read"],
+      itemGroups: ["read"],
+      boms: ["read"],
+      imports: ["read"],
       reports: ["read"],
       customers: ["read"],
       plants: ["read"],
@@ -186,6 +237,11 @@ export const factoryRoleTemplates: readonly FactoryRoleTemplate[] = [
       "2": {
         customers: ["read"],
         plants: ["read"],
+      },
+      "3": {
+        itemGroups: ["read"],
+        boms: ["read"],
+        imports: ["read"],
       },
     },
   },
@@ -201,6 +257,8 @@ export const factoryRoleTemplates: readonly FactoryRoleTemplate[] = [
       ncr: ["read", "create", "update"],
       projects: ["read"],
       items: ["read"],
+      itemGroups: ["read"],
+      boms: ["read"],
       reports: ["read"],
       customers: ["read"],
       plants: ["read"],
@@ -209,6 +267,10 @@ export const factoryRoleTemplates: readonly FactoryRoleTemplate[] = [
       "2": {
         customers: ["read"],
         plants: ["read"],
+      },
+      "3": {
+        itemGroups: ["read"],
+        boms: ["read"],
       },
     },
   },
@@ -224,8 +286,9 @@ export const factoryRoleTemplates: readonly FactoryRoleTemplate[] = [
       ncr: ["create"],
     },
     versionPermissions: {
-      // Bu rol proje ve tesis kayıtlarına erişmez; sürüm 2'de izni yok.
+      // Bu rol proje, ürün ve tesis kayıtlarına erişmez; sürüm 3'te izni yok.
       "2": {},
+      "3": {},
     },
   },
   {
@@ -240,6 +303,8 @@ export const factoryRoleTemplates: readonly FactoryRoleTemplate[] = [
       ncr: ["read", "create", "update"],
       projects: ["read"],
       items: ["read"],
+      itemGroups: ["read"],
+      boms: ["read"],
       customers: ["read"],
       plants: ["read"],
     },
@@ -247,6 +312,10 @@ export const factoryRoleTemplates: readonly FactoryRoleTemplate[] = [
       "2": {
         customers: ["read"],
         plants: ["read"],
+      },
+      "3": {
+        itemGroups: ["read"],
+        boms: ["read"],
       },
     },
   },
@@ -262,6 +331,8 @@ export const factoryRoleTemplates: readonly FactoryRoleTemplate[] = [
       ncr: ["create"],
       projects: ["read"],
       items: ["read", "update"],
+      itemGroups: ["read"],
+      boms: ["read"],
       customers: ["read"],
       plants: ["read"],
     },
@@ -269,6 +340,10 @@ export const factoryRoleTemplates: readonly FactoryRoleTemplate[] = [
       "2": {
         customers: ["read"],
         plants: ["read"],
+      },
+      "3": {
+        itemGroups: ["read"],
+        boms: ["read"],
       },
     },
   },
@@ -284,6 +359,8 @@ export const factoryRoleTemplates: readonly FactoryRoleTemplate[] = [
       ncr: ["read", "create"],
       projects: ["read"],
       items: ["read"],
+      itemGroups: ["read"],
+      boms: ["read"],
       customers: ["read"],
       plants: ["read"],
     },
@@ -291,6 +368,10 @@ export const factoryRoleTemplates: readonly FactoryRoleTemplate[] = [
       "2": {
         customers: ["read"],
         plants: ["read"],
+      },
+      "3": {
+        itemGroups: ["read"],
+        boms: ["read"],
       },
     },
   },
@@ -307,12 +388,17 @@ export const factoryRoleTemplates: readonly FactoryRoleTemplate[] = [
         customers: ["read"],
         plants: ["read"],
       },
+      "3": {
+        itemGroups: ["read"],
+        boms: ["read"],
+        imports: ["read"],
+      },
     },
   },
 ];
 
 /** Seed katalogunun sürümü. */
-export const FACTORY_SEED_VERSION = "2";
+export const FACTORY_SEED_VERSION = "3";
 
 /**
  * Seed rolünün izin çiftleri.
