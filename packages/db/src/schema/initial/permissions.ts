@@ -42,6 +42,16 @@ export const organizationRole = pgTable(
 
     createdById: text("created_by_id").references(() => user.id, { onDelete: "set null" }),
 
+    /**
+     * Uygulanan fabrika seed sürümü.
+     *
+     * Yeni bir seed sürümü çıktığında mevcut organizasyonlardaki roller
+     * yalnızca **o sürümde eklenen** izinlerle güncellenir: owner'ın seed
+     * rolünden kaldırdığı bir izin geri gelmez. Owner'ın oluşturduğu custom
+     * roller seed tarafından hiç değiştirilmez.
+     */
+    seedVersion: text("seed_version").notNull().default("1"),
+
     createdAt: timestamp("created_at", {
       withTimezone: true,
     })
