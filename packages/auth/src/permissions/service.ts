@@ -259,17 +259,26 @@ export function requireOwner(context: AuthContext): AuthContext {
 export async function upgradeFactoryRoleSeeds(context: AuthContext): Promise<number> {
   requireOwner(context);
 
-  const upgraded = await upgradeFactoryRolesForOrganization(context.organizationId);
+  /*
+   * Yükseltme ve audit kaydı tek transaction'da yazılır: audit yazımı
+   * başarısız olursa izinler de geri alınır ve aksiyon hata döner.
+   */
+  return db.transaction(async (tx) => {
+    const upgraded = await upgradeFactoryRolesForOrganization(context.organizationId, tx);
 
-  await writeAuditLog({
-    organizationId: context.organizationId,
-    actorId: context.userId,
-    action: "roles.factorySeedUpgraded",
-    target: { type: "organization", id: context.organizationId },
-    metadata: { upgradedRoles: upgraded },
+    await writeAuditLog(
+      {
+        organizationId: context.organizationId,
+        actorId: context.userId,
+        action: "roles.factorySeedUpgraded",
+        target: { type: "organization", id: context.organizationId },
+        metadata: { upgradedRoles: upgraded },
+      },
+      tx,
+    );
+
+    return upgraded;
   });
-
-  return upgraded;
 }
 
 /* -------------------------------------------------------------------------
@@ -339,6 +348,12 @@ export async function createRole(context: AuthContext, input: unknown): Promise<
       name: parsed.data.name,
       description: parsed.data.description ?? null,
       createdById: context.userId,
+
+      /*
+       * Owner'ın oluşturduğu rol fabrika seed'i ile üretilmemiştir:
+       * `seed_version` boş kalır ve seed yükseltmesi bu rolü hiç değiştirmez.
+       */
+      seedVersion: null,
     })
     .onConflictDoNothing()
     .returning({ id: organizationRole.id });
