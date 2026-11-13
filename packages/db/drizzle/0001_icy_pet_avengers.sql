@@ -128,7 +128,8 @@ CREATE TABLE "project_plant" (
 	CONSTRAINT "project_plant_project_id_plant_id_unique" UNIQUE("project_id","plant_id")
 );
 --> statement-breakpoint
-ALTER TABLE "organization_role" ADD COLUMN "seed_version" text DEFAULT '1' NOT NULL;--> statement-breakpoint
+ALTER TABLE "organization_role" ADD COLUMN "seed_version" text;--> statement-breakpoint
+UPDATE "organization_role" SET "seed_version" = '1' WHERE "organization_role"."slug" IN ('plant-manager','project-manager','project-engineer','quality-manager','quality-engineer','production-supervisor','production-operator','maintenance-supervisor','warehouse-logistics','purchasing','auditor');--> statement-breakpoint
 ALTER TABLE "customer" ADD CONSTRAINT "customer_organization_id_organization_id_fk" FOREIGN KEY ("organization_id") REFERENCES "public"."organization"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "customer" ADD CONSTRAINT "customer_created_by_id_user_id_fk" FOREIGN KEY ("created_by_id") REFERENCES "public"."user"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "customer_contact" ADD CONSTRAINT "customer_contact_organization_id_organization_id_fk" FOREIGN KEY ("organization_id") REFERENCES "public"."organization"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
@@ -141,10 +142,10 @@ ALTER TABLE "customer_site" ADD CONSTRAINT "customer_site_customer_org_fk" FOREI
 ALTER TABLE "plant" ADD CONSTRAINT "plant_organization_id_organization_id_fk" FOREIGN KEY ("organization_id") REFERENCES "public"."organization"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "plant" ADD CONSTRAINT "plant_created_by_id_user_id_fk" FOREIGN KEY ("created_by_id") REFERENCES "public"."user"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "project" ADD CONSTRAINT "project_organization_id_organization_id_fk" FOREIGN KEY ("organization_id") REFERENCES "public"."organization"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "project" ADD CONSTRAINT "project_project_manager_member_id_member_id_fk" FOREIGN KEY ("project_manager_member_id") REFERENCES "public"."member"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "project" ADD CONSTRAINT "project_created_by_id_user_id_fk" FOREIGN KEY ("created_by_id") REFERENCES "public"."user"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "project" ADD CONSTRAINT "project_customer_org_fk" FOREIGN KEY ("organization_id","customer_id") REFERENCES "public"."customer"("organization_id","id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "project" ADD CONSTRAINT "project_site_customer_fk" FOREIGN KEY ("customer_id","customer_site_id") REFERENCES "public"."customer_site"("customer_id","id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "project" ADD CONSTRAINT "project_manager_member_org_fk" FOREIGN KEY ("organization_id","project_manager_member_id") REFERENCES "public"."member"("organization_id","id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "project_member" ADD CONSTRAINT "project_member_organization_id_organization_id_fk" FOREIGN KEY ("organization_id") REFERENCES "public"."organization"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "project_member" ADD CONSTRAINT "project_member_project_org_fk" FOREIGN KEY ("organization_id","project_id") REFERENCES "public"."project"("organization_id","id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "project_member" ADD CONSTRAINT "project_member_member_org_fk" FOREIGN KEY ("organization_id","member_id") REFERENCES "public"."member"("organization_id","id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint

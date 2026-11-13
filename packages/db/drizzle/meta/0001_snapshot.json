@@ -1,5 +1,5 @@
 {
-  "id": "186db7a7-7698-4bd7-81f9-e227827e0517",
+  "id": "4f5179a7-ed74-4073-9433-0fc6ecf29a9f",
   "prevId": "3244e448-856a-4995-bccb-a2a4433a736b",
   "version": "7",
   "dialect": "postgresql",
@@ -2304,8 +2304,7 @@
           "name": "seed_version",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
-          "default": "'1'"
+          "notNull": false
         },
         "created_at": {
           "name": "created_at",
@@ -2909,19 +2908,6 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "project_project_manager_member_id_member_id_fk": {
-          "name": "project_project_manager_member_id_member_id_fk",
-          "tableFrom": "project",
-          "tableTo": "member",
-          "columnsFrom": [
-            "project_manager_member_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
-        },
         "project_created_by_id_user_id_fk": {
           "name": "project_created_by_id_user_id_fk",
           "tableFrom": "project",
@@ -2963,6 +2949,21 @@
             "id"
           ],
           "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "project_manager_member_org_fk": {
+          "name": "project_manager_member_org_fk",
+          "tableFrom": "project",
+          "tableTo": "member",
+          "columnsFrom": [
+            "organization_id",
+            "project_manager_member_id"
+          ],
+          "columnsTo": [
+            "organization_id",
+            "id"
+          ],
+          "onDelete": "no action",
           "onUpdate": "no action"
         }
       },

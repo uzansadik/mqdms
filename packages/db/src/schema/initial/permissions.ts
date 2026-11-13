@@ -47,10 +47,12 @@ export const organizationRole = pgTable(
      *
      * Yeni bir seed sürümü çıktığında mevcut organizasyonlardaki roller
      * yalnızca **o sürümde eklenen** izinlerle güncellenir: owner'ın seed
-     * rolünden kaldırdığı bir izin geri gelmez. Owner'ın oluşturduğu custom
-     * roller seed tarafından hiç değiştirilmez.
+     * rolünden kaldırdığı bir izin geri gelmez.
+     *
+     * `null` olan rol fabrika seed'i ile **oluşturulmamıştır** (owner'ın
+     * custom rolü): bu roller seed yükseltmesinde hiç değiştirilmez.
      */
-    seedVersion: text("seed_version").notNull().default("1"),
+    seedVersion: text("seed_version"),
 
     createdAt: timestamp("created_at", {
       withTimezone: true,

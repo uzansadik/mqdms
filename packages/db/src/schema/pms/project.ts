@@ -81,13 +81,15 @@ export const project = pgTable(
     /**
      * Proje müdürü olan organizasyon üyesi.
      *
-     * Referans `member.id` üzerinden tek kolonlu yabancı anahtardır: üye
-     * organizasyondan ayrıldığında proje silinmez, yalnızca proje müdürü
-     * boşalır. Üyenin organizasyona ait olduğu servis katmanında doğrulanır.
+     * Referans composite yabancı anahtardır: proje müdürü projenin
+     * organizasyonuna ait olmak zorundadır, aksi halde başka bir
+     * organizasyonun üyesi proje müdürü olamaz.
+     *
+     * Silme davranışı `no action`'dır: bir üye proje müdürüyken üye kaydı
+     * doğrudan silinemez. Üye organizasyondan çıkarılırken referans önce
+     * temizlenir (bkz. `removeMemberAction`).
      */
-    projectManagerMemberId: text("project_manager_member_id").references(() => member.id, {
-      onDelete: "set null",
-    }),
+    projectManagerMemberId: text("project_manager_member_id"),
 
     startDate: date("start_date"),
 
@@ -145,6 +147,19 @@ export const project = pgTable(
       foreignColumns: [customerSite.customerId, customerSite.id],
       name: "project_site_customer_fk",
     }).onDelete("cascade"),
+
+    /*
+     * Proje müdürü, projenin organizasyonuna ait bir üye olmak zorundadır.
+     *
+     * Composite FK olduğu için başka bir organizasyonun üye id'si proje
+     * müdürü olarak yazılamaz. `project_manager_member_id` boşsa kısıt
+     * sağlanmaz (proje müdürü atanmamış olabilir).
+     */
+    foreignKey({
+      columns: [table.organizationId, table.projectManagerMemberId],
+      foreignColumns: [member.organizationId, member.id],
+      name: "project_manager_member_org_fk",
+    }),
 
     index("project_organization_id_idx").on(table.organizationId),
     index("project_customer_id_idx").on(table.customerId),
@@ -217,8 +232,14 @@ export const projectPlant = pgTable(
 /**
  * Proje ekibindeki organizasyon üyesi.
  *
- * Üye organizasyondan ayrıldığında `removed_at` set edilerek ilişki
- * soft-remove edilir; kayıt ve audit geçmişi korunur.
+ * Üye projeden ayrıldığında `removed_at` set edilerek ilişki soft-remove
+ * edilir: kayıt korunur ve üye yeniden eklenebilir.
+ *
+ * Üye **organizasyondan** ayrılırsa member satırı silinir ve aşağıdaki
+ * composite foreign key zinciri onunla birlikte proje kayıtlarını da siler;
+ * proje ekibi geçmişi o durumda yalnızca audit log'da kalır. Bu, organizasyon
+ * izolasyonunun veritabanı seviyesinde garanti edilmesi için bilinçli bir
+ * tercihtir.
  */
 export const projectMember = pgTable(
   "project_member",
