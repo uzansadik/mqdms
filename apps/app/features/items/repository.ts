@@ -287,3 +287,29 @@ export async function getItemRevision(
 
   return rows[0] ?? null;
 }
+
+/**
+ * Tüm ürün revision'ları (seçim listesi için).
+ *
+ * BOM satırı formunda iç revision seçilirken hangi ürüne ait oldukları
+ * görünmelidir; filtre istemcide yapılır.
+ */
+export async function listItemRevisionOptions(organizationId: string): Promise<
+  {
+    id: string;
+    itemId: string;
+    revision: string;
+    status: "DRAFT" | "RELEASED" | "SUPERSEDED";
+  }[]
+> {
+  return db
+    .select({
+      id: itemRevision.id,
+      itemId: itemRevision.itemId,
+      revision: itemRevision.revision,
+      status: itemRevision.status,
+    })
+    .from(itemRevision)
+    .where(eq(itemRevision.organizationId, organizationId))
+    .orderBy(asc(itemRevision.createdAt));
+}

@@ -10,9 +10,18 @@ import {
 } from "@mqdms/ui/components/table";
 
 import type { BomExplosionNode, BomFlattenedLine } from "../explosion";
+import { BomLineActions } from "./bom-line-actions";
 
 type BomTreeProps = {
   nodes: BomExplosionNode[];
+
+  /**
+   * Satırlar düzenlenebilir mi?
+   *
+   * Yayınlanmış bir revision'ın içeriği doğrudan değiştirilemez; bu yüzden
+   * eylemler yalnızca düzenlenebilir revision'larda görünür.
+   */
+  editable?: boolean;
 };
 
 /**
@@ -21,7 +30,7 @@ type BomTreeProps = {
  * Ağaç sınırsız derinlikte render edilmez: çözümleme servisi derinlik
  * sınırı uygular ve aşan dallar çözümlenmemiş olarak işaretlenir.
  */
-export async function BomTree({ nodes }: BomTreeProps) {
+export async function BomTree({ nodes, editable = false }: BomTreeProps) {
   const t = await getTranslations();
 
   if (nodes.length === 0) {
@@ -31,14 +40,14 @@ export async function BomTree({ nodes }: BomTreeProps) {
   return (
     <ul className="space-y-1">
       {nodes.map((node) => (
-        <BomTreeNode key={node.bomLineId ?? node.childItemId} node={node} />
+        <BomTreeNode editable={editable} key={node.bomLineId ?? node.childItemId} node={node} />
       ))}
     </ul>
   );
 }
 
 /** Ağacın tek bir düğümü. */
-async function BomTreeNode({ node }: { node: BomExplosionNode }) {
+async function BomTreeNode({ node, editable }: { node: BomExplosionNode; editable: boolean }) {
   const t = await getTranslations();
 
   return (
@@ -65,6 +74,14 @@ async function BomTreeNode({ node }: { node: BomExplosionNode }) {
         )}
 
         {node.unresolved && <Badge variant="outline">{t("boms.explosion.unresolved")}</Badge>}
+
+        {editable && node.bomLineId && (
+          <BomLineActions
+            childItemCode={node.childItemCode}
+            lineId={node.bomLineId}
+            referenceDesignation={node.referenceDesignation}
+          />
+        )}
       </div>
 
       {node.unresolved && node.unresolvedReason && (
@@ -79,7 +96,11 @@ async function BomTreeNode({ node }: { node: BomExplosionNode }) {
       {node.children.length > 0 && (
         <ul className="space-y-1">
           {node.children.map((child) => (
-            <BomTreeNode key={child.bomLineId ?? child.childItemId} node={child} />
+            <BomTreeNode
+              editable={editable}
+              key={child.bomLineId ?? child.childItemId}
+              node={child}
+            />
           ))}
         </ul>
       )}

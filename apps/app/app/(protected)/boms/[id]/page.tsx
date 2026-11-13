@@ -17,7 +17,9 @@ import { notFound } from "next/navigation";
 
 import { requireAuthContext } from "@/features/auth/session";
 import { BomFlattenedTable, BomTree } from "@/features/boms/components/bom-explosion";
-import { getBomDetailData, requireBomsAccess } from "@/features/boms/server";
+import { BomLineForm } from "@/features/boms/components/bom-line-form";
+import { BomRevisionForm } from "@/features/boms/components/bom-revision-form";
+import { getBomDetailData, getBomEditorOptions, requireBomsAccess } from "@/features/boms/server";
 import { StatusBadge } from "@/features/shared/status-badge";
 
 type PageProps = {
@@ -44,6 +46,18 @@ export default async function BomDetailPage({ params }: PageProps) {
   }
 
   const t = await getTranslations();
+
+  const options = await getBomEditorOptions(context.organizationId);
+
+  /*
+   * Yayınlanmış bir revision'ın içeriği doğrudan değiştirilemez; satır
+   * eylemleri yalnızca düzenlenebilir revision'larda görünür.
+   */
+  const isEditable = data.currentRevision?.status !== "RELEASED";
+
+  const parentItemRevisions = options.itemRevisions.filter(
+    (revision) => revision.itemId === data.bom.itemId,
+  );
 
   return (
     <div className="space-y-6">
@@ -84,9 +98,19 @@ export default async function BomDetailPage({ params }: PageProps) {
             </CardHeader>
 
             <CardContent>
-              <BomTree nodes={data.tree} />
+              <BomTree editable={isEditable} nodes={data.tree} />
             </CardContent>
           </Card>
+
+          {data.currentRevision && isEditable && (
+            <BomLineForm
+              bomRevisionId={data.currentRevision.id}
+              bomRevisions={options.bomRevisions}
+              itemRevisions={options.itemRevisions}
+              items={options.items}
+              units={options.units}
+            />
+          )}
         </TabsContent>
 
         <TabsContent className="mt-4 space-y-4" value="flattened">
@@ -153,6 +177,8 @@ export default async function BomDetailPage({ params }: PageProps) {
               )}
             </CardContent>
           </Card>
+
+          <BomRevisionForm bomId={data.bom.id} parentItemRevisions={parentItemRevisions} />
         </TabsContent>
       </Tabs>
     </div>

@@ -1,8 +1,16 @@
 import { requirePermission } from "@/features/auth/session";
-import { listItemOptions } from "@/features/items/repository";
+import { listItemOptions, listItemRevisionOptions } from "@/features/items/repository";
+import { listUnitOptions } from "@/features/units/repository";
 
 import { explodeBom, flattenBom } from "./explosion";
-import { type BomListQuery, countBoms, getBom, listBomRevisions, listBoms } from "./repository";
+import {
+  type BomListQuery,
+  countBoms,
+  getBom,
+  listBomRevisionOptions,
+  listBomRevisions,
+  listBoms,
+} from "./repository";
 
 /**
  * BOM sayfalarının koruma ve veri katmanı.
@@ -56,4 +64,21 @@ export async function getBomDetailData(organizationId: string, bomId: string) {
 /** Formun ihtiyaç duyduğu seçim listeleri. */
 export async function getBomFormOptions(organizationId: string) {
   return { items: await listItemOptions(organizationId) };
+}
+
+/**
+ * Satır ve revision formlarının ihtiyaç duyduğu seçim listeleri.
+ *
+ * Alt BOM revision'ı seçimi, bileşenin ürününe göre istemcide süzülür;
+ * bu yüzden tüm revision'lar birlikte gönderilir.
+ */
+export async function getBomEditorOptions(organizationId: string) {
+  const [items, itemRevisions, bomRevisions, units] = await Promise.all([
+    listItemOptions(organizationId),
+    listItemRevisionOptions(organizationId),
+    listBomRevisionOptions(organizationId),
+    listUnitOptions(organizationId),
+  ]);
+
+  return { items, itemRevisions, bomRevisions, units };
 }

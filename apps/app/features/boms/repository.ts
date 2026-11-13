@@ -418,3 +418,37 @@ export async function listContainedItemIds(
 
   return rows.map((row) => row.childItemId);
 }
+
+/**
+ * Tüm BOM revision'ları (seçim listesi için).
+ *
+ * Satır formunda alt BOM revision'ı seçilirken hangi ürüne ait oldukları
+ * görünmelidir; filtre istemcide yapılır.
+ */
+export async function listBomRevisionOptions(organizationId: string): Promise<
+  {
+    id: string;
+    revision: string;
+    bomId: string;
+    itemId: string;
+    itemCode: string | null;
+    itemName: string | null;
+    status: "DRAFT" | "IN_REVIEW" | "RELEASED" | "SUPERSEDED";
+  }[]
+> {
+  return db
+    .select({
+      id: bomRevision.id,
+      revision: bomRevision.revision,
+      bomId: bomRevision.bomId,
+      itemId: bom.itemId,
+      itemCode: item.code,
+      itemName: item.name,
+      status: bomRevision.status,
+    })
+    .from(bomRevision)
+    .innerJoin(bom, eq(bom.id, bomRevision.bomId))
+    .leftJoin(item, eq(item.id, bom.itemId))
+    .where(eq(bomRevision.organizationId, organizationId))
+    .orderBy(asc(item.name), asc(bomRevision.revision));
+}
