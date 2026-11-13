@@ -41,6 +41,9 @@ yarn-error.log*
 # vercel
 .vercel
 
+# yerel araç ayarları (makineye özel izin önbelleği)
+.claude/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
