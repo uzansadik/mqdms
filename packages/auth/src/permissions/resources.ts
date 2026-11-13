@@ -35,7 +35,16 @@ export const resources = {
   },
   projects: {
     label: "Projeler",
-    actions: ["read", "create", "update", "delete", "archive", "restore", "manageMembers"],
+    actions: [
+      "read",
+      "create",
+      "update",
+      "delete",
+      "archive",
+      "restore",
+      "manageMembers",
+      "manageItems",
+    ],
   },
   customers: {
     label: "Müşteriler",
@@ -47,7 +56,27 @@ export const resources = {
   },
   items: {
     label: "Ürünler",
-    actions: ["read", "create", "update"],
+    actions: [
+      "read",
+      "create",
+      "update",
+      "archive",
+      "restore",
+      "manageRevisions",
+      "releaseRevision",
+    ],
+  },
+  itemGroups: {
+    label: "Ürün Grupları",
+    actions: ["read", "create", "update", "archive"],
+  },
+  boms: {
+    label: "BOM",
+    actions: ["read", "create", "update", "submit", "release", "archive", "compare"],
+  },
+  imports: {
+    label: "İçe Aktarım",
+    actions: ["read", "create", "execute"],
   },
   reports: {
     label: "Raporlar",

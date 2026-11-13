@@ -130,6 +130,10 @@ describe("fabrika rol seed sürümleri", () => {
     }
   });
 
+  it("güncel sürüm üçtür", () => {
+    expect(FACTORY_SEED_VERSION).toBe("3");
+  });
+
   it("sürüm izinleri permission kataloğunda yer alır", () => {
     for (const template of factoryRoleTemplates) {
       for (const version of Object.keys(template.versionPermissions)) {
@@ -167,10 +171,14 @@ describe("fabrika rol seed sürümleri", () => {
     const template = findTemplate("project-manager");
 
     const fromV1 = getPendingVersionGrants(template, "1", FACTORY_SEED_VERSION);
-    const fromV2 = getPendingVersionGrants(template, "2", FACTORY_SEED_VERSION);
+    const fromCurrent = getPendingVersionGrants(
+      template,
+      FACTORY_SEED_VERSION,
+      FACTORY_SEED_VERSION,
+    );
 
     expect(fromV1.length).toBeGreaterThan(0);
-    expect(fromV2).toHaveLength(0);
+    expect(fromCurrent).toHaveLength(0);
   });
 
   it("yükseltme sürüm 1'den önceki izinleri geri getirmez", () => {
@@ -205,6 +213,21 @@ describe("fabrika rol seed sürümleri", () => {
       );
 
       expect(readable, resource).toBe(true);
+    }
+  });
+
+  it("yeni kaynaklar sürüm 3 deltasıyla mevcut organizasyonlara verilir", () => {
+    /*
+     * Yeni kaynaklar (ürün grupları, BOM, içe aktarım) sürüm 3 deltasında
+     * yer almalıdır: aksi halde mevcut organizasyonların seed rolleri bu
+     * kaynaklara erişemez.
+     */
+    for (const resource of ["itemGroups", "boms", "imports"]) {
+      const covered = factoryRoleTemplates.some((template) =>
+        getVersionGrants(template, "3").some((grant) => grant.resource === resource),
+      );
+
+      expect(covered, resource).toBe(true);
     }
   });
 

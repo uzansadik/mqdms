@@ -31,6 +31,28 @@ describe("permission kataloğu", () => {
     expect(resources.projects.actions).toContain("restore");
   });
 
+  it("ürün kaynağı revision aksiyonlarını içerir", () => {
+    for (const action of ["archive", "restore", "manageRevisions", "releaseRevision"] as const) {
+      expect(resources.items.actions).toContain(action);
+    }
+  });
+
+  it("ürün grubu, BOM ve içe aktarım kaynakları tanımlıdır", () => {
+    expect(isResourceKey("itemGroups")).toBe(true);
+    expect(isResourceKey("boms")).toBe(true);
+    expect(isResourceKey("imports")).toBe(true);
+
+    expect(resources.itemGroups.actions).toContain("archive");
+    expect(resources.boms.actions).toContain("submit");
+    expect(resources.boms.actions).toContain("release");
+    expect(resources.boms.actions).toContain("compare");
+    expect(resources.imports.actions).toContain("execute");
+  });
+
+  it("proje kaynağı ürün kapsamı yönetimini içerir", () => {
+    expect(resources.projects.actions).toContain("manageItems");
+  });
+
   it("katalogdaki her kaynak en az bir aksiyona sahiptir", () => {
     for (const key of Object.keys(resources) as ResourceKey[]) {
       expect(resources[key].actions.length, key).toBeGreaterThan(0);
