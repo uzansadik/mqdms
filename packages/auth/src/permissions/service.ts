@@ -35,6 +35,7 @@ import {
 } from "./repository";
 import { isResourceActionKey } from "./resources";
 import { isOwnerRole } from "./roles";
+import { upgradeFactoryRoles as upgradeFactoryRolesForOrganization } from "./seeds/factory";
 
 /**
  * Yetkilendirme bağlamı.
@@ -241,6 +242,34 @@ export function requireOwner(context: AuthContext): AuthContext {
   }
 
   return context;
+}
+
+/**
+ * Organizasyonun fabrika seed rollerini güncel sürüme taşır.
+ *
+ * Yeni bir kaynak veya aksiyon eklendiğinde mevcut organizasyonların seed
+ * rolleri **geriye dönük güncellenmez**: owner bu işlemi açıkça tetikler.
+ * Yalnızca yeni sürümde tanımlanan izinler eklenir; owner'ın seed
+ * rolünden kaldırdığı izinler geri gelmez.
+ *
+ * İşlem idempotenttir ve tekrar çalıştırılabilir.
+ *
+ * @returns yükseltilen rol sayısı.
+ */
+export async function upgradeFactoryRoleSeeds(context: AuthContext): Promise<number> {
+  requireOwner(context);
+
+  const upgraded = await upgradeFactoryRolesForOrganization(context.organizationId);
+
+  await writeAuditLog({
+    organizationId: context.organizationId,
+    actorId: context.userId,
+    action: "roles.factorySeedUpgraded",
+    target: { type: "organization", id: context.organizationId },
+    metadata: { upgradedRoles: upgraded },
+  });
+
+  return upgraded;
 }
 
 /* -------------------------------------------------------------------------

@@ -46,4 +46,5 @@ export {
   requireOwner,
   setMemberPermission,
   updateRole,
+  upgradeFactoryRoleSeeds,
 } from "./service";

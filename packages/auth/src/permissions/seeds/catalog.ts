@@ -27,8 +27,25 @@ export type FactoryRoleTemplate = {
   /** Kısa açıklama. */
   description: string;
 
-  /** Kaynak izinleri. */
+  /**
+   * Seed'in hedef durumu: tüm sürümlerin birleşimi.
+   *
+   * Yeni bir organizasyon bu izinlerin tamamıyla seed edilir.
+   */
   permissions: RolePermissions;
+
+  /**
+   * Sürüm sürüm eklenen izinler.
+   *
+   * Anahtar seed sürümüdür (`"2"`, `"3"`, ...). Bir organizasyonun rolü
+   * `seed_version` değerini `1`'den `2`'ye taşıdığında **yalnızca** `"2"`
+   * anahtarındaki izinler uygulanır.
+   *
+   * Bu ayrım önemlidir: owner'ın seed rolünden **kaldırdığı** bir izin
+   * yeni sürümde yeniden tanımlanmadıkça geri gelmez. Yalnızca o sürümde
+   * açıkça tanımlanan izinler eklenir.
+   */
+  versionPermissions: Record<string, RolePermissions>;
 };
 
 /**
@@ -66,6 +83,16 @@ export const factoryRoleTemplates: readonly FactoryRoleTemplate[] = [
       controlPlan: ["read", "approve", "reject"],
       ncr: ["read", "close"],
       reports: ["read", "export"],
+      customers: ["read"],
+      plants: ["read", "create", "update", "archive", "restore"],
+      projects: ["read", "create", "update", "archive", "restore", "manageMembers"],
+    },
+    versionPermissions: {
+      "2": {
+        customers: ["read"],
+        plants: ["read", "create", "update", "archive", "restore"],
+        projects: ["create", "update", "archive", "restore", "manageMembers"],
+      },
     },
   },
   {
@@ -79,9 +106,18 @@ export const factoryRoleTemplates: readonly FactoryRoleTemplate[] = [
       processFlow: ["read", "create", "update", "submit"],
       controlPlan: ["read", "create", "update", "submit"],
       ncr: ["read"],
-      projects: ["read", "create", "update"],
+      projects: ["read", "create", "update", "archive", "restore", "manageMembers"],
       items: ["read"],
       reports: ["read"],
+      customers: ["read"],
+      plants: ["read"],
+    },
+    versionPermissions: {
+      "2": {
+        customers: ["read"],
+        plants: ["read"],
+        projects: ["archive", "restore", "manageMembers"],
+      },
     },
   },
   {
@@ -96,6 +132,14 @@ export const factoryRoleTemplates: readonly FactoryRoleTemplate[] = [
       ncr: ["read"],
       projects: ["read"],
       items: ["read"],
+      customers: ["read"],
+      plants: ["read"],
+    },
+    versionPermissions: {
+      "2": {
+        customers: ["read"],
+        plants: ["read"],
+      },
     },
   },
   {
@@ -112,6 +156,14 @@ export const factoryRoleTemplates: readonly FactoryRoleTemplate[] = [
       projects: ["read"],
       items: ["read"],
       reports: ["read", "export"],
+      customers: ["read"],
+      plants: ["read"],
+    },
+    versionPermissions: {
+      "2": {
+        customers: ["read"],
+        plants: ["read"],
+      },
     },
   },
   {
@@ -127,6 +179,14 @@ export const factoryRoleTemplates: readonly FactoryRoleTemplate[] = [
       projects: ["read"],
       items: ["read"],
       reports: ["read"],
+      customers: ["read"],
+      plants: ["read"],
+    },
+    versionPermissions: {
+      "2": {
+        customers: ["read"],
+        plants: ["read"],
+      },
     },
   },
   {
@@ -142,6 +202,14 @@ export const factoryRoleTemplates: readonly FactoryRoleTemplate[] = [
       projects: ["read"],
       items: ["read"],
       reports: ["read"],
+      customers: ["read"],
+      plants: ["read"],
+    },
+    versionPermissions: {
+      "2": {
+        customers: ["read"],
+        plants: ["read"],
+      },
     },
   },
   {
@@ -154,6 +222,10 @@ export const factoryRoleTemplates: readonly FactoryRoleTemplate[] = [
       processFlow: ["read"],
       controlPlan: ["read"],
       ncr: ["create"],
+    },
+    versionPermissions: {
+      // Bu rol proje ve tesis kayıtlarına erişmez; sürüm 2'de izni yok.
+      "2": {},
     },
   },
   {
@@ -168,6 +240,14 @@ export const factoryRoleTemplates: readonly FactoryRoleTemplate[] = [
       ncr: ["read", "create", "update"],
       projects: ["read"],
       items: ["read"],
+      customers: ["read"],
+      plants: ["read"],
+    },
+    versionPermissions: {
+      "2": {
+        customers: ["read"],
+        plants: ["read"],
+      },
     },
   },
   {
@@ -182,6 +262,14 @@ export const factoryRoleTemplates: readonly FactoryRoleTemplate[] = [
       ncr: ["create"],
       projects: ["read"],
       items: ["read", "update"],
+      customers: ["read"],
+      plants: ["read"],
+    },
+    versionPermissions: {
+      "2": {
+        customers: ["read"],
+        plants: ["read"],
+      },
     },
   },
   {
@@ -196,6 +284,14 @@ export const factoryRoleTemplates: readonly FactoryRoleTemplate[] = [
       ncr: ["read", "create"],
       projects: ["read"],
       items: ["read"],
+      customers: ["read"],
+      plants: ["read"],
+    },
+    versionPermissions: {
+      "2": {
+        customers: ["read"],
+        plants: ["read"],
+      },
     },
   },
   {
@@ -206,11 +302,17 @@ export const factoryRoleTemplates: readonly FactoryRoleTemplate[] = [
       ...allRead(),
       reports: ["read", "export"],
     },
+    versionPermissions: {
+      "2": {
+        customers: ["read"],
+        plants: ["read"],
+      },
+    },
   },
 ];
 
 /** Seed katalogunun sürümü. */
-export const FACTORY_SEED_VERSION = "1";
+export const FACTORY_SEED_VERSION = "2";
 
 /**
  * Seed rolünün izin çiftleri.
@@ -227,6 +329,64 @@ export function getTemplateGrants(template: FactoryRoleTemplate): {
     for (const action of actions ?? []) {
       grants.push({ resource, action });
     }
+  }
+
+  return grants;
+}
+
+/**
+ * Belirli bir seed sürümünün eklediği izin çiftleri.
+ *
+ * Bir rolün `seed_version` değeri `fromVersion`'dan küçükse, bu izinler
+ * organizasyona uygulanır. Böylece owner'ın daha önce kaldırdığı izinler
+ * yeni sürümde açıkça tanımlanmadıkça geri gelmez.
+ */
+export function getVersionGrants(
+  template: FactoryRoleTemplate,
+  version: string,
+): { resource: string; action: string }[] {
+  const grants: { resource: string; action: string }[] = [];
+
+  for (const [resource, actions] of Object.entries(template.versionPermissions[version] ?? {})) {
+    for (const action of actions ?? []) {
+      grants.push({ resource, action });
+    }
+  }
+
+  return grants;
+}
+
+/**
+ * Bir rolün uygulanmış seed sürümünden sonraki tüm sürümlerin izinleri.
+ *
+ * `currentVersion` sürümüne kadar olan tüm sürümler birleştirilir; böylece
+ * bir organizasyon birden fazla sürümü atladığında da eksik izinler tamamlanır.
+ */
+export function getPendingVersionGrants(
+  template: FactoryRoleTemplate,
+  fromVersion: string,
+  toVersion: string,
+): { resource: string; action: string }[] {
+  const grants: { resource: string; action: string }[] = [];
+
+  const versions = Object.keys(template.versionPermissions)
+    .map((version) => Number.parseInt(version, 10))
+    .filter((version) => Number.isFinite(version))
+    .sort((a, b) => a - b);
+
+  const from = Number.parseInt(fromVersion, 10);
+  const to = Number.parseInt(toVersion, 10);
+
+  for (const version of versions) {
+    if (Number.isFinite(from) && version <= from) {
+      continue;
+    }
+
+    if (Number.isFinite(to) && version > to) {
+      continue;
+    }
+
+    grants.push(...getVersionGrants(template, String(version)));
   }
 
   return grants;

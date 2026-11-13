@@ -35,7 +35,15 @@ export const resources = {
   },
   projects: {
     label: "Projeler",
-    actions: ["read", "create", "update", "delete"],
+    actions: ["read", "create", "update", "delete", "archive", "restore", "manageMembers"],
+  },
+  customers: {
+    label: "Müşteriler",
+    actions: ["read", "create", "update", "archive", "restore"],
+  },
+  plants: {
+    label: "Tesisler",
+    actions: ["read", "create", "update", "archive", "restore"],
   },
   items: {
     label: "Ürünler",
