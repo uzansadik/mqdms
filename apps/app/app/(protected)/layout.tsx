@@ -51,6 +51,10 @@ export default async function ProtectedLayout({ children }: ProtectedLayoutProps
     visibleModules.push("itemGroups");
   }
 
+  if (await canAccess(context, "boms", "read")) {
+    visibleModules.push("boms");
+  }
+
   return (
     <SidebarProvider>
       <AppSidebar

@@ -16,6 +16,7 @@ import {
   SidebarRail,
 } from "@mqdms/ui/components/sidebar";
 import {
+  Boxes,
   Building2,
   Factory,
   FileSpreadsheet,
@@ -102,6 +103,12 @@ export function AppSidebar({ organization, user, visibleModules }: AppSidebarPro
       href: "/item-groups",
       icon: FolderTree,
       module: "itemGroups",
+    },
+    {
+      title: t("app.nav.boms"),
+      href: "/boms",
+      icon: Boxes,
+      module: "boms",
     },
     {
       title: t("app.nav.units"),
