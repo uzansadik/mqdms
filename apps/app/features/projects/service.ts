@@ -4,7 +4,7 @@ import { db } from "@mqdms/db";
 import { project, projectMember, projectPlant } from "@mqdms/db/schema";
 import { and, eq, sql } from "drizzle-orm";
 
-import { getCustomer, getCustomerSite } from "@/features/customers/repository";
+import { getCustomerSite, lockCustomer } from "@/features/customers/repository";
 
 import {
   findActiveProjectMember,
@@ -90,13 +90,19 @@ function validateDates(input: {
   }
 }
 
-/** Müşteri ve site eşleşmesini doğrular. */
+/**
+ * Müşteri ve site eşleşmesini doğrular.
+ *
+ * Müşteri satırı kilitlenir: müşteri arşivi ile proje yazımı bu satır
+ * üzerinde serileşir. Arşivlenmiş bir müşterinin altında proje oluşamaz.
+ */
 async function validateCustomerAndSite(
   context: AuthContext,
+  tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
   customerId: string,
   customerSiteId: string | null,
 ): Promise<void> {
-  const target = await getCustomer(context.organizationId, customerId);
+  const target = await lockCustomer(tx, context.organizationId, customerId);
 
   if (!target || target.archivedAt) {
     throw new ProjectRuleError("Müşteri bulunamadı.", "NOT_FOUND");
@@ -106,7 +112,7 @@ async function validateCustomerAndSite(
     return;
   }
 
-  const site = await getCustomerSite(context.organizationId, customerSiteId);
+  const site = await getCustomerSite(context.organizationId, customerSiteId, tx);
 
   if (!site || site.customerId !== customerId) {
     throw new ProjectRuleError("Seçilen site bu müşteriye ait değil.", "INVALID_INPUT");
@@ -116,13 +122,18 @@ async function validateCustomerAndSite(
 /** Proje müdürünün organizasyon üyesi olduğunu doğrular. */
 async function validateProjectManager(
   context: AuthContext,
+  tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
   projectManagerMemberId: string | null,
 ): Promise<void> {
   if (!projectManagerMemberId) {
     return;
   }
 
-  const manager = await findMemberInOrganization(context.organizationId, projectManagerMemberId);
+  const manager = await findMemberInOrganization(
+    context.organizationId,
+    projectManagerMemberId,
+    tx,
+  );
 
   if (!manager) {
     throw new ProjectRuleError("Proje müdürü organizasyonun bir üyesi olmalıdır.", "INVALID_INPUT");
@@ -138,6 +149,9 @@ async function validateProjectManager(
  *
  * Müşteri zorunludur. `ACTIVE` durumunda bir proje için en az bir tesis
  * gerekir; oluşturma sırasında tesis seçilebilir.
+ *
+ * Proje ve tesis ataması tek transaction'da yazılır: tesis ataması
+ * başarısız olursa proje de oluşmaz.
  */
 export async function createProject(
   context: AuthContext,
@@ -149,74 +163,79 @@ export async function createProject(
 
   const code = normalizeProjectCode(input.code);
 
-  const existing = await findProjectByCode(context.organizationId, code);
-
-  if (existing) {
-    throw new ProjectRuleError("Bu proje kodu zaten kullanılıyor.", "CONFLICT");
-  }
-
   const customerSiteId = toNull(input.customerSiteId);
   const projectManagerMemberId = toNull(input.projectManagerMemberId);
   const primaryPlantId = toNull(input.primaryPlantId);
 
-  await validateCustomerAndSite(context, input.customerId, customerSiteId);
-  await validateProjectManager(context, projectManagerMemberId);
+  return db.transaction(async (tx) => {
+    const existing = await findProjectByCode(context.organizationId, code, undefined, tx);
 
-  if (input.status === "ACTIVE" && !primaryPlantId) {
-    throw new ProjectRuleError(
-      "Aktif bir proje için en az bir üretim tesisi seçilmelidir.",
-      "INVALID_INPUT",
+    if (existing) {
+      throw new ProjectRuleError("Bu proje kodu zaten kullanılıyor.", "CONFLICT");
+    }
+
+    await validateCustomerAndSite(context, tx, input.customerId, customerSiteId);
+    await validateProjectManager(context, tx, projectManagerMemberId);
+
+    if (input.status === "ACTIVE" && !primaryPlantId) {
+      throw new ProjectRuleError(
+        "Aktif bir proje için en az bir üretim tesisi seçilmelidir.",
+        "INVALID_INPUT",
+      );
+    }
+
+    const created = await tx
+      .insert(project)
+      .values({
+        organizationId: context.organizationId,
+        customerId: input.customerId,
+        customerSiteId,
+        code,
+        name: input.name.trim(),
+        customerProjectCode: toNull(input.customerProjectCode),
+        description: toNull(input.description),
+        status: input.status,
+        projectManagerMemberId,
+        startDate: toNull(input.startDate),
+        targetCompletionDate: toNull(input.targetCompletionDate),
+        actualCompletionDate: toNull(input.actualCompletionDate),
+        createdById: context.userId,
+      })
+      .returning({ id: project.id });
+
+    const projectId = created[0]?.id;
+
+    if (!projectId) {
+      throw new ProjectRuleError("Proje oluşturulamadı.", "INVALID_INPUT");
+    }
+
+    if (primaryPlantId) {
+      await tx.insert(projectPlant).values({
+        organizationId: context.organizationId,
+        projectId,
+        plantId: primaryPlantId,
+        isPrimary: true,
+      });
+    }
+
+    await writeAuditLog(
+      {
+        organizationId: context.organizationId,
+        actorId: context.userId,
+        action: "project.created",
+        target: { type: "project", id: projectId },
+        metadata: {
+          code,
+          name: input.name.trim(),
+          customerId: input.customerId,
+          status: input.status,
+        },
+      },
+      tx,
     );
-  }
 
-  const created = await db
-    .insert(project)
-    .values({
-      organizationId: context.organizationId,
-      customerId: input.customerId,
-      customerSiteId,
-      code,
-      name: input.name.trim(),
-      customerProjectCode: toNull(input.customerProjectCode),
-      description: toNull(input.description),
-      status: input.status,
-      projectManagerMemberId,
-      startDate: toNull(input.startDate),
-      targetCompletionDate: toNull(input.targetCompletionDate),
-      actualCompletionDate: toNull(input.actualCompletionDate),
-      createdById: context.userId,
-    })
-    .returning({ id: project.id });
-
-  const projectId = created[0]?.id;
-
-  if (!projectId) {
-    throw new ProjectRuleError("Proje oluşturulamadı.", "INVALID_INPUT");
-  }
-
-  if (primaryPlantId) {
-    await db.insert(projectPlant).values({
-      organizationId: context.organizationId,
-      projectId,
-      plantId: primaryPlantId,
-      isPrimary: true,
-    });
-  }
-
-  await writeAuditLog({
-    organizationId: context.organizationId,
-    actorId: context.userId,
-    action: "project.created",
-    target: { type: "project", id: projectId },
-    metadata: {
-      code,
-      name: input.name.trim(),
-      customerId: input.customerId,
-      status: input.status,
-    },
+    return projectId;
   });
-
-  return projectId;
 }
 
 /** Projeyi günceller. */
@@ -227,73 +246,81 @@ export async function updateProject(
 ): Promise<void> {
   await requireProjectPermission(context, "update");
 
-  const target = await getProject(context.organizationId, projectId);
-
-  if (!target) {
-    throw new ProjectRuleError("Proje bulunamadı.", "NOT_FOUND");
-  }
-
   validateDates(input);
 
   const code = normalizeProjectCode(input.code);
 
-  const existing = await findProjectByCode(context.organizationId, code, projectId);
-
-  if (existing) {
-    throw new ProjectRuleError("Bu proje kodu zaten kullanılıyor.", "CONFLICT");
-  }
-
   const customerSiteId = toNull(input.customerSiteId);
   const projectManagerMemberId = toNull(input.projectManagerMemberId);
 
-  await validateCustomerAndSite(context, input.customerId, customerSiteId);
-  await validateProjectManager(context, projectManagerMemberId);
+  await db.transaction(async (tx) => {
+    const target = await getProject(context.organizationId, projectId, tx);
 
-  // `ACTIVE` durumuna geçiş için en az bir tesis gerekir.
-  if (input.status === "ACTIVE" && target.status !== "ACTIVE") {
-    const plants = await listProjectPlants(context.organizationId, projectId);
+    if (!target) {
+      throw new ProjectRuleError("Proje bulunamadı.", "NOT_FOUND");
+    }
 
-    if (plants.length === 0) {
-      throw new ProjectRuleError(
-        "Aktif bir proje için en az bir üretim tesisi atanmış olmalıdır.",
-        "INVALID_INPUT",
+    const existing = await findProjectByCode(context.organizationId, code, projectId, tx);
+
+    if (existing) {
+      throw new ProjectRuleError("Bu proje kodu zaten kullanılıyor.", "CONFLICT");
+    }
+
+    await validateCustomerAndSite(context, tx, input.customerId, customerSiteId);
+    await validateProjectManager(context, tx, projectManagerMemberId);
+
+    // `ACTIVE` durumuna geçiş için en az bir tesis gerekir.
+    if (input.status === "ACTIVE" && target.status !== "ACTIVE") {
+      const plants = await listProjectPlants(context.organizationId, projectId, tx);
+
+      if (plants.length === 0) {
+        throw new ProjectRuleError(
+          "Aktif bir proje için en az bir üretim tesisi atanmış olmalıdır.",
+          "INVALID_INPUT",
+        );
+      }
+    }
+
+    await tx
+      .update(project)
+      .set({
+        customerId: input.customerId,
+        customerSiteId,
+        code,
+        name: input.name.trim(),
+        customerProjectCode: toNull(input.customerProjectCode),
+        description: toNull(input.description),
+        status: input.status,
+        projectManagerMemberId,
+        startDate: toNull(input.startDate),
+        targetCompletionDate: toNull(input.targetCompletionDate),
+        actualCompletionDate: toNull(input.actualCompletionDate),
+      })
+      .where(and(eq(project.organizationId, context.organizationId), eq(project.id, projectId)));
+
+    if (target.status !== input.status) {
+      await writeAuditLog(
+        {
+          organizationId: context.organizationId,
+          actorId: context.userId,
+          action: "project.statusChanged",
+          target: { type: "project", id: projectId },
+          metadata: { from: target.status, to: input.status },
+        },
+        tx,
       );
     }
-  }
 
-  await db
-    .update(project)
-    .set({
-      customerId: input.customerId,
-      customerSiteId,
-      code,
-      name: input.name.trim(),
-      customerProjectCode: toNull(input.customerProjectCode),
-      description: toNull(input.description),
-      status: input.status,
-      projectManagerMemberId,
-      startDate: toNull(input.startDate),
-      targetCompletionDate: toNull(input.targetCompletionDate),
-      actualCompletionDate: toNull(input.actualCompletionDate),
-    })
-    .where(and(eq(project.organizationId, context.organizationId), eq(project.id, projectId)));
-
-  if (target.status !== input.status) {
-    await writeAuditLog({
-      organizationId: context.organizationId,
-      actorId: context.userId,
-      action: "project.statusChanged",
-      target: { type: "project", id: projectId },
-      metadata: { from: target.status, to: input.status },
-    });
-  }
-
-  await writeAuditLog({
-    organizationId: context.organizationId,
-    actorId: context.userId,
-    action: "project.updated",
-    target: { type: "project", id: projectId },
-    metadata: { code, name: input.name.trim() },
+    await writeAuditLog(
+      {
+        organizationId: context.organizationId,
+        actorId: context.userId,
+        action: "project.updated",
+        target: { type: "project", id: projectId },
+        metadata: { code, name: input.name.trim() },
+      },
+      tx,
+    );
   });
 }
 
@@ -306,27 +333,32 @@ export async function updateProject(
 export async function archiveProject(context: AuthContext, projectId: string): Promise<void> {
   await requireProjectPermission(context, "archive");
 
-  const target = await getProject(context.organizationId, projectId);
+  await db.transaction(async (tx) => {
+    const target = await getProject(context.organizationId, projectId, tx);
 
-  if (!target) {
-    throw new ProjectRuleError("Proje bulunamadı.", "NOT_FOUND");
-  }
+    if (!target) {
+      throw new ProjectRuleError("Proje bulunamadı.", "NOT_FOUND");
+    }
 
-  if (target.archivedAt) {
-    return;
-  }
+    if (target.archivedAt) {
+      return;
+    }
 
-  await db
-    .update(project)
-    .set({ archivedAt: new Date() })
-    .where(and(eq(project.organizationId, context.organizationId), eq(project.id, projectId)));
+    await tx
+      .update(project)
+      .set({ archivedAt: new Date() })
+      .where(and(eq(project.organizationId, context.organizationId), eq(project.id, projectId)));
 
-  await writeAuditLog({
-    organizationId: context.organizationId,
-    actorId: context.userId,
-    action: "project.archived",
-    target: { type: "project", id: projectId },
-    metadata: { code: target.code },
+    await writeAuditLog(
+      {
+        organizationId: context.organizationId,
+        actorId: context.userId,
+        action: "project.archived",
+        target: { type: "project", id: projectId },
+        metadata: { code: target.code },
+      },
+      tx,
+    );
   });
 }
 
@@ -334,27 +366,32 @@ export async function archiveProject(context: AuthContext, projectId: string): P
 export async function restoreProject(context: AuthContext, projectId: string): Promise<void> {
   await requireProjectPermission(context, "restore");
 
-  const target = await getProject(context.organizationId, projectId);
+  await db.transaction(async (tx) => {
+    const target = await getProject(context.organizationId, projectId, tx);
 
-  if (!target) {
-    throw new ProjectRuleError("Proje bulunamadı.", "NOT_FOUND");
-  }
+    if (!target) {
+      throw new ProjectRuleError("Proje bulunamadı.", "NOT_FOUND");
+    }
 
-  if (!target.archivedAt) {
-    return;
-  }
+    if (!target.archivedAt) {
+      return;
+    }
 
-  await db
-    .update(project)
-    .set({ archivedAt: null })
-    .where(and(eq(project.organizationId, context.organizationId), eq(project.id, projectId)));
+    await tx
+      .update(project)
+      .set({ archivedAt: null })
+      .where(and(eq(project.organizationId, context.organizationId), eq(project.id, projectId)));
 
-  await writeAuditLog({
-    organizationId: context.organizationId,
-    actorId: context.userId,
-    action: "project.restored",
-    target: { type: "project", id: projectId },
-    metadata: { code: target.code },
+    await writeAuditLog(
+      {
+        organizationId: context.organizationId,
+        actorId: context.userId,
+        action: "project.restored",
+        target: { type: "project", id: projectId },
+        metadata: { code: target.code },
+      },
+      tx,
+    );
   });
 }
 
@@ -376,46 +413,56 @@ export async function assignProjectPlant(
 ): Promise<void> {
   await requireProjectPermission(context, "update");
 
-  const target = await getProject(context.organizationId, projectId);
+  await db.transaction(async (tx) => {
+    const target = await getProject(context.organizationId, projectId, tx);
 
-  if (!target) {
-    throw new ProjectRuleError("Proje bulunamadı.", "NOT_FOUND");
-  }
-
-  const existing = await findProjectPlant(context.organizationId, projectId, plantId);
-
-  if (existing) {
-    throw new ProjectRuleError("Bu tesis zaten projeye atanmış.", "CONFLICT");
-  }
-
-  if (isPrimary) {
-    const primary = await findPrimaryProjectPlant(context.organizationId, projectId);
-
-    if (primary) {
-      throw new ProjectRuleError(
-        "Projede zaten bir ana tesis var. Önce onu kaldırın veya ana tesisi değiştirin.",
-        "CONFLICT",
-      );
+    if (!target) {
+      throw new ProjectRuleError("Proje bulunamadı.", "NOT_FOUND");
     }
-  }
 
-  await db.insert(projectPlant).values({
-    organizationId: context.organizationId,
-    projectId,
-    plantId,
-    isPrimary,
-  });
+    const existing = await findProjectPlant(context.organizationId, projectId, plantId, tx);
 
-  await writeAuditLog({
-    organizationId: context.organizationId,
-    actorId: context.userId,
-    action: "project.plantAssigned",
-    target: { type: "project", id: projectId },
-    metadata: { plantId, isPrimary },
+    if (existing) {
+      throw new ProjectRuleError("Bu tesis zaten projeye atanmış.", "CONFLICT");
+    }
+
+    if (isPrimary) {
+      const primary = await findPrimaryProjectPlant(context.organizationId, projectId, tx);
+
+      if (primary) {
+        throw new ProjectRuleError(
+          "Projede zaten bir ana tesis var. Önce onu kaldırın veya ana tesisi değiştirin.",
+          "CONFLICT",
+        );
+      }
+    }
+
+    await tx.insert(projectPlant).values({
+      organizationId: context.organizationId,
+      projectId,
+      plantId,
+      isPrimary,
+    });
+
+    await writeAuditLog(
+      {
+        organizationId: context.organizationId,
+        actorId: context.userId,
+        action: "project.plantAssigned",
+        target: { type: "project", id: projectId },
+        metadata: { plantId, isPrimary },
+      },
+      tx,
+    );
   });
 }
 
-/** Projeden tesisi kaldırır. */
+/**
+ * Projeden tesisi kaldırır.
+ *
+ * `ACTIVE` bir projeden son tesisi kaldırmak mümkün değildir: aktif proje
+ * için en az bir tesis gerekir.
+ */
 export async function removeProjectPlant(
   context: AuthContext,
   projectId: string,
@@ -423,28 +470,50 @@ export async function removeProjectPlant(
 ): Promise<void> {
   await requireProjectPermission(context, "update");
 
-  const existing = await findProjectPlant(context.organizationId, projectId, plantId);
+  await db.transaction(async (tx) => {
+    const target = await getProject(context.organizationId, projectId, tx);
 
-  if (!existing) {
-    throw new ProjectRuleError("Bu tesis projeye atanmamış.", "NOT_FOUND");
-  }
+    if (!target) {
+      throw new ProjectRuleError("Proje bulunamadı.", "NOT_FOUND");
+    }
 
-  await db
-    .delete(projectPlant)
-    .where(
-      and(
-        eq(projectPlant.organizationId, context.organizationId),
-        eq(projectPlant.projectId, projectId),
-        eq(projectPlant.plantId, plantId),
-      ),
+    const existing = await findProjectPlant(context.organizationId, projectId, plantId, tx);
+
+    if (!existing) {
+      throw new ProjectRuleError("Bu tesis projeye atanmamış.", "NOT_FOUND");
+    }
+
+    if (target.status === "ACTIVE") {
+      const plants = await listProjectPlants(context.organizationId, projectId, tx);
+
+      if (plants.length <= 1) {
+        throw new ProjectRuleError(
+          "Aktif bir proje için en az bir üretim tesisi olmalıdır. Önce proje durumunu değiştirin.",
+          "CONFLICT",
+        );
+      }
+    }
+
+    await tx
+      .delete(projectPlant)
+      .where(
+        and(
+          eq(projectPlant.organizationId, context.organizationId),
+          eq(projectPlant.projectId, projectId),
+          eq(projectPlant.plantId, plantId),
+        ),
+      );
+
+    await writeAuditLog(
+      {
+        organizationId: context.organizationId,
+        actorId: context.userId,
+        action: "project.plantRemoved",
+        target: { type: "project", id: projectId },
+        metadata: { plantId },
+      },
+      tx,
     );
-
-  await writeAuditLog({
-    organizationId: context.organizationId,
-    actorId: context.userId,
-    action: "project.plantRemoved",
-    target: { type: "project", id: projectId },
-    metadata: { plantId },
   });
 }
 
@@ -467,38 +536,43 @@ export async function addProjectMember(
 ): Promise<void> {
   await requireProjectPermission(context, "manageMembers");
 
-  const target = await getProject(context.organizationId, projectId);
+  await db.transaction(async (tx) => {
+    const target = await getProject(context.organizationId, projectId, tx);
 
-  if (!target) {
-    throw new ProjectRuleError("Proje bulunamadı.", "NOT_FOUND");
-  }
+    if (!target) {
+      throw new ProjectRuleError("Proje bulunamadı.", "NOT_FOUND");
+    }
 
-  const member = await findMemberInOrganization(context.organizationId, memberId);
+    const member = await findMemberInOrganization(context.organizationId, memberId, tx);
 
-  if (!member) {
-    throw new ProjectRuleError("Üye organizasyona ait değil.", "INVALID_INPUT");
-  }
+    if (!member) {
+      throw new ProjectRuleError("Üye organizasyona ait değil.", "INVALID_INPUT");
+    }
 
-  const existing = await findActiveProjectMember(context.organizationId, projectId, memberId);
+    const existing = await findActiveProjectMember(context.organizationId, projectId, memberId, tx);
 
-  if (existing) {
-    throw new ProjectRuleError("Bu üye zaten projede.", "CONFLICT");
-  }
+    if (existing) {
+      throw new ProjectRuleError("Bu üye zaten projede.", "CONFLICT");
+    }
 
-  await db.insert(projectMember).values({
-    organizationId: context.organizationId,
-    projectId,
-    memberId,
-    projectRole,
-    responsibility: toNull(responsibility),
-  });
+    await tx.insert(projectMember).values({
+      organizationId: context.organizationId,
+      projectId,
+      memberId,
+      projectRole,
+      responsibility: toNull(responsibility),
+    });
 
-  await writeAuditLog({
-    organizationId: context.organizationId,
-    actorId: context.userId,
-    action: "project.memberAssigned",
-    target: { type: "project", id: projectId },
-    metadata: { memberId, projectRole },
+    await writeAuditLog(
+      {
+        organizationId: context.organizationId,
+        actorId: context.userId,
+        action: "project.memberAssigned",
+        target: { type: "project", id: projectId },
+        metadata: { memberId, projectRole },
+      },
+      tx,
+    );
   });
 }
 
@@ -515,29 +589,34 @@ export async function removeProjectMember(
 ): Promise<void> {
   await requireProjectPermission(context, "manageMembers");
 
-  const existing = await findActiveProjectMember(context.organizationId, projectId, memberId);
+  await db.transaction(async (tx) => {
+    const existing = await findActiveProjectMember(context.organizationId, projectId, memberId, tx);
 
-  if (!existing) {
-    throw new ProjectRuleError("Bu üye projede değil.", "NOT_FOUND");
-  }
+    if (!existing) {
+      throw new ProjectRuleError("Bu üye projede değil.", "NOT_FOUND");
+    }
 
-  await db
-    .update(projectMember)
-    .set({ removedAt: new Date() })
-    .where(
-      and(
-        eq(projectMember.organizationId, context.organizationId),
-        eq(projectMember.projectId, projectId),
-        eq(projectMember.memberId, memberId),
-        sql`${projectMember.removedAt} is null`,
-      ),
+    await tx
+      .update(projectMember)
+      .set({ removedAt: new Date() })
+      .where(
+        and(
+          eq(projectMember.organizationId, context.organizationId),
+          eq(projectMember.projectId, projectId),
+          eq(projectMember.memberId, memberId),
+          sql`${projectMember.removedAt} is null`,
+        ),
+      );
+
+    await writeAuditLog(
+      {
+        organizationId: context.organizationId,
+        actorId: context.userId,
+        action: "project.memberRemoved",
+        target: { type: "project", id: projectId },
+        metadata: { memberId },
+      },
+      tx,
     );
-
-  await writeAuditLog({
-    organizationId: context.organizationId,
-    actorId: context.userId,
-    action: "project.memberRemoved",
-    target: { type: "project", id: projectId },
-    metadata: { memberId },
   });
 }

@@ -1,4 +1,4 @@
-import { db } from "@mqdms/db";
+import { type DbClient, db } from "@mqdms/db";
 import { plant, project, projectPlant } from "@mqdms/db/schema";
 import { and, asc, count, eq, ilike, isNull, or, type SQL, sql } from "drizzle-orm";
 
@@ -123,8 +123,9 @@ export async function countPlants(query: PlantListQuery): Promise<number> {
 export async function getPlant(
   organizationId: string,
   plantId: string,
+  client: DbClient | typeof db = db,
 ): Promise<PlantRecord | null> {
-  const rows = await db
+  const rows = await client
     .select({
       id: plant.id,
       organizationId: plant.organizationId,
@@ -153,8 +154,9 @@ export async function findPlantByCode(
   organizationId: string,
   code: string,
   excludeId?: string,
+  client: DbClient | typeof db = db,
 ): Promise<PlantRecord | null> {
-  const rows = await db
+  const rows = await client
     .select({
       id: plant.id,
       organizationId: plant.organizationId,
@@ -221,8 +223,9 @@ export async function listProjectsByPlant(
 export async function countActiveProjectsByPlant(
   organizationId: string,
   plantId: string,
+  client: DbClient | typeof db = db,
 ): Promise<number> {
-  const rows = await db
+  const rows = await client
     .select({ value: count() })
     .from(projectPlant)
     .innerJoin(project, eq(project.id, projectPlant.projectId))

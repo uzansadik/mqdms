@@ -66,44 +66,49 @@ export async function createPlant(context: AuthContext, input: PlantFormValues):
 
   const code = normalizePlantCode(input.code);
 
-  const existing = await findPlantByCode(context.organizationId, code);
+  return db.transaction(async (tx) => {
+    const existing = await findPlantByCode(context.organizationId, code, undefined, tx);
 
-  if (existing) {
-    throw new PlantRuleError("Bu tesis kodu zaten kullanılıyor.", "CONFLICT");
-  }
+    if (existing) {
+      throw new PlantRuleError("Bu tesis kodu zaten kullanılıyor.", "CONFLICT");
+    }
 
-  const created = await db
-    .insert(plant)
-    .values({
-      organizationId: context.organizationId,
-      code,
-      name: input.name.trim(),
-      description: toNull(input.description),
-      countryCode: toCountryCode(input.countryCode),
-      city: toNull(input.city),
-      address: toNull(input.address),
-      postalCode: toNull(input.postalCode),
-      timezone: toNull(input.timezone),
-      status: input.status,
-      createdById: context.userId,
-    })
-    .returning({ id: plant.id });
+    const created = await tx
+      .insert(plant)
+      .values({
+        organizationId: context.organizationId,
+        code,
+        name: input.name.trim(),
+        description: toNull(input.description),
+        countryCode: toCountryCode(input.countryCode),
+        city: toNull(input.city),
+        address: toNull(input.address),
+        postalCode: toNull(input.postalCode),
+        timezone: toNull(input.timezone),
+        status: input.status,
+        createdById: context.userId,
+      })
+      .returning({ id: plant.id });
 
-  const plantId = created[0]?.id;
+    const plantId = created[0]?.id;
 
-  if (!plantId) {
-    throw new PlantRuleError("Tesis oluşturulamadı.", "INVALID_INPUT");
-  }
+    if (!plantId) {
+      throw new PlantRuleError("Tesis oluşturulamadı.", "INVALID_INPUT");
+    }
 
-  await writeAuditLog({
-    organizationId: context.organizationId,
-    actorId: context.userId,
-    action: "plant.created",
-    target: { type: "plant", id: plantId },
-    metadata: { code, name: input.name.trim() },
+    await writeAuditLog(
+      {
+        organizationId: context.organizationId,
+        actorId: context.userId,
+        action: "plant.created",
+        target: { type: "plant", id: plantId },
+        metadata: { code, name: input.name.trim() },
+      },
+      tx,
+    );
+
+    return plantId;
   });
-
-  return plantId;
 }
 
 /** Tesisi günceller. */
@@ -114,41 +119,46 @@ export async function updatePlant(
 ): Promise<void> {
   await requirePlantPermission(context, "update");
 
-  const target = await getPlant(context.organizationId, plantId);
-
-  if (!target) {
-    throw new PlantRuleError("Tesis bulunamadı.", "NOT_FOUND");
-  }
-
   const code = normalizePlantCode(input.code);
 
-  const existing = await findPlantByCode(context.organizationId, code, plantId);
+  await db.transaction(async (tx) => {
+    const target = await getPlant(context.organizationId, plantId, tx);
 
-  if (existing) {
-    throw new PlantRuleError("Bu tesis kodu zaten kullanılıyor.", "CONFLICT");
-  }
+    if (!target) {
+      throw new PlantRuleError("Tesis bulunamadı.", "NOT_FOUND");
+    }
 
-  await db
-    .update(plant)
-    .set({
-      code,
-      name: input.name.trim(),
-      description: toNull(input.description),
-      countryCode: toCountryCode(input.countryCode),
-      city: toNull(input.city),
-      address: toNull(input.address),
-      postalCode: toNull(input.postalCode),
-      timezone: toNull(input.timezone),
-      status: input.status,
-    })
-    .where(and(eq(plant.organizationId, context.organizationId), eq(plant.id, plantId)));
+    const existing = await findPlantByCode(context.organizationId, code, plantId, tx);
 
-  await writeAuditLog({
-    organizationId: context.organizationId,
-    actorId: context.userId,
-    action: "plant.updated",
-    target: { type: "plant", id: plantId },
-    metadata: { code, name: input.name.trim() },
+    if (existing) {
+      throw new PlantRuleError("Bu tesis kodu zaten kullanılıyor.", "CONFLICT");
+    }
+
+    await tx
+      .update(plant)
+      .set({
+        code,
+        name: input.name.trim(),
+        description: toNull(input.description),
+        countryCode: toCountryCode(input.countryCode),
+        city: toNull(input.city),
+        address: toNull(input.address),
+        postalCode: toNull(input.postalCode),
+        timezone: toNull(input.timezone),
+        status: input.status,
+      })
+      .where(and(eq(plant.organizationId, context.organizationId), eq(plant.id, plantId)));
+
+    await writeAuditLog(
+      {
+        organizationId: context.organizationId,
+        actorId: context.userId,
+        action: "plant.updated",
+        target: { type: "plant", id: plantId },
+        metadata: { code, name: input.name.trim() },
+      },
+      tx,
+    );
   });
 }
 
@@ -163,36 +173,41 @@ export async function updatePlant(
 export async function archivePlant(context: AuthContext, plantId: string): Promise<void> {
   await requirePlantPermission(context, "archive");
 
-  const target = await getPlant(context.organizationId, plantId);
+  await db.transaction(async (tx) => {
+    const target = await getPlant(context.organizationId, plantId, tx);
 
-  if (!target) {
-    throw new PlantRuleError("Tesis bulunamadı.", "NOT_FOUND");
-  }
+    if (!target) {
+      throw new PlantRuleError("Tesis bulunamadı.", "NOT_FOUND");
+    }
 
-  if (target.archivedAt) {
-    return;
-  }
+    if (target.archivedAt) {
+      return;
+    }
 
-  const activeProjects = await countActiveProjectsByPlant(context.organizationId, plantId);
+    const activeProjects = await countActiveProjectsByPlant(context.organizationId, plantId, tx);
 
-  if (activeProjects > 0) {
-    throw new PlantRuleError(
-      "Tesisin aktif projeleri var. Önce projeleri tamamlayın veya arşivleyin.",
-      "CONFLICT",
+    if (activeProjects > 0) {
+      throw new PlantRuleError(
+        "Tesisin aktif projeleri var. Önce projeleri tamamlayın veya arşivleyin.",
+        "CONFLICT",
+      );
+    }
+
+    await tx
+      .update(plant)
+      .set({ archivedAt: new Date() })
+      .where(and(eq(plant.organizationId, context.organizationId), eq(plant.id, plantId)));
+
+    await writeAuditLog(
+      {
+        organizationId: context.organizationId,
+        actorId: context.userId,
+        action: "plant.archived",
+        target: { type: "plant", id: plantId },
+        metadata: { code: target.code },
+      },
+      tx,
     );
-  }
-
-  await db
-    .update(plant)
-    .set({ archivedAt: new Date() })
-    .where(and(eq(plant.organizationId, context.organizationId), eq(plant.id, plantId)));
-
-  await writeAuditLog({
-    organizationId: context.organizationId,
-    actorId: context.userId,
-    action: "plant.archived",
-    target: { type: "plant", id: plantId },
-    metadata: { code: target.code },
   });
 }
 
@@ -200,26 +215,31 @@ export async function archivePlant(context: AuthContext, plantId: string): Promi
 export async function restorePlant(context: AuthContext, plantId: string): Promise<void> {
   await requirePlantPermission(context, "restore");
 
-  const target = await getPlant(context.organizationId, plantId);
+  await db.transaction(async (tx) => {
+    const target = await getPlant(context.organizationId, plantId, tx);
 
-  if (!target) {
-    throw new PlantRuleError("Tesis bulunamadı.", "NOT_FOUND");
-  }
+    if (!target) {
+      throw new PlantRuleError("Tesis bulunamadı.", "NOT_FOUND");
+    }
 
-  if (!target.archivedAt) {
-    return;
-  }
+    if (!target.archivedAt) {
+      return;
+    }
 
-  await db
-    .update(plant)
-    .set({ archivedAt: null })
-    .where(and(eq(plant.organizationId, context.organizationId), eq(plant.id, plantId)));
+    await tx
+      .update(plant)
+      .set({ archivedAt: null })
+      .where(and(eq(plant.organizationId, context.organizationId), eq(plant.id, plantId)));
 
-  await writeAuditLog({
-    organizationId: context.organizationId,
-    actorId: context.userId,
-    action: "plant.restored",
-    target: { type: "plant", id: plantId },
-    metadata: { code: target.code },
+    await writeAuditLog(
+      {
+        organizationId: context.organizationId,
+        actorId: context.userId,
+        action: "plant.restored",
+        target: { type: "plant", id: plantId },
+        metadata: { code: target.code },
+      },
+      tx,
+    );
   });
 }

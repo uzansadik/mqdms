@@ -108,12 +108,20 @@ export function ProjectForm({
       return;
     }
 
-    form.reset();
-
     if (project) {
+      /*
+       * Düzenleme sonrası form, **kaydedilen** değerlerle sıfırlanır.
+       * `reset()` varsayılan değerlere döner ve bunlar eski kaydın değerleridir:
+       * bir sonraki kayıt, yalnızca başka bir alanı değiştirdiğinde ilk
+       * değişikliği geri alırdı.
+       */
+      form.reset(values);
+
       router.refresh();
       return;
     }
+
+    form.reset();
 
     router.push("/projects");
     router.refresh();

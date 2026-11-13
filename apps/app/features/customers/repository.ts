@@ -1,4 +1,4 @@
-import { db } from "@mqdms/db";
+import { type DbClient, db } from "@mqdms/db";
 import { customer, customerContact, customerSite, project } from "@mqdms/db/schema";
 import { and, asc, count, eq, ilike, isNull, or, type SQL, sql } from "drizzle-orm";
 
@@ -7,6 +7,9 @@ import { and, asc, count, eq, ilike, isNull, or, type SQL, sql } from "drizzle-o
  *
  * Bütün sorgular `organizationId` ile kısıtlanır: bir organizasyon başka bir
  * organizasyonun müşteri, site veya temsilci kaydını göremez.
+ *
+ * Yazma yolları, kayıt ile audit kaydını tek transaction'da yazabilmek için
+ * sorgulara istemci parametresi alır.
  */
 
 export type CustomerListQuery = {
@@ -86,7 +89,7 @@ export type CustomerContactRecord = {
 };
 
 /**
- * Müşteri listesi filtresini SQL koşullarına çevirir.
+ * Müşteri filtresini SQL koşullarına çevirir.
  *
  * Arşiv filtresi `archivedAt` üzerinden yapılır: arşivlenen kayıt normal
  * listelerde görünmez, arşiv listesinde yalnızca arşivlenenler görünür.
@@ -168,8 +171,9 @@ export async function countCustomers(query: CustomerListQuery): Promise<number> 
 export async function getCustomer(
   organizationId: string,
   customerId: string,
+  client: DbClient | typeof db = db,
 ): Promise<CustomerRecord | null> {
-  const rows = await db
+  const rows = await client
     .select({
       id: customer.id,
       organizationId: customer.organizationId,
@@ -193,6 +197,43 @@ export async function getCustomer(
 }
 
 /**
+ * Müşteri satırını kilitler ve kaydı okur.
+ *
+ * Müşteri arşivi ile projeye yazma bu satır üzerinde serileşir: arşiv işlemi
+ * aktif proje sayısını kilit altında sayar, proje yazımı ise kilidi alarak
+ * müşterinin arşivlenmediğini doğrular. Böylece arşivlenmiş bir müşterinin
+ * aktif projesi kalmaz.
+ */
+export async function lockCustomer(
+  tx: DbClient,
+  organizationId: string,
+  customerId: string,
+): Promise<CustomerRecord | null> {
+  const rows = await tx
+    .select({
+      id: customer.id,
+      organizationId: customer.organizationId,
+      code: customer.code,
+      name: customer.name,
+      legalName: customer.legalName,
+      description: customer.description,
+      website: customer.website,
+      countryCode: customer.countryCode,
+      preferredLanguage: customer.preferredLanguage,
+      status: customer.status,
+      createdAt: customer.createdAt,
+      updatedAt: customer.updatedAt,
+      archivedAt: customer.archivedAt,
+    })
+    .from(customer)
+    .where(and(eq(customer.organizationId, organizationId), eq(customer.id, customerId)))
+    .for("update")
+    .limit(1);
+
+  return rows[0] ?? null;
+}
+
+/**
  * Müşteri kodu organizasyon içinde unique olmalıdır.
  *
  * Arşivlenen kayıtlar da unique kapsamındadır: arşivlenmiş bir kod yeniden
@@ -202,8 +243,9 @@ export async function findCustomerByCode(
   organizationId: string,
   code: string,
   excludeId?: string,
+  client: DbClient | typeof db = db,
 ): Promise<CustomerRecord | null> {
-  const rows = await db
+  const rows = await client
     .select({
       id: customer.id,
       organizationId: customer.organizationId,
@@ -266,8 +308,9 @@ export async function listCustomerSites(
 export async function getCustomerSite(
   organizationId: string,
   siteId: string,
+  client: DbClient | typeof db = db,
 ): Promise<CustomerSiteRecord | null> {
-  const rows = await db
+  const rows = await client
     .select({
       id: customerSite.id,
       customerId: customerSite.customerId,
@@ -294,8 +337,9 @@ export async function findCustomerSiteByCode(
   customerId: string,
   code: string,
   excludeId?: string,
+  client: DbClient | typeof db = db,
 ): Promise<CustomerSiteRecord | null> {
-  const rows = await db
+  const rows = await client
     .select({
       id: customerSite.id,
       customerId: customerSite.customerId,
@@ -359,8 +403,9 @@ export async function listCustomerContacts(
 export async function getCustomerContact(
   organizationId: string,
   contactId: string,
+  client: DbClient | typeof db = db,
 ): Promise<CustomerContactRecord | null> {
-  const rows = await db
+  const rows = await client
     .select({
       id: customerContact.id,
       customerId: customerContact.customerId,
@@ -383,6 +428,32 @@ export async function getCustomerContact(
     .limit(1);
 
   return rows[0] ?? null;
+}
+
+/**
+ * Müşterinin aktif proje sayısı.
+ *
+ * Müşteri arşivlenirken kontrol edilir: aktif projesi olan bir müşteri
+ * arşivlenemez.
+ */
+export async function countActiveProjectsByCustomer(
+  organizationId: string,
+  customerId: string,
+  client: DbClient | typeof db = db,
+): Promise<number> {
+  const rows = await client
+    .select({ value: count() })
+    .from(project)
+    .where(
+      and(
+        eq(project.organizationId, organizationId),
+        eq(project.customerId, customerId),
+        eq(project.status, "ACTIVE"),
+        isNull(project.archivedAt),
+      ),
+    );
+
+  return rows[0]?.value ?? 0;
 }
 
 /**
@@ -432,31 +503,6 @@ export async function listAllCustomerSiteOptions(
       ),
     )
     .orderBy(asc(customerSite.name));
-}
-
-/**
- * Müşterinin aktif proje sayısı.
- *
- * Müşteri arşivlenirken kontrol edilir: aktif projesi olan bir müşteri
- * arşivlenemez.
- */
-export async function countActiveProjectsByCustomer(
-  organizationId: string,
-  customerId: string,
-): Promise<number> {
-  const rows = await db
-    .select({ value: count() })
-    .from(project)
-    .where(
-      and(
-        eq(project.organizationId, organizationId),
-        eq(project.customerId, customerId),
-        eq(project.status, "ACTIVE"),
-        isNull(project.archivedAt),
-      ),
-    );
-
-  return rows[0]?.value ?? 0;
 }
 
 /** Müşterinin projeleri (özet). */

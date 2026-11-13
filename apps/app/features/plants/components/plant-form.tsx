@@ -75,12 +75,20 @@ export function PlantForm({ plant }: PlantFormProps) {
       return;
     }
 
-    form.reset();
-
     if (plant) {
+      /*
+       * Düzenleme sonrası form, **kaydedilen** değerlerle sıfırlanır.
+       * `reset()` varsayılan değerlere döner ve bunlar eski kaydın değerleridir:
+       * bir sonraki kayıt, yalnızca başka bir alanı değiştirdiğinde ilk
+       * değişikliği geri alırdı.
+       */
+      form.reset(values);
+
       router.refresh();
       return;
     }
+
+    form.reset();
 
     router.push("/plants");
     router.refresh();

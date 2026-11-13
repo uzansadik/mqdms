@@ -1,4 +1,4 @@
-import { db } from "@mqdms/db";
+import { type DbClient, db } from "@mqdms/db";
 import {
   customer,
   customerSite,
@@ -150,8 +150,9 @@ export async function countProjects(query: ProjectListQuery): Promise<number> {
 export async function getProject(
   organizationId: string,
   projectId: string,
+  client: DbClient | typeof db = db,
 ): Promise<ProjectRecord | null> {
-  const rows = await db
+  const rows = await client
     .select({
       id: project.id,
       organizationId: project.organizationId,
@@ -182,8 +183,9 @@ export async function findProjectByCode(
   organizationId: string,
   code: string,
   excludeId?: string,
+  client: DbClient | typeof db = db,
 ): Promise<ProjectRecord | null> {
-  const rows = await db
+  const rows = await client
     .select({
       id: project.id,
       organizationId: project.organizationId,
@@ -219,8 +221,9 @@ export async function findProjectByCode(
 export async function listProjectPlants(
   organizationId: string,
   projectId: string,
+  client: DbClient | typeof db = db,
 ): Promise<ProjectPlantRecord[]> {
-  return db
+  return client
     .select({
       id: projectPlant.id,
       plantId: projectPlant.plantId,
@@ -270,8 +273,9 @@ export async function findProjectPlant(
   organizationId: string,
   projectId: string,
   plantId: string,
+  client: DbClient | typeof db = db,
 ): Promise<{ id: string; isPrimary: boolean } | null> {
-  const rows = await db
+  const rows = await client
     .select({ id: projectPlant.id, isPrimary: projectPlant.isPrimary })
     .from(projectPlant)
     .where(
@@ -290,8 +294,9 @@ export async function findProjectPlant(
 export async function findPrimaryProjectPlant(
   organizationId: string,
   projectId: string,
+  client: DbClient | typeof db = db,
 ): Promise<{ id: string } | null> {
-  const rows = await db
+  const rows = await client
     .select({ id: projectPlant.id })
     .from(projectPlant)
     .where(
@@ -311,8 +316,9 @@ export async function findActiveProjectMember(
   organizationId: string,
   projectId: string,
   memberId: string,
+  client: DbClient | typeof db = db,
 ): Promise<{ id: string } | null> {
-  const rows = await db
+  const rows = await client
     .select({ id: projectMember.id })
     .from(projectMember)
     .where(
@@ -336,8 +342,9 @@ export async function findActiveProjectMember(
 export async function findMemberInOrganization(
   organizationId: string,
   memberId: string,
+  client: DbClient | typeof db = db,
 ): Promise<{ id: string; userId: string; name: string; email: string } | null> {
-  const rows = await db
+  const rows = await client
     .select({
       id: member.id,
       userId: member.userId,

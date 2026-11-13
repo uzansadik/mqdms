@@ -11,6 +11,7 @@ import {
   getCustomer,
   getCustomerContact,
   getCustomerSite,
+  lockCustomer,
 } from "./repository";
 import type {
   CustomerContactFormValues,
@@ -93,43 +94,48 @@ export async function createCustomer(
 
   const code = normalizeCode(input.code);
 
-  const existing = await findCustomerByCode(context.organizationId, code);
+  return db.transaction(async (tx) => {
+    const existing = await findCustomerByCode(context.organizationId, code, undefined, tx);
 
-  if (existing) {
-    throw new BusinessRuleError("Bu müşteri kodu zaten kullanılıyor.", "CONFLICT");
-  }
+    if (existing) {
+      throw new BusinessRuleError("Bu müşteri kodu zaten kullanılıyor.", "CONFLICT");
+    }
 
-  const created = await db
-    .insert(customer)
-    .values({
-      organizationId: context.organizationId,
-      code,
-      name: input.name.trim(),
-      legalName: toNull(input.legalName),
-      description: toNull(input.description),
-      website: toNull(input.website),
-      countryCode: toCountryCode(input.countryCode),
-      preferredLanguage: toNull(input.preferredLanguage),
-      status: input.status,
-      createdById: context.userId,
-    })
-    .returning({ id: customer.id });
+    const created = await tx
+      .insert(customer)
+      .values({
+        organizationId: context.organizationId,
+        code,
+        name: input.name.trim(),
+        legalName: toNull(input.legalName),
+        description: toNull(input.description),
+        website: toNull(input.website),
+        countryCode: toCountryCode(input.countryCode),
+        preferredLanguage: toNull(input.preferredLanguage),
+        status: input.status,
+        createdById: context.userId,
+      })
+      .returning({ id: customer.id });
 
-  const customerId = created[0]?.id;
+    const customerId = created[0]?.id;
 
-  if (!customerId) {
-    throw new BusinessRuleError("Müşteri oluşturulamadı.", "INVALID_INPUT");
-  }
+    if (!customerId) {
+      throw new BusinessRuleError("Müşteri oluşturulamadı.", "INVALID_INPUT");
+    }
 
-  await writeAuditLog({
-    organizationId: context.organizationId,
-    actorId: context.userId,
-    action: "customer.created",
-    target: { type: "customer", id: customerId },
-    metadata: { code, name: input.name.trim() },
+    await writeAuditLog(
+      {
+        organizationId: context.organizationId,
+        actorId: context.userId,
+        action: "customer.created",
+        target: { type: "customer", id: customerId },
+        metadata: { code, name: input.name.trim() },
+      },
+      tx,
+    );
+
+    return customerId;
   });
-
-  return customerId;
 }
 
 /** Müşteriyi günceller. */
@@ -140,40 +146,45 @@ export async function updateCustomer(
 ): Promise<void> {
   await requireBusinessPermission(context, "customers", "update");
 
-  const target = await getCustomer(context.organizationId, customerId);
-
-  if (!target) {
-    throw new BusinessRuleError("Müşteri bulunamadı.", "NOT_FOUND");
-  }
-
   const code = normalizeCode(input.code);
 
-  const existing = await findCustomerByCode(context.organizationId, code, customerId);
+  await db.transaction(async (tx) => {
+    const target = await getCustomer(context.organizationId, customerId, tx);
 
-  if (existing) {
-    throw new BusinessRuleError("Bu müşteri kodu zaten kullanılıyor.", "CONFLICT");
-  }
+    if (!target) {
+      throw new BusinessRuleError("Müşteri bulunamadı.", "NOT_FOUND");
+    }
 
-  await db
-    .update(customer)
-    .set({
-      code,
-      name: input.name.trim(),
-      legalName: toNull(input.legalName),
-      description: toNull(input.description),
-      website: toNull(input.website),
-      countryCode: toCountryCode(input.countryCode),
-      preferredLanguage: toNull(input.preferredLanguage),
-      status: input.status,
-    })
-    .where(and(eq(customer.organizationId, context.organizationId), eq(customer.id, customerId)));
+    const existing = await findCustomerByCode(context.organizationId, code, customerId, tx);
 
-  await writeAuditLog({
-    organizationId: context.organizationId,
-    actorId: context.userId,
-    action: "customer.updated",
-    target: { type: "customer", id: customerId },
-    metadata: { code, name: input.name.trim() },
+    if (existing) {
+      throw new BusinessRuleError("Bu müşteri kodu zaten kullanılıyor.", "CONFLICT");
+    }
+
+    await tx
+      .update(customer)
+      .set({
+        code,
+        name: input.name.trim(),
+        legalName: toNull(input.legalName),
+        description: toNull(input.description),
+        website: toNull(input.website),
+        countryCode: toCountryCode(input.countryCode),
+        preferredLanguage: toNull(input.preferredLanguage),
+        status: input.status,
+      })
+      .where(and(eq(customer.organizationId, context.organizationId), eq(customer.id, customerId)));
+
+    await writeAuditLog(
+      {
+        organizationId: context.organizationId,
+        actorId: context.userId,
+        action: "customer.updated",
+        target: { type: "customer", id: customerId },
+        metadata: { code, name: input.name.trim() },
+      },
+      tx,
+    );
   });
 }
 
@@ -183,41 +194,54 @@ export async function updateCustomer(
  * Aktif projesi bulunan müşteri arşivlenemez: arşivlenen müşterinin
  * projeleri çalışmaya devam eder ve kayıt kaybolur.
  *
+ * Arşiv, müşteri satırını kilit altında sayar. Proje yazımları da aynı satırı
+ * kilitlediği için arşiv ile proje oluşturma serileşir: arşivlenmiş bir
+ * müşterinin aktif projesi kalamaz.
+ *
  * İlişkili kayıtlar (site, temsilci, proje) **fiziksel olarak silinmez**.
  */
 export async function archiveCustomer(context: AuthContext, customerId: string): Promise<void> {
   await requireBusinessPermission(context, "customers", "archive");
 
-  const target = await getCustomer(context.organizationId, customerId);
+  await db.transaction(async (tx) => {
+    const target = await lockCustomer(tx, context.organizationId, customerId);
 
-  if (!target) {
-    throw new BusinessRuleError("Müşteri bulunamadı.", "NOT_FOUND");
-  }
+    if (!target) {
+      throw new BusinessRuleError("Müşteri bulunamadı.", "NOT_FOUND");
+    }
 
-  if (target.archivedAt) {
-    return;
-  }
+    if (target.archivedAt) {
+      return;
+    }
 
-  const activeProjects = await countActiveProjectsByCustomer(context.organizationId, customerId);
-
-  if (activeProjects > 0) {
-    throw new BusinessRuleError(
-      "Müşterinin aktif projeleri var. Önce projeleri tamamlayın veya arşivleyin.",
-      "CONFLICT",
+    const activeProjects = await countActiveProjectsByCustomer(
+      context.organizationId,
+      customerId,
+      tx,
     );
-  }
 
-  await db
-    .update(customer)
-    .set({ archivedAt: new Date() })
-    .where(and(eq(customer.organizationId, context.organizationId), eq(customer.id, customerId)));
+    if (activeProjects > 0) {
+      throw new BusinessRuleError(
+        "Müşterinin aktif projeleri var. Önce projeleri tamamlayın veya arşivleyin.",
+        "CONFLICT",
+      );
+    }
 
-  await writeAuditLog({
-    organizationId: context.organizationId,
-    actorId: context.userId,
-    action: "customer.archived",
-    target: { type: "customer", id: customerId },
-    metadata: { code: target.code },
+    await tx
+      .update(customer)
+      .set({ archivedAt: new Date() })
+      .where(and(eq(customer.organizationId, context.organizationId), eq(customer.id, customerId)));
+
+    await writeAuditLog(
+      {
+        organizationId: context.organizationId,
+        actorId: context.userId,
+        action: "customer.archived",
+        target: { type: "customer", id: customerId },
+        metadata: { code: target.code },
+      },
+      tx,
+    );
   });
 }
 
@@ -225,27 +249,32 @@ export async function archiveCustomer(context: AuthContext, customerId: string):
 export async function restoreCustomer(context: AuthContext, customerId: string): Promise<void> {
   await requireBusinessPermission(context, "customers", "restore");
 
-  const target = await getCustomer(context.organizationId, customerId);
+  await db.transaction(async (tx) => {
+    const target = await lockCustomer(tx, context.organizationId, customerId);
 
-  if (!target) {
-    throw new BusinessRuleError("Müşteri bulunamadı.", "NOT_FOUND");
-  }
+    if (!target) {
+      throw new BusinessRuleError("Müşteri bulunamadı.", "NOT_FOUND");
+    }
 
-  if (!target.archivedAt) {
-    return;
-  }
+    if (!target.archivedAt) {
+      return;
+    }
 
-  await db
-    .update(customer)
-    .set({ archivedAt: null })
-    .where(and(eq(customer.organizationId, context.organizationId), eq(customer.id, customerId)));
+    await tx
+      .update(customer)
+      .set({ archivedAt: null })
+      .where(and(eq(customer.organizationId, context.organizationId), eq(customer.id, customerId)));
 
-  await writeAuditLog({
-    organizationId: context.organizationId,
-    actorId: context.userId,
-    action: "customer.restored",
-    target: { type: "customer", id: customerId },
-    metadata: { code: target.code },
+    await writeAuditLog(
+      {
+        organizationId: context.organizationId,
+        actorId: context.userId,
+        action: "customer.restored",
+        target: { type: "customer", id: customerId },
+        metadata: { code: target.code },
+      },
+      tx,
+    );
   });
 }
 
@@ -260,52 +289,63 @@ export async function createCustomerSite(
 ): Promise<string> {
   await requireBusinessPermission(context, "customers", "create");
 
-  const target = await getCustomer(context.organizationId, input.customerId);
-
-  if (!target || target.archivedAt) {
-    throw new BusinessRuleError("Müşteri bulunamadı.", "NOT_FOUND");
-  }
-
   const code = normalizeCode(input.code);
 
-  const existing = await findCustomerSiteByCode(context.organizationId, input.customerId, code);
+  return db.transaction(async (tx) => {
+    const target = await getCustomer(context.organizationId, input.customerId, tx);
 
-  if (existing) {
-    throw new BusinessRuleError("Bu site kodu bu müşteri içinde zaten kullanılıyor.", "CONFLICT");
-  }
+    if (!target || target.archivedAt) {
+      throw new BusinessRuleError("Müşteri bulunamadı.", "NOT_FOUND");
+    }
 
-  const created = await db
-    .insert(customerSite)
-    .values({
-      organizationId: context.organizationId,
-      customerId: input.customerId,
+    const existing = await findCustomerSiteByCode(
+      context.organizationId,
+      input.customerId,
       code,
-      name: input.name.trim(),
-      countryCode: toCountryCode(input.countryCode),
-      city: toNull(input.city),
-      address: toNull(input.address),
-      postalCode: toNull(input.postalCode),
-      description: toNull(input.description),
-      status: input.status,
-      createdById: context.userId,
-    })
-    .returning({ id: customerSite.id });
+      undefined,
+      tx,
+    );
 
-  const siteId = created[0]?.id;
+    if (existing) {
+      throw new BusinessRuleError("Bu site kodu bu müşteri içinde zaten kullanılıyor.", "CONFLICT");
+    }
 
-  if (!siteId) {
-    throw new BusinessRuleError("Site oluşturulamadı.", "INVALID_INPUT");
-  }
+    const created = await tx
+      .insert(customerSite)
+      .values({
+        organizationId: context.organizationId,
+        customerId: input.customerId,
+        code,
+        name: input.name.trim(),
+        countryCode: toCountryCode(input.countryCode),
+        city: toNull(input.city),
+        address: toNull(input.address),
+        postalCode: toNull(input.postalCode),
+        description: toNull(input.description),
+        status: input.status,
+        createdById: context.userId,
+      })
+      .returning({ id: customerSite.id });
 
-  await writeAuditLog({
-    organizationId: context.organizationId,
-    actorId: context.userId,
-    action: "customerSite.created",
-    target: { type: "customerSite", id: siteId },
-    metadata: { customerId: input.customerId, code, name: input.name.trim() },
+    const siteId = created[0]?.id;
+
+    if (!siteId) {
+      throw new BusinessRuleError("Site oluşturulamadı.", "INVALID_INPUT");
+    }
+
+    await writeAuditLog(
+      {
+        organizationId: context.organizationId,
+        actorId: context.userId,
+        action: "customerSite.created",
+        target: { type: "customerSite", id: siteId },
+        metadata: { customerId: input.customerId, code, name: input.name.trim() },
+      },
+      tx,
+    );
+
+    return siteId;
   });
-
-  return siteId;
 }
 
 /** Müşteri sitesini günceller. */
@@ -316,47 +356,53 @@ export async function updateCustomerSite(
 ): Promise<void> {
   await requireBusinessPermission(context, "customers", "update");
 
-  const target = await getCustomerSite(context.organizationId, siteId);
-
-  if (!target) {
-    throw new BusinessRuleError("Site bulunamadı.", "NOT_FOUND");
-  }
-
   const code = normalizeCode(input.code);
 
-  const existing = await findCustomerSiteByCode(
-    context.organizationId,
-    target.customerId,
-    code,
-    siteId,
-  );
+  await db.transaction(async (tx) => {
+    const target = await getCustomerSite(context.organizationId, siteId, tx);
 
-  if (existing) {
-    throw new BusinessRuleError("Bu site kodu bu müşteri içinde zaten kullanılıyor.", "CONFLICT");
-  }
+    if (!target) {
+      throw new BusinessRuleError("Site bulunamadı.", "NOT_FOUND");
+    }
 
-  await db
-    .update(customerSite)
-    .set({
+    const existing = await findCustomerSiteByCode(
+      context.organizationId,
+      target.customerId,
       code,
-      name: input.name.trim(),
-      countryCode: toCountryCode(input.countryCode),
-      city: toNull(input.city),
-      address: toNull(input.address),
-      postalCode: toNull(input.postalCode),
-      description: toNull(input.description),
-      status: input.status,
-    })
-    .where(
-      and(eq(customerSite.organizationId, context.organizationId), eq(customerSite.id, siteId)),
+      siteId,
+      tx,
     );
 
-  await writeAuditLog({
-    organizationId: context.organizationId,
-    actorId: context.userId,
-    action: "customerSite.updated",
-    target: { type: "customerSite", id: siteId },
-    metadata: { customerId: target.customerId, code },
+    if (existing) {
+      throw new BusinessRuleError("Bu site kodu bu müşteri içinde zaten kullanılıyor.", "CONFLICT");
+    }
+
+    await tx
+      .update(customerSite)
+      .set({
+        code,
+        name: input.name.trim(),
+        countryCode: toCountryCode(input.countryCode),
+        city: toNull(input.city),
+        address: toNull(input.address),
+        postalCode: toNull(input.postalCode),
+        description: toNull(input.description),
+        status: input.status,
+      })
+      .where(
+        and(eq(customerSite.organizationId, context.organizationId), eq(customerSite.id, siteId)),
+      );
+
+    await writeAuditLog(
+      {
+        organizationId: context.organizationId,
+        actorId: context.userId,
+        action: "customerSite.updated",
+        target: { type: "customerSite", id: siteId },
+        metadata: { customerId: target.customerId, code },
+      },
+      tx,
+    );
   });
 }
 
@@ -364,29 +410,34 @@ export async function updateCustomerSite(
 export async function archiveCustomerSite(context: AuthContext, siteId: string): Promise<void> {
   await requireBusinessPermission(context, "customers", "archive");
 
-  const target = await getCustomerSite(context.organizationId, siteId);
+  await db.transaction(async (tx) => {
+    const target = await getCustomerSite(context.organizationId, siteId, tx);
 
-  if (!target) {
-    throw new BusinessRuleError("Site bulunamadı.", "NOT_FOUND");
-  }
+    if (!target) {
+      throw new BusinessRuleError("Site bulunamadı.", "NOT_FOUND");
+    }
 
-  if (target.archivedAt) {
-    return;
-  }
+    if (target.archivedAt) {
+      return;
+    }
 
-  await db
-    .update(customerSite)
-    .set({ archivedAt: new Date() })
-    .where(
-      and(eq(customerSite.organizationId, context.organizationId), eq(customerSite.id, siteId)),
+    await tx
+      .update(customerSite)
+      .set({ archivedAt: new Date() })
+      .where(
+        and(eq(customerSite.organizationId, context.organizationId), eq(customerSite.id, siteId)),
+      );
+
+    await writeAuditLog(
+      {
+        organizationId: context.organizationId,
+        actorId: context.userId,
+        action: "customerSite.archived",
+        target: { type: "customerSite", id: siteId },
+        metadata: { customerId: target.customerId, code: target.code },
+      },
+      tx,
     );
-
-  await writeAuditLog({
-    organizationId: context.organizationId,
-    actorId: context.userId,
-    action: "customerSite.archived",
-    target: { type: "customerSite", id: siteId },
-    metadata: { customerId: target.customerId, code: target.code },
   });
 }
 
@@ -406,60 +457,65 @@ export async function createCustomerContact(
 ): Promise<string> {
   await requireBusinessPermission(context, "customers", "create");
 
-  const target = await getCustomer(context.organizationId, input.customerId);
-
-  if (!target || target.archivedAt) {
-    throw new BusinessRuleError("Müşteri bulunamadı.", "NOT_FOUND");
-  }
-
   const customerSiteId = toNull(input.customerSiteId);
 
-  // Site seçildiyse site gerçekten bu müşteriye ait olmalıdır.
-  if (customerSiteId) {
-    const site = await getCustomerSite(context.organizationId, customerSiteId);
+  return db.transaction(async (tx) => {
+    const target = await getCustomer(context.organizationId, input.customerId, tx);
 
-    if (!site || site.customerId !== input.customerId) {
-      throw new BusinessRuleError("Seçilen site bu müşteriye ait değil.", "INVALID_INPUT");
+    if (!target || target.archivedAt) {
+      throw new BusinessRuleError("Müşteri bulunamadı.", "NOT_FOUND");
     }
-  }
 
-  const created = await db
-    .insert(customerContact)
-    .values({
-      organizationId: context.organizationId,
-      customerId: input.customerId,
-      customerSiteId,
-      firstName: input.firstName.trim(),
-      lastName: input.lastName.trim(),
-      jobTitle: toNull(input.jobTitle),
-      department: toNull(input.department),
-      email: toNull(input.email),
-      phone: toNull(input.phone),
-      contactType: input.contactType,
-      notes: toNull(input.notes),
-      status: input.status,
-      createdById: context.userId,
-    })
-    .returning({ id: customerContact.id });
+    // Site seçildiyse site gerçekten bu müşteriye ait olmalıdır.
+    if (customerSiteId) {
+      const site = await getCustomerSite(context.organizationId, customerSiteId, tx);
 
-  const contactId = created[0]?.id;
+      if (!site || site.customerId !== input.customerId) {
+        throw new BusinessRuleError("Seçilen site bu müşteriye ait değil.", "INVALID_INPUT");
+      }
+    }
 
-  if (!contactId) {
-    throw new BusinessRuleError("Temsilci oluşturulamadı.", "INVALID_INPUT");
-  }
+    const created = await tx
+      .insert(customerContact)
+      .values({
+        organizationId: context.organizationId,
+        customerId: input.customerId,
+        customerSiteId,
+        firstName: input.firstName.trim(),
+        lastName: input.lastName.trim(),
+        jobTitle: toNull(input.jobTitle),
+        department: toNull(input.department),
+        email: toNull(input.email),
+        phone: toNull(input.phone),
+        contactType: input.contactType,
+        notes: toNull(input.notes),
+        status: input.status,
+        createdById: context.userId,
+      })
+      .returning({ id: customerContact.id });
 
-  await writeAuditLog({
-    organizationId: context.organizationId,
-    actorId: context.userId,
-    action: "customerContact.created",
-    target: { type: "customerContact", id: contactId },
-    metadata: {
-      customerId: input.customerId,
-      contactType: input.contactType,
-    },
+    const contactId = created[0]?.id;
+
+    if (!contactId) {
+      throw new BusinessRuleError("Temsilci oluşturulamadı.", "INVALID_INPUT");
+    }
+
+    await writeAuditLog(
+      {
+        organizationId: context.organizationId,
+        actorId: context.userId,
+        action: "customerContact.created",
+        target: { type: "customerContact", id: contactId },
+        metadata: {
+          customerId: input.customerId,
+          contactType: input.contactType,
+        },
+      },
+      tx,
+    );
+
+    return contactId;
   });
-
-  return contactId;
 }
 
 /** Müşteri temsilcisini günceller. */
@@ -470,49 +526,54 @@ export async function updateCustomerContact(
 ): Promise<void> {
   await requireBusinessPermission(context, "customers", "update");
 
-  const target = await getCustomerContact(context.organizationId, contactId);
-
-  if (!target) {
-    throw new BusinessRuleError("Temsilci bulunamadı.", "NOT_FOUND");
-  }
-
   const customerSiteId = toNull(input.customerSiteId);
 
-  if (customerSiteId) {
-    const site = await getCustomerSite(context.organizationId, customerSiteId);
+  await db.transaction(async (tx) => {
+    const target = await getCustomerContact(context.organizationId, contactId, tx);
 
-    if (!site || site.customerId !== target.customerId) {
-      throw new BusinessRuleError("Seçilen site bu müşteriye ait değil.", "INVALID_INPUT");
+    if (!target) {
+      throw new BusinessRuleError("Temsilci bulunamadı.", "NOT_FOUND");
     }
-  }
 
-  await db
-    .update(customerContact)
-    .set({
-      customerSiteId,
-      firstName: input.firstName.trim(),
-      lastName: input.lastName.trim(),
-      jobTitle: toNull(input.jobTitle),
-      department: toNull(input.department),
-      email: toNull(input.email),
-      phone: toNull(input.phone),
-      contactType: input.contactType,
-      notes: toNull(input.notes),
-      status: input.status,
-    })
-    .where(
-      and(
-        eq(customerContact.organizationId, context.organizationId),
-        eq(customerContact.id, contactId),
-      ),
+    if (customerSiteId) {
+      const site = await getCustomerSite(context.organizationId, customerSiteId, tx);
+
+      if (!site || site.customerId !== target.customerId) {
+        throw new BusinessRuleError("Seçilen site bu müşteriye ait değil.", "INVALID_INPUT");
+      }
+    }
+
+    await tx
+      .update(customerContact)
+      .set({
+        customerSiteId,
+        firstName: input.firstName.trim(),
+        lastName: input.lastName.trim(),
+        jobTitle: toNull(input.jobTitle),
+        department: toNull(input.department),
+        email: toNull(input.email),
+        phone: toNull(input.phone),
+        contactType: input.contactType,
+        notes: toNull(input.notes),
+        status: input.status,
+      })
+      .where(
+        and(
+          eq(customerContact.organizationId, context.organizationId),
+          eq(customerContact.id, contactId),
+        ),
+      );
+
+    await writeAuditLog(
+      {
+        organizationId: context.organizationId,
+        actorId: context.userId,
+        action: "customerContact.updated",
+        target: { type: "customerContact", id: contactId },
+        metadata: { customerId: target.customerId },
+      },
+      tx,
     );
-
-  await writeAuditLog({
-    organizationId: context.organizationId,
-    actorId: context.userId,
-    action: "customerContact.updated",
-    target: { type: "customerContact", id: contactId },
-    metadata: { customerId: target.customerId },
   });
 }
 
@@ -523,31 +584,36 @@ export async function archiveCustomerContact(
 ): Promise<void> {
   await requireBusinessPermission(context, "customers", "archive");
 
-  const target = await getCustomerContact(context.organizationId, contactId);
+  await db.transaction(async (tx) => {
+    const target = await getCustomerContact(context.organizationId, contactId, tx);
 
-  if (!target) {
-    throw new BusinessRuleError("Temsilci bulunamadı.", "NOT_FOUND");
-  }
+    if (!target) {
+      throw new BusinessRuleError("Temsilci bulunamadı.", "NOT_FOUND");
+    }
 
-  if (target.archivedAt) {
-    return;
-  }
+    if (target.archivedAt) {
+      return;
+    }
 
-  await db
-    .update(customerContact)
-    .set({ archivedAt: new Date() })
-    .where(
-      and(
-        eq(customerContact.organizationId, context.organizationId),
-        eq(customerContact.id, contactId),
-      ),
+    await tx
+      .update(customerContact)
+      .set({ archivedAt: new Date() })
+      .where(
+        and(
+          eq(customerContact.organizationId, context.organizationId),
+          eq(customerContact.id, contactId),
+        ),
+      );
+
+    await writeAuditLog(
+      {
+        organizationId: context.organizationId,
+        actorId: context.userId,
+        action: "customerContact.archived",
+        target: { type: "customerContact", id: contactId },
+        metadata: { customerId: target.customerId },
+      },
+      tx,
     );
-
-  await writeAuditLog({
-    organizationId: context.organizationId,
-    actorId: context.userId,
-    action: "customerContact.archived",
-    target: { type: "customerContact", id: contactId },
-    metadata: { customerId: target.customerId },
   });
 }
