@@ -15,7 +15,15 @@ import {
   SidebarMenuItem,
   SidebarRail,
 } from "@mqdms/ui/components/sidebar";
-import { FileSpreadsheet, LayoutDashboard, Network, UserRound } from "lucide-react";
+import {
+  Building2,
+  Factory,
+  FileSpreadsheet,
+  FolderKanban,
+  LayoutDashboard,
+  Network,
+  UserRound,
+} from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -55,6 +63,27 @@ export function AppSidebar({ organization, user, visibleModules }: AppSidebarPro
       href: "/synoptic",
       icon: Network,
       module: "synoptic",
+    },
+  ].filter((item) => visibleModules.includes(item.module));
+
+  const management = [
+    {
+      title: t("app.nav.customers"),
+      href: "/customers",
+      icon: Building2,
+      module: "customers",
+    },
+    {
+      title: t("app.nav.plants"),
+      href: "/plants",
+      icon: Factory,
+      module: "plants",
+    },
+    {
+      title: t("app.nav.projects"),
+      href: "/projects",
+      icon: FolderKanban,
+      module: "projects",
     },
   ].filter((item) => visibleModules.includes(item.module));
 
@@ -106,6 +135,33 @@ export function AppSidebar({ organization, user, visibleModules }: AppSidebarPro
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+
+        {management.length > 0 && (
+          <SidebarGroup>
+            <SidebarGroupLabel>{t("app.nav.management")}</SidebarGroupLabel>
+
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {management.map((item) => {
+                  const Icon = item.icon;
+
+                  const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
+
+                  return (
+                    <SidebarMenuItem key={item.href}>
+                      <SidebarMenuButton asChild isActive={isActive} tooltip={item.title}>
+                        <Link href={item.href}>
+                          <Icon />
+                          <span>{item.title}</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                })}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
       </SidebarContent>
 
       <SidebarFooter>

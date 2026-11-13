@@ -5,6 +5,7 @@ import {
   deleteRole,
   setMemberPermission,
   updateRole,
+  upgradeFactoryRoleSeeds,
 } from "@mqdms/auth/permissions/server";
 import { z } from "zod";
 
@@ -163,4 +164,38 @@ export async function deleteRoleAction(input: unknown): Promise<SetPermissionRes
   }
 
   return { success: true };
+}
+
+/**
+ * Fabrika seed rollerini güncel sürüme taşır.
+ *
+ * Yeni bir kaynak veya aksiyon eklendiğinde mevcut organizasyonların seed
+ * rolleri geriye dönük güncellenmez; owner bu işlemi açıkça tetikler.
+ * Yalnızca yeni sürümde tanımlanan izinler eklenir.
+ */
+export async function upgradeFactoryRolesAction(): Promise<
+  | {
+      success: true;
+      upgradedRoles: number;
+    }
+  | { success: false; error: string }
+> {
+  const context = await requireRequestContext();
+
+  if (!context.isOwner) {
+    return { success: false, error: "Only the organization owner can perform this action." };
+  }
+
+  try {
+    const upgradedRoles = await upgradeFactoryRoleSeeds(context);
+
+    return { success: true, upgradedRoles };
+  } catch (error) {
+    console.error("Failed to upgrade the factory roles:", error);
+
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unable to upgrade the factory roles.",
+    };
+  }
 }

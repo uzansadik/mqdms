@@ -408,6 +408,33 @@ export async function listCustomerOptions(
 }
 
 /**
+ * Form seçim listesi için müşteri siteleri.
+ *
+ * Proje formunda site seçimi müşteriye göre filtrelenir; tüm siteler
+ * istemciye gönderilip seçilen müşteriye göre süzülür.
+ */
+export async function listAllCustomerSiteOptions(
+  organizationId: string,
+): Promise<{ id: string; customerId: string; code: string; name: string }[]> {
+  return db
+    .select({
+      id: customerSite.id,
+      customerId: customerSite.customerId,
+      code: customerSite.code,
+      name: customerSite.name,
+    })
+    .from(customerSite)
+    .where(
+      and(
+        eq(customerSite.organizationId, organizationId),
+        isNull(customerSite.archivedAt),
+        eq(customerSite.status, "ACTIVE"),
+      ),
+    )
+    .orderBy(asc(customerSite.name));
+}
+
+/**
  * Müşterinin aktif proje sayısı.
  *
  * Müşteri arşivlenirken kontrol edilir: aktif projesi olan bir müşteri

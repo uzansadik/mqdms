@@ -164,6 +164,10 @@ export const en = {
   "app.nav.fmea": "FMEA",
   "app.nav.synoptic": "Synoptic",
   "app.nav.account": "Account settings",
+  "app.nav.management": "Management",
+  "app.nav.customers": "Customers",
+  "app.nav.plants": "Plants",
+  "app.nav.projects": "Projects",
 
   "app.dashboard.welcome": "Welcome back, {name}",
   "app.dashboard.description": "Here is an overview of {organization}.",
@@ -191,6 +195,13 @@ export const en = {
   "common.notFound.description":
     "The record you are looking for does not exist or you do not have access to it.",
   "common.notFound.back": "Back to dashboard",
+
+  "organization.roles.seedUpgrade.title": "Update the factory roles",
+  "organization.roles.seedUpgrade.description":
+    "Applies the permissions introduced by a new factory seed version. Permissions you removed from a factory role stay removed and custom roles are never touched.",
+  "organization.roles.seedUpgrade.submit": "Update factory roles",
+  "organization.roles.seedUpgrade.running": "Updating...",
+  "organization.roles.seedUpgrade.success": "{count} factory roles updated.",
 
   "customers.title": "Customers",
   "customers.description": "Companies you produce for, their sites and their representatives.",

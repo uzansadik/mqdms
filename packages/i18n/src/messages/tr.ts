@@ -165,6 +165,10 @@ export const tr = {
   "app.nav.fmea": "FMEA",
   "app.nav.synoptic": "Sinoptik",
   "app.nav.account": "Hesap ayarları",
+  "app.nav.management": "Yönetim",
+  "app.nav.customers": "Müşteriler",
+  "app.nav.plants": "Tesisler",
+  "app.nav.projects": "Projeler",
 
   "app.dashboard.welcome": "Tekrar hoş geldin, {name}",
   "app.dashboard.description": "{organization} için genel bakış.",
@@ -191,6 +195,13 @@ export const tr = {
   "common.notFound.title": "Kayıt bulunamadı",
   "common.notFound.description": "Aradığınız kayıt mevcut değil veya erişim yetkiniz yok.",
   "common.notFound.back": "Kontrol paneline dön",
+
+  "organization.roles.seedUpgrade.title": "Fabrika rollerini güncelle",
+  "organization.roles.seedUpgrade.description":
+    "Yeni fabrika seed sürümüyle eklenen izinleri uygular. Fabrika rolünden kaldırdığınız izinler geri gelmez ve custom roller hiç değiştirilmez.",
+  "organization.roles.seedUpgrade.submit": "Fabrika rollerini güncelle",
+  "organization.roles.seedUpgrade.running": "Güncelleniyor...",
+  "organization.roles.seedUpgrade.success": "{count} fabrika rolü güncellendi.",
 
   "customers.title": "Müşteriler",
   "customers.description": "Üretim yaptığınız firmalar, tesisleri ve temsilcileri.",

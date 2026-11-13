@@ -30,6 +30,18 @@ export default async function ProtectedLayout({ children }: ProtectedLayoutProps
     visibleModules.push("synoptic");
   }
 
+  if (await canAccess(context, "customers", "read")) {
+    visibleModules.push("customers");
+  }
+
+  if (await canAccess(context, "plants", "read")) {
+    visibleModules.push("plants");
+  }
+
+  if (await canAccess(context, "projects", "read")) {
+    visibleModules.push("projects");
+  }
+
   return (
     <SidebarProvider>
       <AppSidebar
