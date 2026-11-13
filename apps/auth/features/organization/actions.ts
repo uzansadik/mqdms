@@ -4,7 +4,7 @@ import { assignMemberRoles } from "@mqdms/auth/permissions/server";
 import { auth } from "@mqdms/auth/server";
 import { db } from "@mqdms/db";
 import { invitationRole, organizationRole, project } from "@mqdms/db/schema";
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, isNull } from "drizzle-orm";
 import { headers } from "next/headers";
 import { z } from "zod";
 
@@ -232,17 +232,37 @@ export async function removeMemberAction(input: unknown): Promise<OrganizationAc
      * Üye silinemedi. Üye silme better-auth'ın kendi transaction'ında
      * çalıştığı için temizlemeden ayrıdır: atamalar geri yazılır, aksi
      * halde üye organizasyonda kalır ama projelerdeki müdürlükleri kaybolur.
+     *
+     * Yalnızca hâlâ boş olan atamalar geri yazılır: temizleme ile bu
+     * an arasında projeye başka bir müdürr atanmış olabilir, o atama
+     * ezilmemelidir.
      */
     if (releasedProjectIds.length > 0) {
-      await db
-        .update(project)
-        .set({ projectManagerMemberId: memberId })
-        .where(
-          and(
-            eq(project.organizationId, context.organizationId),
-            inArray(project.id, releasedProjectIds),
-          ),
-        );
+      await db.transaction(async (tx) => {
+        const restored = await tx
+          .update(project)
+          .set({ projectManagerMemberId: memberId })
+          .where(
+            and(
+              eq(project.organizationId, context.organizationId),
+              inArray(project.id, releasedProjectIds),
+              isNull(project.projectManagerMemberId),
+            ),
+          )
+          .returning({ id: project.id });
+
+        if (restored.length > 0) {
+          await audit(
+            {
+              organizationId: context.organizationId,
+              action: "project.managerRestored",
+              target: { type: "member", id: memberId },
+              metadata: { projectIds: restored.map((item) => item.id) },
+            },
+            tx,
+          );
+        }
+      });
     }
 
     return { success: false, error: "Unable to remove the member." };
