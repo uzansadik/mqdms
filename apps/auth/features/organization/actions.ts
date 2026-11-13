@@ -234,35 +234,49 @@ export async function removeMemberAction(input: unknown): Promise<OrganizationAc
      * halde üye organizasyonda kalır ama projelerdeki müdürlükleri kaybolur.
      *
      * Yalnızca hâlâ boş olan atamalar geri yazılır: temizleme ile bu
-     * an arasında projeye başka bir müdürr atanmış olabilir, o atama
+     * an arasında projeye başka bir müdür atanmış olabilir, o atama
      * ezilmemelidir.
+     *
+     * Geri yazma başarısız olursa atamalar temizlenmiş kalır. Bu durum
+     * sessizce yutulmaz: etkilenen projeler `project.managerReleased`
+     * audit kaydında durur ve buraya da yazılır. Aksi hâlde aksiyon
+     * reddedilmez, kullanıcıya başarısızlık sonucu döner.
      */
     if (releasedProjectIds.length > 0) {
-      await db.transaction(async (tx) => {
-        const restored = await tx
-          .update(project)
-          .set({ projectManagerMemberId: memberId })
-          .where(
-            and(
-              eq(project.organizationId, context.organizationId),
-              inArray(project.id, releasedProjectIds),
-              isNull(project.projectManagerMemberId),
-            ),
-          )
-          .returning({ id: project.id });
+      try {
+        await db.transaction(async (tx) => {
+          const restored = await tx
+            .update(project)
+            .set({ projectManagerMemberId: memberId })
+            .where(
+              and(
+                eq(project.organizationId, context.organizationId),
+                inArray(project.id, releasedProjectIds),
+                isNull(project.projectManagerMemberId),
+              ),
+            )
+            .returning({ id: project.id });
 
-        if (restored.length > 0) {
-          await audit(
-            {
-              organizationId: context.organizationId,
-              action: "project.managerRestored",
-              target: { type: "member", id: memberId },
-              metadata: { projectIds: restored.map((item) => item.id) },
-            },
-            tx,
-          );
-        }
-      });
+          if (restored.length > 0) {
+            await audit(
+              {
+                organizationId: context.organizationId,
+                action: "project.managerRestored",
+                target: { type: "member", id: memberId },
+                metadata: { projectIds: restored.map((item) => item.id) },
+              },
+              tx,
+            );
+          }
+        });
+      } catch (restoreError) {
+        console.error("Failed to restore the project manager assignments:", restoreError);
+
+        console.error(
+          "The project manager assignments of the removed projects stay cleared:",
+          releasedProjectIds,
+        );
+      }
     }
 
     return { success: false, error: "Unable to remove the member." };
