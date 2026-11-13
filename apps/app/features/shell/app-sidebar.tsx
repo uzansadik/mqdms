@@ -16,12 +16,16 @@ import {
   SidebarRail,
 } from "@mqdms/ui/components/sidebar";
 import {
+  Boxes,
   Building2,
   Factory,
   FileSpreadsheet,
   FolderKanban,
+  FolderTree,
   LayoutDashboard,
   Network,
+  Package,
+  Ruler,
   UserRound,
 } from "lucide-react";
 import Link from "next/link";
@@ -87,6 +91,33 @@ export function AppSidebar({ organization, user, visibleModules }: AppSidebarPro
     },
   ].filter((item) => visibleModules.includes(item.module));
 
+  const productManagement = [
+    {
+      title: t("app.nav.items"),
+      href: "/items",
+      icon: Package,
+      module: "items",
+    },
+    {
+      title: t("app.nav.itemGroups"),
+      href: "/item-groups",
+      icon: FolderTree,
+      module: "itemGroups",
+    },
+    {
+      title: t("app.nav.boms"),
+      href: "/boms",
+      icon: Boxes,
+      module: "boms",
+    },
+    {
+      title: t("app.nav.units"),
+      href: "/units",
+      icon: Ruler,
+      module: "units",
+    },
+  ].filter((item) => visibleModules.includes(item.module));
+
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader>
@@ -143,6 +174,33 @@ export function AppSidebar({ organization, user, visibleModules }: AppSidebarPro
             <SidebarGroupContent>
               <SidebarMenu>
                 {management.map((item) => {
+                  const Icon = item.icon;
+
+                  const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
+
+                  return (
+                    <SidebarMenuItem key={item.href}>
+                      <SidebarMenuButton asChild isActive={isActive} tooltip={item.title}>
+                        <Link href={item.href}>
+                          <Icon />
+                          <span>{item.title}</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                })}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
+
+        {productManagement.length > 0 && (
+          <SidebarGroup>
+            <SidebarGroupLabel>{t("app.nav.productManagement")}</SidebarGroupLabel>
+
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {productManagement.map((item) => {
                   const Icon = item.icon;
 
                   const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);

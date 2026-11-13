@@ -16,6 +16,14 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { requireAuthContext } from "@/features/auth/session";
+import { analyzeProductStructure } from "@/features/product-structure/analysis";
+import { ProductStructurePanel } from "@/features/product-structure/components/product-structure-panel";
+import { ProjectItemForm } from "@/features/project-items/components/project-item-form";
+import {
+  getCustomerItemOptions,
+  getProjectItemFormOptions,
+  getProjectItemListData,
+} from "@/features/project-items/server";
 import { ProjectMemberActions } from "@/features/projects/components/project-member-actions";
 import { ProjectPlantActions } from "@/features/projects/components/project-plant-actions";
 import { ProjectPlantsForm } from "@/features/projects/components/project-plants-form";
@@ -29,6 +37,7 @@ import { StatusBadge } from "@/features/shared/status-badge";
 
 type PageProps = {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ structure?: string }>;
 };
 
 /**
@@ -36,7 +45,7 @@ type PageProps = {
  *
  * Sekmeler: genel bakış, ekip ve tesisler.
  */
-export default async function ProjectDetailPage({ params }: PageProps) {
+export default async function ProjectDetailPage({ params, searchParams }: PageProps) {
   const context = await requireAuthContext();
 
   await requireProjectsAccess("read");
@@ -50,6 +59,39 @@ export default async function ProjectDetailPage({ params }: PageProps) {
   }
 
   const options = await getProjectFormOptions(context.organizationId);
+
+  const [projectItems, projectItemOptions] = await Promise.all([
+    getProjectItemListData(context.organizationId, id),
+    getProjectItemFormOptions(context.organizationId),
+  ]);
+
+  /*
+   * Müşteri ürün referansları seçilen ürüne göre süzülür; formda yalnızca
+   * projenin müşterisine ait olanlar gösterilir.
+   */
+  const customerItemOptions = data.customer
+    ? await getCustomerItemOptions(context.organizationId, data.customer.id)
+    : [];
+
+  /*
+   * Ürün ağacı analizi, projedeki deliverable'ların BOM revision'ları
+   * üzerinden yapılır. Seçim yapılmadıysa analiz çalıştırılmaz.
+   */
+  const structureParams = await searchParams;
+
+  const deliverableBomRevisions = projectItems
+    .filter((projectItem) => projectItem.itemRole === "DELIVERABLE" && projectItem.bomRevisionId)
+    .map((projectItem) => ({
+      id: projectItem.bomRevisionId as string,
+      label: `${projectItem.itemCode ?? ""} · ${projectItem.itemName ?? ""}`,
+    }));
+
+  const selectedStructureId = structureParams.structure ?? null;
+
+  const structureAnalysis =
+    selectedStructureId && deliverableBomRevisions.some((r) => r.id === selectedStructureId)
+      ? await analyzeProductStructure(context.organizationId, selectedStructureId)
+      : null;
 
   const t = await getTranslations();
 
@@ -88,6 +130,10 @@ export default async function ProjectDetailPage({ params }: PageProps) {
           <TabsTrigger value="team">{t("projects.detail.tabs.team")}</TabsTrigger>
 
           <TabsTrigger value="plants">{t("projects.detail.tabs.plants")}</TabsTrigger>
+
+          <TabsTrigger value="items">{t("projects.detail.tabs.items")}</TabsTrigger>
+
+          <TabsTrigger value="structure">{t("projects.detail.tabs.structure")}</TabsTrigger>
         </TabsList>
 
         <TabsContent className="mt-4 space-y-4" value="overview">
@@ -310,6 +356,87 @@ export default async function ProjectDetailPage({ params }: PageProps) {
             hasPrimary={data.plants.some((projectPlant) => projectPlant.isPrimary)}
             plants={options.plants}
             projectId={data.project.id}
+          />
+        </TabsContent>
+
+        <TabsContent className="mt-4 space-y-4" value="items">
+          <Card>
+            <CardHeader>
+              <CardTitle>{t("projectItems.title")}</CardTitle>
+            </CardHeader>
+
+            <CardContent>
+              {projectItems.length === 0 ? (
+                <Empty>
+                  <EmptyHeader>
+                    <EmptyTitle>{t("projectItems.empty.title")}</EmptyTitle>
+
+                    <EmptyDescription>{t("projectItems.empty.description")}</EmptyDescription>
+                  </EmptyHeader>
+                </Empty>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>{t("projectItems.list.columns.item")}</TableHead>
+
+                      <TableHead>{t("projectItems.list.columns.role")}</TableHead>
+
+                      <TableHead>{t("projectItems.list.columns.customerPartNumber")}</TableHead>
+
+                      <TableHead>{t("projectItems.list.columns.revision")}</TableHead>
+
+                      <TableHead>{t("projectItems.list.columns.supplyType")}</TableHead>
+                    </TableRow>
+                  </TableHeader>
+
+                  <TableBody>
+                    {projectItems.map((projectItem) => (
+                      <TableRow key={projectItem.id}>
+                        <TableCell className="font-medium">
+                          {projectItem.itemCode ?? "-"}
+                          <span className="block text-xs text-muted-foreground">
+                            {projectItem.itemName ?? ""}
+                          </span>
+                        </TableCell>
+
+                        <TableCell>{t(`projectItems.role.${projectItem.itemRole}`)}</TableCell>
+
+                        <TableCell>{projectItem.customerPartNumber ?? "-"}</TableCell>
+
+                        <TableCell>
+                          {projectItem.itemRevision ?? projectItem.customerRevision ?? "-"}
+                        </TableCell>
+
+                        <TableCell>
+                          {projectItem.supplyTypeOverride
+                            ? t(`items.supplyType.${projectItem.supplyTypeOverride}`)
+                            : "-"}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+
+          <ProjectItemForm
+            bomRevisions={projectItemOptions.bomRevisions}
+            customerId={data.project.customerId}
+            customerItems={customerItemOptions}
+            itemRevisions={projectItemOptions.itemRevisions}
+            items={projectItemOptions.items}
+            projectId={data.project.id}
+          />
+        </TabsContent>
+
+        <TabsContent className="mt-4 space-y-4" value="structure">
+          <ProductStructurePanel
+            analysis={structureAnalysis}
+            path={`/projects/${data.project.id}`}
+            bomRevisions={deliverableBomRevisions}
+            selectedId={selectedStructureId}
           />
         </TabsContent>
       </Tabs>
