@@ -13,7 +13,7 @@ import {
 
 import { customer } from "../crm/customer";
 import { organization } from "../initial/auth";
-import { revisionStatus, recordStatus } from "./enums";
+import { recordStatus, revisionStatus } from "./enums";
 import { item } from "./item";
 import { itemRevision } from "./item-revision";
 

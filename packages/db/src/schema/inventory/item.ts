@@ -11,8 +11,8 @@ import {
 } from "drizzle-orm/pg-core";
 
 import { organization, user } from "../initial/auth";
-import { itemGroup } from "./item-group";
 import { itemType, recordStatus, supplyType } from "./enums";
+import { itemGroup } from "./item-group";
 import { itemUnit } from "./unit";
 
 /**
@@ -159,10 +159,7 @@ export const itemExternalReference = pgTable(
       .notNull(),
   },
   (table) => [
-    unique("item_external_reference_organization_id_id_unique").on(
-      table.organizationId,
-      table.id,
-    ),
+    unique("item_external_reference_organization_id_id_unique").on(table.organizationId, table.id),
 
     /*
      * Aynı source instance içindeki aynı harici kimlik birden fazla ürüne
@@ -170,21 +167,11 @@ export const itemExternalReference = pgTable(
      * `externalCode` tanımlıysa geçerlidir.
      */
     uniqueIndex("item_external_reference_identity_uidx")
-      .on(
-        table.organizationId,
-        table.sourceInstanceKey,
-        table.sourceSystem,
-        table.externalId,
-      )
+      .on(table.organizationId, table.sourceInstanceKey, table.sourceSystem, table.externalId)
       .where(sql`${table.externalId} is not null`),
 
     uniqueIndex("item_external_reference_code_uidx")
-      .on(
-        table.organizationId,
-        table.sourceInstanceKey,
-        table.sourceSystem,
-        table.externalCode,
-      )
+      .on(table.organizationId, table.sourceInstanceKey, table.sourceSystem, table.externalCode)
       .where(sql`${table.externalCode} is not null`),
 
     /*
