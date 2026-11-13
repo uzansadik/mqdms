@@ -16,6 +16,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { requireAuthContext } from "@/features/auth/session";
+import { analyzeProductStructure } from "@/features/product-structure/analysis";
+import { ProductStructurePanel } from "@/features/product-structure/components/product-structure-panel";
 import { ProjectItemForm } from "@/features/project-items/components/project-item-form";
 import {
   getCustomerItemOptions,
@@ -35,6 +37,7 @@ import { StatusBadge } from "@/features/shared/status-badge";
 
 type PageProps = {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ structure?: string }>;
 };
 
 /**
@@ -42,7 +45,7 @@ type PageProps = {
  *
  * Sekmeler: genel bakış, ekip ve tesisler.
  */
-export default async function ProjectDetailPage({ params }: PageProps) {
+export default async function ProjectDetailPage({ params, searchParams }: PageProps) {
   const context = await requireAuthContext();
 
   await requireProjectsAccess("read");
@@ -69,6 +72,26 @@ export default async function ProjectDetailPage({ params }: PageProps) {
   const customerItemOptions = data.customer
     ? await getCustomerItemOptions(context.organizationId, data.customer.id)
     : [];
+
+  /*
+   * Ürün ağacı analizi, projedeki deliverable'ların BOM revision'ları
+   * üzerinden yapılır. Seçim yapılmadıysa analiz çalıştırılmaz.
+   */
+  const structureParams = await searchParams;
+
+  const deliverableBomRevisions = projectItems
+    .filter((projectItem) => projectItem.itemRole === "DELIVERABLE" && projectItem.bomRevisionId)
+    .map((projectItem) => ({
+      id: projectItem.bomRevisionId as string,
+      label: `${projectItem.itemCode ?? ""} · ${projectItem.itemName ?? ""}`,
+    }));
+
+  const selectedStructureId = structureParams.structure ?? null;
+
+  const structureAnalysis =
+    selectedStructureId && deliverableBomRevisions.some((r) => r.id === selectedStructureId)
+      ? await analyzeProductStructure(context.organizationId, selectedStructureId)
+      : null;
 
   const t = await getTranslations();
 
@@ -109,6 +132,8 @@ export default async function ProjectDetailPage({ params }: PageProps) {
           <TabsTrigger value="plants">{t("projects.detail.tabs.plants")}</TabsTrigger>
 
           <TabsTrigger value="items">{t("projects.detail.tabs.items")}</TabsTrigger>
+
+          <TabsTrigger value="structure">{t("projects.detail.tabs.structure")}</TabsTrigger>
         </TabsList>
 
         <TabsContent className="mt-4 space-y-4" value="overview">
@@ -403,6 +428,15 @@ export default async function ProjectDetailPage({ params }: PageProps) {
             itemRevisions={projectItemOptions.itemRevisions}
             items={projectItemOptions.items}
             projectId={data.project.id}
+          />
+        </TabsContent>
+
+        <TabsContent className="mt-4 space-y-4" value="structure">
+          <ProductStructurePanel
+            analysis={structureAnalysis}
+            path={`/projects/${data.project.id}`}
+            bomRevisions={deliverableBomRevisions}
+            selectedId={selectedStructureId}
           />
         </TabsContent>
       </Tabs>

@@ -884,6 +884,31 @@ export const en = {
   "projectItems.role.COMPONENT": "Component",
   "projectItems.role.RAW_MATERIAL": "Raw material",
   "projectItems.role.AUXILIARY": "Auxiliary",
+
+  "projects.detail.tabs.structure": "Product structure",
+
+  "productStructure.deliverable": "Deliverable",
+  "productStructure.select": "Select a deliverable",
+  "productStructure.analyze": "Analyze",
+  "productStructure.hint": "Select a deliverable to see the composition of its product tree.",
+  "productStructure.byCategory": "Composition by category",
+  "productStructure.bySupplyType": "Composition by supply type",
+  "productStructure.repeatedUsage": "Items used in several places",
+  "productStructure.occurrenceCount": "Occurrences",
+  "productStructure.metrics.uniqueItems": "Unique items",
+  "productStructure.metrics.withOwnBom": "Items with their own BOM",
+  "productStructure.metrics.unclassified": "Unclassified items",
+  "productStructure.metrics.unresolved": "Unresolved references",
+
+  "productStructure.category.FRP": "FRP",
+  "productStructure.category.METAL": "Metal parts",
+  "productStructure.category.CHEMICAL": "Chemicals",
+  "productStructure.category.FIBER": "Reinforcement materials",
+  "productStructure.category.STANDARD": "Standard parts",
+  "productStructure.category.ASSEMBLY": "Assemblies",
+  "productStructure.category.CONSUMABLE": "Consumables",
+  "productStructure.category.UNCLASSIFIED": "Unclassified",
+  "productStructure.category.OTHER": "Other",
 } as const;
 
 export type MessageKey = keyof typeof en;
