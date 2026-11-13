@@ -4,7 +4,7 @@ import { assignMemberRoles } from "@mqdms/auth/permissions/server";
 import { auth } from "@mqdms/auth/server";
 import { db } from "@mqdms/db";
 import { invitationRole, organizationRole, project } from "@mqdms/db/schema";
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, isNull } from "drizzle-orm";
 import { headers } from "next/headers";
 import { z } from "zod";
 
@@ -186,29 +186,36 @@ export async function removeMemberAction(input: unknown): Promise<OrganizationAc
    * tablosundaki composite FK, projenin organizasyonu ile üyenin
    * organizasyonunun eşleşmesini zorlar ve silme davranışı `no action`'dır.
    * Referans önce temizlenir; proje müdürü boşalır, proje korunur.
+   *
+   * Temizleme ve audit kaydı tek transaction'da yazılır: audit yazımı
+   * başarısız olursa temizleme de geri alınır.
    */
-  const releasedProjects = await db
-    .update(project)
-    .set({ projectManagerMemberId: null })
-    .where(
-      and(
-        eq(project.organizationId, context.organizationId),
-        eq(project.projectManagerMemberId, memberId),
-      ),
-    )
-    .returning({ id: project.id });
+  const releasedProjectIds = await db.transaction(async (tx) => {
+    const affected = await tx
+      .update(project)
+      .set({ projectManagerMemberId: null })
+      .where(
+        and(
+          eq(project.organizationId, context.organizationId),
+          eq(project.projectManagerMemberId, memberId),
+        ),
+      )
+      .returning({ id: project.id });
 
-  if (releasedProjects.length > 0) {
-    await audit(
-      {
-        organizationId: context.organizationId,
-        action: "project.managerReleased",
-        target: { type: "member", id: memberId },
-        metadata: { projectIds: releasedProjects.map((item) => item.id) },
-      },
-      db,
-    );
-  }
+    if (affected.length > 0) {
+      await audit(
+        {
+          organizationId: context.organizationId,
+          action: "project.managerReleased",
+          target: { type: "member", id: memberId },
+          metadata: { projectIds: affected.map((item) => item.id) },
+        },
+        tx,
+      );
+    }
+
+    return affected.map((item) => item.id);
+  });
 
   try {
     await auth.api.removeMember({
@@ -220,6 +227,57 @@ export async function removeMemberAction(input: unknown): Promise<OrganizationAc
     });
   } catch (error) {
     console.error("Failed to remove the member:", error);
+
+    /*
+     * Üye silinemedi. Üye silme better-auth'ın kendi transaction'ında
+     * çalıştığı için temizlemeden ayrıdır: atamalar geri yazılır, aksi
+     * halde üye organizasyonda kalır ama projelerdeki müdürlükleri kaybolur.
+     *
+     * Yalnızca hâlâ boş olan atamalar geri yazılır: temizleme ile bu
+     * an arasında projeye başka bir müdür atanmış olabilir, o atama
+     * ezilmemelidir.
+     *
+     * Geri yazma başarısız olursa atamalar temizlenmiş kalır. Bu durum
+     * sessizce yutulmaz: etkilenen projeler `project.managerReleased`
+     * audit kaydında durur ve buraya da yazılır. Aksi hâlde aksiyon
+     * reddedilmez, kullanıcıya başarısızlık sonucu döner.
+     */
+    if (releasedProjectIds.length > 0) {
+      try {
+        await db.transaction(async (tx) => {
+          const restored = await tx
+            .update(project)
+            .set({ projectManagerMemberId: memberId })
+            .where(
+              and(
+                eq(project.organizationId, context.organizationId),
+                inArray(project.id, releasedProjectIds),
+                isNull(project.projectManagerMemberId),
+              ),
+            )
+            .returning({ id: project.id });
+
+          if (restored.length > 0) {
+            await audit(
+              {
+                organizationId: context.organizationId,
+                action: "project.managerRestored",
+                target: { type: "member", id: memberId },
+                metadata: { projectIds: restored.map((item) => item.id) },
+              },
+              tx,
+            );
+          }
+        });
+      } catch (restoreError) {
+        console.error("Failed to restore the project manager assignments:", restoreError);
+
+        console.error(
+          "The project manager assignments of the removed projects stay cleared:",
+          releasedProjectIds,
+        );
+      }
+    }
 
     return { success: false, error: "Unable to remove the member." };
   }
