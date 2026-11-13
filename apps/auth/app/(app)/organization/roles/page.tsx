@@ -3,6 +3,7 @@ import { getTranslations } from "@mqdms/i18n/server";
 import { redirect } from "next/navigation";
 
 import { requireRequestContext } from "@/features/auth/context";
+import { FactorySeedUpgrade } from "@/features/permissions/components/factory-seed-upgrade";
 import { RoleManager } from "@/features/permissions/components/role-manager";
 
 export default async function RolesPage() {
@@ -33,6 +34,8 @@ export default async function RolesPage() {
           permissions: role.permissions,
         }))}
       />
+
+      <FactorySeedUpgrade />
     </div>
   );
 }

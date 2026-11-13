@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
 
 import { isResourceActionKey, resources } from "../resources";
-import { factoryRoleTemplates, getTemplateGrants } from "./catalog";
+import {
+  FACTORY_SEED_VERSION,
+  factoryRoleTemplates,
+  getPendingVersionGrants,
+  getTemplateGrants,
+  getVersionGrants,
+} from "./catalog";
 
 /** Slug ile şablon bulur; yoksa testi anlaşılır biçimde durdurur. */
 function findTemplate(slug: string) {
@@ -110,6 +116,125 @@ describe("fabrika rol kataloğu", () => {
 
     for (const grant of getTemplateGrants(auditor)) {
       expect(["read", "export"]).toContain(grant.action);
+    }
+  });
+});
+
+describe("fabrika rol seed sürümleri", () => {
+  it("her şablon güncel sürüm için bir delta tanımlar", () => {
+    for (const template of factoryRoleTemplates) {
+      expect(
+        template.versionPermissions[FACTORY_SEED_VERSION],
+        `${template.slug}: ${FACTORY_SEED_VERSION}`,
+      ).toBeDefined();
+    }
+  });
+
+  it("sürüm izinleri permission kataloğunda yer alır", () => {
+    for (const template of factoryRoleTemplates) {
+      for (const version of Object.keys(template.versionPermissions)) {
+        for (const grant of getVersionGrants(template, version)) {
+          expect(
+            isResourceActionKey(`${grant.resource}:${grant.action}`),
+            `${template.slug} v${version}: ${grant.resource}:${grant.action}`,
+          ).toBe(true);
+        }
+      }
+    }
+  });
+
+  it("sürüm izinleri hedef durumun bir parçasıdır", () => {
+    /*
+     * Delta, rolün hedef izin setinin alt kümesi olmalıdır: aksi halde
+     * yükseltme, hedef durumda olmayan bir izin eklerdi.
+     */
+    for (const template of factoryRoleTemplates) {
+      const target = getTemplateGrants(template);
+      const targetKeys = new Set(target.map((grant) => `${grant.resource}:${grant.action}`));
+
+      for (const version of Object.keys(template.versionPermissions)) {
+        for (const grant of getVersionGrants(template, version)) {
+          expect(
+            targetKeys.has(`${grant.resource}:${grant.action}`),
+            `${template.slug} v${version}: ${grant.resource}:${grant.action}`,
+          ).toBe(true);
+        }
+      }
+    }
+  });
+
+  it("yükseltme yalnızca uygulanmış sürümden sonrasını ekler", () => {
+    const template = findTemplate("project-manager");
+
+    const fromV1 = getPendingVersionGrants(template, "1", FACTORY_SEED_VERSION);
+    const fromV2 = getPendingVersionGrants(template, "2", FACTORY_SEED_VERSION);
+
+    expect(fromV1.length).toBeGreaterThan(0);
+    expect(fromV2).toHaveLength(0);
+  });
+
+  it("yükseltme sürüm 1'den önceki izinleri geri getirmez", () => {
+    /*
+     * Sürüm 1'de projeyi okuyabilen roller bu izinleri almış durumdadır.
+     * Yükseltme yalnızca yeni eklenenleri uygular; eski izinler geri gelmez.
+     */
+    const template = findTemplate("project-engineer");
+
+    const pending = getPendingVersionGrants(template, "1", FACTORY_SEED_VERSION);
+
+    expect(pending.some((grant) => grant.resource === "projects" && grant.action === "read")).toBe(
+      false,
+    );
+
+    expect(pending.some((grant) => grant.resource === "customers")).toBe(true);
+    expect(pending.some((grant) => grant.resource === "plants")).toBe(true);
+  });
+
+  it("bilinmeyen sürüm için hiçbir izin uygulanmaz", () => {
+    const template = findTemplate("auditor");
+
+    expect(getPendingVersionGrants(template, "9", "10")).toHaveLength(0);
+  });
+
+  it("yeni kaynaklar seed rollerinde okunabilir", () => {
+    for (const resource of ["customers", "plants"]) {
+      const readable = factoryRoleTemplates.some((template) =>
+        getTemplateGrants(template).some(
+          (grant) => grant.resource === resource && grant.action === "read",
+        ),
+      );
+
+      expect(readable, resource).toBe(true);
+    }
+  });
+
+  it("yönetim rolleri yeni kaynakları yönetebilir", () => {
+    const plantManager = getTemplateGrants(findTemplate("plant-manager"));
+
+    expect(
+      plantManager.some((grant) => grant.resource === "plants" && grant.action === "create"),
+    ).toBe(true);
+
+    const projectManager = getTemplateGrants(findTemplate("project-manager"));
+
+    expect(
+      projectManager.some(
+        (grant) => grant.resource === "projects" && grant.action === "manageMembers",
+      ),
+    ).toBe(true);
+  });
+
+  it("uzman rolleri yalnızca okur", () => {
+    for (const slug of ["project-engineer", "quality-engineer", "production-supervisor"]) {
+      const grants = getTemplateGrants(findTemplate(slug));
+
+      const writes = grants.filter(
+        (grant) =>
+          (grant.resource === "customers" || grant.resource === "plants") &&
+          grant.action !== "read",
+      );
+
+      expect(writes, slug).toHaveLength(0);
     }
   });
 });

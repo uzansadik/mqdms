@@ -35,6 +35,7 @@ import {
 } from "./repository";
 import { isResourceActionKey } from "./resources";
 import { isOwnerRole } from "./roles";
+import { upgradeFactoryRoles as upgradeFactoryRolesForOrganization } from "./seeds/factory";
 
 /**
  * Yetkilendirme bağlamı.
@@ -243,6 +244,43 @@ export function requireOwner(context: AuthContext): AuthContext {
   return context;
 }
 
+/**
+ * Organizasyonun fabrika seed rollerini güncel sürüme taşır.
+ *
+ * Yeni bir kaynak veya aksiyon eklendiğinde mevcut organizasyonların seed
+ * rolleri **geriye dönük güncellenmez**: owner bu işlemi açıkça tetikler.
+ * Yalnızca yeni sürümde tanımlanan izinler eklenir; owner'ın seed
+ * rolünden kaldırdığı izinler geri gelmez.
+ *
+ * İşlem idempotenttir ve tekrar çalıştırılabilir.
+ *
+ * @returns yükseltilen rol sayısı.
+ */
+export async function upgradeFactoryRoleSeeds(context: AuthContext): Promise<number> {
+  requireOwner(context);
+
+  /*
+   * Yükseltme ve audit kaydı tek transaction'da yazılır: audit yazımı
+   * başarısız olursa izinler de geri alınır ve aksiyon hata döner.
+   */
+  return db.transaction(async (tx) => {
+    const upgraded = await upgradeFactoryRolesForOrganization(context.organizationId, tx);
+
+    await writeAuditLog(
+      {
+        organizationId: context.organizationId,
+        actorId: context.userId,
+        action: "roles.factorySeedUpgraded",
+        target: { type: "organization", id: context.organizationId },
+        metadata: { upgradedRoles: upgraded },
+      },
+      tx,
+    );
+
+    return upgraded;
+  });
+}
+
 /* -------------------------------------------------------------------------
  * Rol yönetimi
  * ---------------------------------------------------------------------- */
@@ -310,6 +348,12 @@ export async function createRole(context: AuthContext, input: unknown): Promise<
       name: parsed.data.name,
       description: parsed.data.description ?? null,
       createdById: context.userId,
+
+      /*
+       * Owner'ın oluşturduğu rol fabrika seed'i ile üretilmemiştir:
+       * `seed_version` boş kalır ve seed yükseltmesi bu rolü hiç değiştirmez.
+       */
+      seedVersion: null,
     })
     .onConflictDoNothing()
     .returning({ id: organizationRole.id });

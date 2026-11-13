@@ -1,4 +1,4 @@
-import { writeAuditLog } from "@mqdms/audit";
+import { type AuditClient, writeAuditLog } from "@mqdms/audit";
 import { headers } from "next/headers";
 
 import { getSession } from "@/features/auth/session";
@@ -16,7 +16,16 @@ type AuditInput = {
   metadata?: Record<string, unknown>;
 };
 
-export async function audit({ organizationId, action, target, metadata }: AuditInput) {
+/**
+ * Audit kaydı yazar.
+ *
+ * İkinci parametre olarak transaction istemcisi geçilebilir: kayıt ile onu
+ * üreten işlem aynı transaction'da yazılmalıdır.
+ */
+export async function audit(
+  { organizationId, action, target, metadata }: AuditInput,
+  client?: AuditClient,
+) {
   const session = await getSession();
 
   if (!session) {
@@ -25,19 +34,22 @@ export async function audit({ organizationId, action, target, metadata }: AuditI
 
   const requestHeaders = await headers();
 
-  await writeAuditLog({
-    organizationId,
+  await writeAuditLog(
+    {
+      organizationId,
 
-    actorId: session.user.id,
+      actorId: session.user.id,
 
-    action,
+      action,
 
-    target,
+      target,
 
-    metadata,
+      metadata,
 
-    ipAddress: requestHeaders.get("x-forwarded-for") ?? requestHeaders.get("x-real-ip"),
+      ipAddress: requestHeaders.get("x-forwarded-for") ?? requestHeaders.get("x-real-ip"),
 
-    userAgent: requestHeaders.get("user-agent"),
-  });
+      userAgent: requestHeaders.get("user-agent"),
+    },
+    client,
+  );
 }

@@ -25,3 +25,12 @@ export const db = drizzle({
   client: pool,
   schema,
 });
+
+/**
+ * Transaction istemcisi.
+ *
+ * `db.transaction()` içinden gelen istemci aynı sorgu arayüzünü sunar. Bir
+ * kaydın ve onu üreten işlemin tek transaction'da yazılması gerektiğinde
+ * bu tip kullanılır.
+ */
+export type DbClient = Parameters<Parameters<typeof db.transaction>[0]>[0];

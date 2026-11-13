@@ -3,7 +3,7 @@
 import { assignMemberRoles } from "@mqdms/auth/permissions/server";
 import { auth } from "@mqdms/auth/server";
 import { db } from "@mqdms/db";
-import { invitationRole, organizationRole } from "@mqdms/db/schema";
+import { invitationRole, organizationRole, project } from "@mqdms/db/schema";
 import { and, eq, inArray } from "drizzle-orm";
 import { headers } from "next/headers";
 import { z } from "zod";
@@ -179,6 +179,35 @@ export async function removeMemberAction(input: unknown): Promise<OrganizationAc
 
   if (memberId === context.member.id) {
     return { success: false, error: "The owner cannot be removed." };
+  }
+
+  /*
+   * Proje müdürü olarak atanmış bir üye doğrudan silinemez: `project`
+   * tablosundaki composite FK, projenin organizasyonu ile üyenin
+   * organizasyonunun eşleşmesini zorlar ve silme davranışı `no action`'dır.
+   * Referans önce temizlenir; proje müdürü boşalır, proje korunur.
+   */
+  const releasedProjects = await db
+    .update(project)
+    .set({ projectManagerMemberId: null })
+    .where(
+      and(
+        eq(project.organizationId, context.organizationId),
+        eq(project.projectManagerMemberId, memberId),
+      ),
+    )
+    .returning({ id: project.id });
+
+  if (releasedProjects.length > 0) {
+    await audit(
+      {
+        organizationId: context.organizationId,
+        action: "project.managerReleased",
+        target: { type: "member", id: memberId },
+        metadata: { projectIds: releasedProjects.map((item) => item.id) },
+      },
+      db,
+    );
   }
 
   try {

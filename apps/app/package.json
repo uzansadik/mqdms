@@ -16,6 +16,7 @@
     "@base-ui/react": "^1.7.0",
     "@hookform/resolvers": "^5.9.1",
     "@mqdms/auth": "workspace:*",
+    "@mqdms/audit": "workspace:*",
     "@mqdms/config": "workspace:*",
     "@mqdms/db": "workspace:*",
     "@mqdms/env": "workspace:*",
