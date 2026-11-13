@@ -555,6 +555,7 @@ export const en = {
   "items.actions.restore.description": "The item becomes visible in the default lists again.",
 
   "items.archived.title": "Archived items",
+  "items.archived.badge": "Archived",
   "items.archived.description": "Archived items are kept with all their related records.",
   "items.archived.back": "Back to items",
   "items.archived.empty.title": "No archived items",
@@ -647,6 +648,58 @@ export const en = {
   "units.dimension.OTHER": "Other",
 
   "units.actions.created": "Unit created.",
+
+  "items.detail.tabs.overview": "Overview",
+  "items.detail.tabs.customerReferences": "Customer references",
+  "items.detail.overview.title": "Item information",
+  "items.detail.revisions.title": "Revisions",
+  "items.detail.revisions.empty.title": "No revisions yet",
+  "items.detail.revisions.empty.description":
+    "A product card can be created without a revision, but the revision used in a released technical document must be determined explicitly.",
+  "items.detail.revisions.columns.revision": "Revision",
+  "items.detail.revisions.columns.status": "Status",
+  "items.detail.revisions.columns.description": "Description",
+
+  "customerItems.empty.title": "No customer references yet",
+  "customerItems.empty.description": "Add the customer part numbers this product is known by.",
+  "customerItems.actions.created": "Customer reference created.",
+
+  "customerItems.form.title": "Add customer reference",
+  "customerItems.form.description":
+    "The customer part number is managed independently of the internal item code.",
+  "customerItems.form.customer.label": "Customer",
+  "customerItems.form.customer.placeholder": "Select a customer",
+  "customerItems.form.customerPartNumber.label": "Customer part number",
+  "customerItems.form.customerPartNumber.placeholder": "DTRF-100123",
+  "customerItems.form.customerPartName.label": "Customer part name",
+  "customerItems.form.scope.label": "Scope",
+  "customerItems.form.scope.placeholder": "Salzgitter",
+  "customerItems.form.status.label": "Status",
+  "customerItems.form.description.label": "Description",
+  "customerItems.form.submit": "Add reference",
+
+  "customerItems.revisions.empty": "No customer revision mapping yet.",
+  "customerItems.revisions.form.title": "Add customer revision",
+  "customerItems.revisions.form.description":
+    "The customer revision, the customer product revision and the internal product revision are kept separately.",
+  "customerItems.revisions.form.customerRevision.label": "Customer revision",
+  "customerItems.revisions.form.customerRevision.placeholder": "C",
+  "customerItems.revisions.form.internalRevision.label": "Internal revision",
+  "customerItems.revisions.form.internalRevision.none": "Not mapped",
+  "customerItems.revisions.form.drawingReference.label": "Drawing reference",
+  "customerItems.revisions.form.drawingRevision.label": "Drawing revision",
+  "customerItems.revisions.form.effectiveFrom.label": "Effective from",
+  "customerItems.revisions.form.status.label": "Status",
+  "customerItems.revisions.form.description.label": "Description",
+  "customerItems.revisions.form.submit": "Add revision",
+  "customerItems.revisions.actions.created": "Customer revision created.",
+  "customerItems.revisions.status.DRAFT": "Draft",
+  "customerItems.revisions.status.RELEASED": "Released",
+  "customerItems.revisions.status.SUPERSEDED": "Superseded",
+  "customerItems.revisions.columns.customerRevision": "Customer revision",
+  "customerItems.revisions.columns.internalRevision": "Internal revision",
+  "customerItems.revisions.columns.drawing": "Drawing",
+  "customerItems.revisions.columns.status": "Status",
 } as const;
 
 export type MessageKey = keyof typeof en;

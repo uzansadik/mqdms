@@ -553,6 +553,7 @@ export const tr = {
   "items.actions.restore.description": "Ürün varsayılan listelerde tekrar görünür olur.",
 
   "items.archived.title": "Arşivlenen ürünler",
+  "items.archived.badge": "Arşivlendi",
   "items.archived.description": "Arşivlenen ürünler ilişkili kayıtlarıyla birlikte korunur.",
   "items.archived.back": "Ürünlere dön",
   "items.archived.empty.title": "Arşivlenen ürün yok",
@@ -646,4 +647,57 @@ export const tr = {
   "units.dimension.OTHER": "Diğer",
 
   "units.actions.created": "Birim oluşturuldu.",
+
+  "items.detail.tabs.overview": "Genel bakış",
+  "items.detail.tabs.customerReferences": "Müşteri referansları",
+  "items.detail.overview.title": "Ürün bilgileri",
+  "items.detail.revisions.title": "Revision'lar",
+  "items.detail.revisions.empty.title": "Henüz revision yok",
+  "items.detail.revisions.empty.description":
+    "Ürün kartı revision bilgisi olmadan açılabilir; ancak yayınlanmış teknik yapılarda kullanılan revision açıkça belirlenmelidir.",
+  "items.detail.revisions.columns.revision": "Revision",
+  "items.detail.revisions.columns.status": "Durum",
+  "items.detail.revisions.columns.description": "Açıklama",
+
+  "customerItems.empty.title": "Henüz müşteri referansı yok",
+  "customerItems.empty.description":
+    "Bu ürünün müşteriler tarafında bilindiği parça numaralarını ekleyin.",
+  "customerItems.actions.created": "Müşteri referansı eklendi.",
+
+  "customerItems.form.title": "Müşteri referansı ekle",
+  "customerItems.form.description":
+    "Müşteri parça numarası, şirket içi ürün kodundan bağımsız yönetilir.",
+  "customerItems.form.customer.label": "Müşteri",
+  "customerItems.form.customer.placeholder": "Müşteri seçin",
+  "customerItems.form.customerPartNumber.label": "Müşteri parça numarası",
+  "customerItems.form.customerPartNumber.placeholder": "DTRF-100123",
+  "customerItems.form.customerPartName.label": "Müşteri parça adı",
+  "customerItems.form.scope.label": "Kapsam",
+  "customerItems.form.scope.placeholder": "Salzgitter",
+  "customerItems.form.status.label": "Durum",
+  "customerItems.form.description.label": "Açıklama",
+  "customerItems.form.submit": "Referans ekle",
+
+  "customerItems.revisions.empty": "Henüz müşteri revision eşleştirmesi yok.",
+  "customerItems.revisions.form.title": "Müşteri revision ekle",
+  "customerItems.revisions.form.description":
+    "Müşteri revision'ı, müşteri ürün revizyonu ve iç ürün revizyonu ayrı saklanır.",
+  "customerItems.revisions.form.customerRevision.label": "Müşteri revision",
+  "customerItems.revisions.form.customerRevision.placeholder": "C",
+  "customerItems.revisions.form.internalRevision.label": "İç revision",
+  "customerItems.revisions.form.internalRevision.none": "Eşleştirilmedi",
+  "customerItems.revisions.form.drawingReference.label": "Resim referansı",
+  "customerItems.revisions.form.drawingRevision.label": "Resim revision'ı",
+  "customerItems.revisions.form.effectiveFrom.label": "Yürürlük tarihi",
+  "customerItems.revisions.form.status.label": "Durum",
+  "customerItems.revisions.form.description.label": "Açıklama",
+  "customerItems.revisions.form.submit": "Revision ekle",
+  "customerItems.revisions.actions.created": "Müşteri revision eklendi.",
+  "customerItems.revisions.status.DRAFT": "Taslak",
+  "customerItems.revisions.status.RELEASED": "Yayınlandı",
+  "customerItems.revisions.status.SUPERSEDED": "Geçersiz kılındı",
+  "customerItems.revisions.columns.customerRevision": "Müşteri revision",
+  "customerItems.revisions.columns.internalRevision": "İç revision",
+  "customerItems.revisions.columns.drawing": "Resim",
+  "customerItems.revisions.columns.status": "Durum",
 } satisfies Record<MessageKey, string>;

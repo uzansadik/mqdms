@@ -234,8 +234,7 @@ export async function listItemOptions(
     .orderBy(asc(item.name));
 }
 
-/** Ürünün revision kayıtları (en yeni önce). */
-export async function listItemRevisions(
+/** Ürünün revision kayıtları (en yeni önce). */ export async function listItemRevisions(
   organizationId: string,
   itemId: string,
 ): Promise<
@@ -262,4 +261,28 @@ export async function listItemRevisions(
     .from(itemRevision)
     .where(and(eq(itemRevision.organizationId, organizationId), eq(itemRevision.itemId, itemId)))
     .orderBy(sql`${itemRevision.createdAt} desc`);
+}
+
+/** Tek ürün revision kaydı. */
+export async function getItemRevision(
+  organizationId: string,
+  revisionId: string,
+): Promise<{
+  id: string;
+  itemId: string;
+  revision: string;
+  status: "DRAFT" | "RELEASED" | "SUPERSEDED";
+} | null> {
+  const rows = await db
+    .select({
+      id: itemRevision.id,
+      itemId: itemRevision.itemId,
+      revision: itemRevision.revision,
+      status: itemRevision.status,
+    })
+    .from(itemRevision)
+    .where(and(eq(itemRevision.organizationId, organizationId), eq(itemRevision.id, revisionId)))
+    .limit(1);
+
+  return rows[0] ?? null;
 }
