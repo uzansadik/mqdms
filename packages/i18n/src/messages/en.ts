@@ -825,6 +825,28 @@ export const en = {
   "boms.revisions.form.description.label": "Description",
   "boms.revisions.form.submit": "Add revision",
   "boms.revisions.actions.created": "BOM revision created.",
+
+  "boms.detail.tabs.comparison": "Compare revisions",
+  "boms.comparison.title": "Compare two revisions",
+  "boms.comparison.from": "Previous revision",
+  "boms.comparison.to": "New revision",
+  "boms.comparison.select": "Select a revision",
+  "boms.comparison.submit": "Compare",
+  "boms.comparison.hint": "Select two revisions to see what changed between them.",
+  "boms.comparison.empty": "The two revisions have no differences.",
+  "boms.comparison.columns.change": "Change",
+  "boms.comparison.columns.item": "Component",
+  "boms.comparison.columns.before": "Before",
+  "boms.comparison.columns.after": "After",
+  "boms.comparison.columns.line": "line",
+
+  "boms.changeType.ITEM_ADDED": "Component added",
+  "boms.changeType.ITEM_REMOVED": "Component removed",
+  "boms.changeType.QUANTITY_CHANGED": "Quantity changed",
+  "boms.changeType.UNIT_CHANGED": "Unit changed",
+  "boms.changeType.ITEM_REVISION_CHANGED": "Component revision changed",
+  "boms.changeType.CHILD_BOM_REVISION_CHANGED": "Sub-BOM revision changed",
+  "boms.changeType.POSITION_CHANGED": "Position changed",
 } as const;
 
 export type MessageKey = keyof typeof en;

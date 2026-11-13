@@ -16,6 +16,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { requireAuthContext } from "@/features/auth/session";
+import { compareBomRevisions } from "@/features/boms/compare";
+import { BomComparison } from "@/features/boms/components/bom-comparison";
 import { BomFlattenedTable, BomTree } from "@/features/boms/components/bom-explosion";
 import { BomLineForm } from "@/features/boms/components/bom-line-form";
 import { BomRevisionForm } from "@/features/boms/components/bom-revision-form";
@@ -24,6 +26,7 @@ import { StatusBadge } from "@/features/shared/status-badge";
 
 type PageProps = {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ compareFrom?: string; compareTo?: string }>;
 };
 
 /**
@@ -32,12 +35,14 @@ type PageProps = {
  * Sekmeler: revision geçmişi, hiyerarşik ağaç ve düzleştirilmiş malzeme
  * listesi. Satır düzenleme ilgili revision modülüyle birlikte eklenir.
  */
-export default async function BomDetailPage({ params }: PageProps) {
+export default async function BomDetailPage({ params, searchParams }: PageProps) {
   const context = await requireAuthContext();
 
   await requireBomsAccess("read");
 
   const { id } = await params;
+
+  const comparisonParams = await searchParams;
 
   const data = await getBomDetailData(context.organizationId, id);
 
@@ -58,6 +63,18 @@ export default async function BomDetailPage({ params }: PageProps) {
   const parentItemRevisions = options.itemRevisions.filter(
     (revision) => revision.itemId === data.bom.itemId,
   );
+
+  /*
+   * Karşılaştırma iki revision seçildiğinde çalışır. Seçim yoksa sonuç
+   * `null`'dur: karşılaştırma tahmin edilmez.
+   */
+  const compareFrom = comparisonParams.compareFrom ?? null;
+  const compareTo = comparisonParams.compareTo ?? null;
+
+  const changes =
+    compareFrom && compareTo
+      ? await compareBomRevisions(context.organizationId, compareFrom, compareTo)
+      : null;
 
   return (
     <div className="space-y-6">
@@ -86,6 +103,8 @@ export default async function BomDetailPage({ params }: PageProps) {
           <TabsTrigger value="flattened">{t("boms.detail.tabs.flattened")}</TabsTrigger>
 
           <TabsTrigger value="revisions">{t("boms.detail.tabs.revisions")}</TabsTrigger>
+
+          <TabsTrigger value="comparison">{t("boms.detail.tabs.comparison")}</TabsTrigger>
         </TabsList>
 
         <TabsContent className="mt-4 space-y-4" value="tree">
@@ -179,6 +198,24 @@ export default async function BomDetailPage({ params }: PageProps) {
           </Card>
 
           <BomRevisionForm bomId={data.bom.id} parentItemRevisions={parentItemRevisions} />
+        </TabsContent>
+
+        <TabsContent className="mt-4 space-y-4" value="comparison">
+          <Card>
+            <CardHeader>
+              <CardTitle>{t("boms.comparison.title")}</CardTitle>
+            </CardHeader>
+
+            <CardContent>
+              <BomComparison
+                bomId={data.bom.id}
+                changes={changes}
+                fromId={compareFrom}
+                revisions={data.revisions}
+                toId={compareTo}
+              />
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
     </div>
