@@ -62,7 +62,7 @@ export const itemGroup = pgTable(
 
     createdAt: timestamp("created_at", {
       withTimezone: true,
-      })
+    })
       .defaultNow()
       .notNull(),
 

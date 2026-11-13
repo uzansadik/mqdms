@@ -1,15 +1,5 @@
 import { relations } from "drizzle-orm";
-import {
-  foreignKey,
-  index,
-  integer,
-  jsonb,
-  pgTable,
-  text,
-  timestamp,
-  unique,
-  uuid,
-} from "drizzle-orm/pg-core";
+import { index, integer, jsonb, pgTable, text, timestamp, unique, uuid } from "drizzle-orm/pg-core";
 
 import { organization, user } from "../initial/auth";
 import { importStatus, importType } from "./enums";
@@ -50,10 +40,7 @@ export const importJob = pgTable(
     status: importStatus("status").notNull().default("PENDING"),
 
     /** Dosya kolonlarının mQDMS alanlarına eşleştirmesi. */
-    columnMapping: jsonb("column_mapping")
-      .$type<Record<string, string>>()
-      .notNull()
-      .default({}),
+    columnMapping: jsonb("column_mapping").$type<Record<string, string>>().notNull().default({}),
 
     totalRows: integer("total_rows").notNull().default(0),
     createdCount: integer("created_count").notNull().default(0),
@@ -127,9 +114,7 @@ export const importJobError = pgTable(
       .defaultNow()
       .notNull(),
   },
-  (table) => [
-    index("import_job_error_import_job_id_idx").on(table.importJobId),
-  ],
+  (table) => [index("import_job_error_import_job_id_idx").on(table.importJobId)],
 );
 
 export const importJobRelations = relations(importJob, ({ many }) => ({
