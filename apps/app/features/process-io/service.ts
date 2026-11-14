@@ -246,6 +246,7 @@ export async function createProcessApplicability(
       .values({
         organizationId: context.organizationId,
         processVariantRevisionId: input.processVariantRevisionId,
+        logicalId: crypto.randomUUID(),
         name: input.name,
         description: toNull(input.description),
         supplyType: input.supplyType,

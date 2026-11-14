@@ -1,6 +1,6 @@
 import { db } from "@mqdms/db";
 import { process, processVariant, processVariantRevision } from "@mqdms/db/schema";
-import { and, asc, desc, eq, sql } from "drizzle-orm";
+import { and, asc, desc, eq, isNull, sql } from "drizzle-orm";
 
 import type { ProcessVariantType } from "./schema";
 
@@ -273,6 +273,119 @@ export async function findProcessVariantRevisionByValue(
     .limit(1);
 
   return rows[0] ?? null;
+}
+
+/**
+ * Türetim için kaynak revision'lar.
+ *
+ * Yalnızca **yayınlanmış** revision'lar kaynak olabilir: türetilen içerik
+ * kararlı bir taban üzerine kurulur.
+ */
+export async function listGenericSourceRevisions(
+  organizationId: string,
+  processId: string,
+): Promise<
+  {
+    id: string;
+    revision: string;
+    variantId: string;
+    variantCode: string;
+    variantName: string;
+  }[]
+> {
+  const rows = await db
+    .select({
+      id: processVariantRevision.id,
+      revision: processVariantRevision.revision,
+      variantId: processVariant.id,
+      variantCode: processVariant.code,
+      variantName: processVariant.name,
+    })
+    .from(processVariantRevision)
+    .innerJoin(processVariant, eq(processVariant.id, processVariantRevision.processVariantId))
+    .where(
+      and(
+        eq(processVariantRevision.organizationId, organizationId),
+        eq(processVariantRevision.status, "RELEASED"),
+        eq(processVariant.processId, processId),
+        eq(processVariant.variantType, "GENERIC"),
+        isNull(processVariant.archivedAt),
+      ),
+    )
+    .orderBy(asc(processVariant.code), asc(processVariantRevision.revision));
+
+  return rows;
+}
+
+/**
+ * Varyantın türetildiği kaynak revision.
+ *
+ * Lineage, varyantın `sourceVariantRevisionId` bildiren ilk revision'ı
+ * üzerinden izlenir; isim eşleştirmesi yapılmaz.
+ *
+ * Dönen kayıt **kaynak revision**'dır: varyantın kendi revision'ı değil.
+ */
+export async function getLineageSourceRevision(
+  organizationId: string,
+  variantId: string,
+): Promise<ProcessVariantRevisionRecord | null> {
+  const rows = await db
+    .select({ sourceVariantRevisionId: processVariantRevision.sourceVariantRevisionId })
+    .from(processVariantRevision)
+    .where(
+      and(
+        eq(processVariantRevision.organizationId, organizationId),
+        eq(processVariantRevision.processVariantId, variantId),
+        sql`${processVariantRevision.sourceVariantRevisionId} is not null`,
+      ),
+    )
+    .orderBy(asc(processVariantRevision.createdAt))
+    .limit(1);
+
+  const sourceRevisionId = rows[0]?.sourceVariantRevisionId;
+
+  if (!sourceRevisionId) {
+    return null;
+  }
+
+  return getProcessVariantRevision(organizationId, sourceRevisionId);
+}
+
+/**
+ * Bir varyantın yayınlanmış revision'ları.
+ *
+ * Kaynak güncellemesinde, lineage kaynağından sonra yayınlanmış revision'lar
+ * aday olarak listelenir.
+ */
+export async function listReleasedRevisionsOfVariant(
+  organizationId: string,
+  processVariantId: string,
+): Promise<
+  {
+    id: string;
+    revision: string;
+    releasedAt: Date | null;
+    createdAt: Date;
+  }[]
+> {
+  const rows = await db
+    .select({
+      id: processVariantRevision.id,
+      revision: processVariantRevision.revision,
+      releasedAt: processVariantRevision.releasedAt,
+      createdAt: processVariantRevision.createdAt,
+    })
+    .from(processVariantRevision)
+    .where(
+      and(
+        eq(processVariantRevision.organizationId, organizationId),
+        eq(processVariantRevision.processVariantId, processVariantId),
+        eq(processVariantRevision.status, "RELEASED"),
+      ),
+    )
+    .orderBy(desc(processVariantRevision.releasedAt), desc(processVariantRevision.createdAt));
+
+  return rows;
 }
 
 /**

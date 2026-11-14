@@ -93,6 +93,14 @@ export default async function ProcessVariantRevisionPage({ params }: PageProps) 
             </Link>
           </Button>
 
+          <Button asChild variant="outline">
+            <Link
+              href={`/master-processes/${data.variant.processId}/variants/${data.variant.id}/revisions/${data.revision.id}/source-update`}
+            >
+              {t("processVariants.actions.sourceUpdate")}
+            </Link>
+          </Button>
+
           <ProcessVariantRevisionActions
             canApprove={canApprove}
             canRelease={canRelease}

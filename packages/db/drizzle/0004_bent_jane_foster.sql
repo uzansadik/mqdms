@@ -91,6 +91,8 @@ CREATE TABLE "process_variant_applicability" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"organization_id" text NOT NULL,
 	"process_variant_revision_id" uuid NOT NULL,
+	"logical_id" text NOT NULL,
+	"derived_from_id" uuid,
 	"name" text NOT NULL,
 	"description" text,
 	"supply_type" "supply_type",
@@ -98,7 +100,8 @@ CREATE TABLE "process_variant_applicability" (
 	"is_active" boolean DEFAULT true NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
-	CONSTRAINT "process_variant_applicability_organization_id_id_unique" UNIQUE("organization_id","id")
+	CONSTRAINT "process_variant_applicability_organization_id_id_unique" UNIQUE("organization_id","id"),
+	CONSTRAINT "process_variant_applicability_revision_id_logical_id_unique" UNIQUE("process_variant_revision_id","logical_id")
 );
 --> statement-breakpoint
 CREATE TABLE "process_variant_applicability_item_group" (
@@ -274,6 +277,7 @@ ALTER TABLE "process" ADD CONSTRAINT "process_organization_id_organization_id_fk
 ALTER TABLE "process" ADD CONSTRAINT "process_created_by_id_user_id_fk" FOREIGN KEY ("created_by_id") REFERENCES "public"."user"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "process_variant_applicability" ADD CONSTRAINT "process_variant_applicability_organization_id_organization_id_fk" FOREIGN KEY ("organization_id") REFERENCES "public"."organization"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "process_variant_applicability" ADD CONSTRAINT "process_variant_applicability_revision_org_fk" FOREIGN KEY ("organization_id","process_variant_revision_id") REFERENCES "public"."process_variant_revision"("organization_id","id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "process_variant_applicability" ADD CONSTRAINT "process_variant_applicability_derived_from_org_fk" FOREIGN KEY ("organization_id","derived_from_id") REFERENCES "public"."process_variant_applicability"("organization_id","id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "process_variant_applicability_item_group" ADD CONSTRAINT "process_variant_applicability_item_group_organization_id_organization_id_fk" FOREIGN KEY ("organization_id") REFERENCES "public"."organization"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "process_variant_applicability_item_group" ADD CONSTRAINT "process_variant_applicability_item_group_applicability_org_fk" FOREIGN KEY ("organization_id","applicability_id") REFERENCES "public"."process_variant_applicability"("organization_id","id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "process_variant_applicability_item_group" ADD CONSTRAINT "process_variant_applicability_item_group_item_group_org_fk" FOREIGN KEY ("organization_id","item_group_id") REFERENCES "public"."item_group"("organization_id","id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint

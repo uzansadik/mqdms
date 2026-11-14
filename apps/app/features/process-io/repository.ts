@@ -34,6 +34,7 @@ export type ProcessApplicabilityRecord = {
   id: string;
   organizationId: string;
   processVariantRevisionId: string;
+  logicalId: string;
   name: string;
   description: string | null;
   supplyType: "MANUFACTURED" | "PURCHASED" | "OUTSOURCED" | "MIXED" | "UNKNOWN" | null;
@@ -82,6 +83,7 @@ export async function listProcessApplicabilities(
       id: processVariantApplicability.id,
       organizationId: processVariantApplicability.organizationId,
       processVariantRevisionId: processVariantApplicability.processVariantRevisionId,
+      logicalId: processVariantApplicability.logicalId,
       name: processVariantApplicability.name,
       description: processVariantApplicability.description,
       supplyType: processVariantApplicability.supplyType,
@@ -112,6 +114,7 @@ export async function listProcessApplicabilities(
         id: row.id,
         organizationId: row.organizationId,
         processVariantRevisionId: row.processVariantRevisionId,
+        logicalId: row.logicalId,
         name: row.name,
         description: row.description,
         supplyType: row.supplyType,
@@ -171,6 +174,7 @@ export async function getProcessApplicability(
       id: processVariantApplicability.id,
       organizationId: processVariantApplicability.organizationId,
       processVariantRevisionId: processVariantApplicability.processVariantRevisionId,
+      logicalId: processVariantApplicability.logicalId,
       name: processVariantApplicability.name,
       description: processVariantApplicability.description,
       supplyType: processVariantApplicability.supplyType,

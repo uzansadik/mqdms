@@ -26,7 +26,7 @@ import { listVariantsOfProcess } from "@/features/process-variants/repository";
 import { StatusBadge } from "@/features/shared/status-badge";
 
 type PageProps = {
-  params: Promise<{ id: string }>;
+  params: Promise<{ processId: string }>;
 };
 
 /**
@@ -41,20 +41,20 @@ export default async function MasterProcessDetailPage({ params }: PageProps) {
 
   await requireMasterProcessesAccess("read");
 
-  const { id } = await params;
+  const { processId } = await params;
 
-  const data = await getProcessDetailData(context.organizationId, id);
+  const data = await getProcessDetailData(context.organizationId, processId);
 
   if (!data) {
     notFound();
   }
 
   const [variants, history] = await Promise.all([
-    listVariantsOfProcess(context.organizationId, id),
+    listVariantsOfProcess(context.organizationId, processId),
     listAuditLogs({
       organizationId: context.organizationId,
       targetType: "process",
-      targetId: id,
+      targetId: processId,
     }),
   ]);
 
@@ -82,11 +82,25 @@ export default async function MasterProcessDetailPage({ params }: PageProps) {
           </p>
         </div>
 
-        <Button asChild variant="outline">
-          <Link href={`/master-processes/${data.process.id}/edit`}>
-            {t("processes.actions.edit")}
-          </Link>
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button asChild variant="outline">
+            <Link href={`/master-processes/${data.process.id}/edit`}>
+              {t("processes.actions.edit")}
+            </Link>
+          </Button>
+
+          <Button asChild variant="outline">
+            <Link href={`/master-processes/${data.process.id}/variants/new`}>
+              {t("processes.actions.createVariant")}
+            </Link>
+          </Button>
+
+          <Button asChild>
+            <Link href={`/master-processes/${data.process.id}/variants/derive`}>
+              {t("processes.actions.deriveVariant")}
+            </Link>
+          </Button>
+        </div>
       </div>
 
       <Tabs defaultValue="overview">

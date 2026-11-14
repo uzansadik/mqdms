@@ -1,5 +1,5 @@
 {
-  "id": "a4409278-c48a-4812-a527-d3145d358168",
+  "id": "67e15093-3da4-445e-9b4d-5ce794fae4b0",
   "prevId": "1ac351f6-46cd-4de7-abfb-b446e4e2194b",
   "version": "7",
   "dialect": "postgresql",
@@ -6506,6 +6506,18 @@
           "primaryKey": false,
           "notNull": true
         },
+        "logical_id": {
+          "name": "logical_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "derived_from_id": {
+          "name": "derived_from_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
         "name": {
           "name": "name",
           "type": "text",
@@ -6614,6 +6626,21 @@
           ],
           "onDelete": "cascade",
           "onUpdate": "no action"
+        },
+        "process_variant_applicability_derived_from_org_fk": {
+          "name": "process_variant_applicability_derived_from_org_fk",
+          "tableFrom": "process_variant_applicability",
+          "tableTo": "process_variant_applicability",
+          "columnsFrom": [
+            "organization_id",
+            "derived_from_id"
+          ],
+          "columnsTo": [
+            "organization_id",
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
@@ -6624,6 +6651,14 @@
           "columns": [
             "organization_id",
             "id"
+          ]
+        },
+        "process_variant_applicability_revision_id_logical_id_unique": {
+          "name": "process_variant_applicability_revision_id_logical_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "process_variant_revision_id",
+            "logical_id"
           ]
         }
       },

@@ -12,11 +12,13 @@ import {
 } from "@/features/process-requirements/repository";
 import { listWorkElements } from "@/features/process-work-elements/repository";
 
+import { compareRevisions, layoutChanges, technicalChanges } from "./comparison";
 import {
   getProcessVariant,
   getProcessVariantRevision,
   listProcessVariantRevisions,
 } from "./repository";
+import { getRevisionSnapshot } from "./source-update";
 
 /**
  * Process Variant sayfalarının koruma ve veri katmanı.
@@ -66,6 +68,46 @@ export async function getProcessVariantRevisionDetailData(
   }
 
   return { revision, variant };
+}
+
+/**
+ * İki revision'ın karşılaştırma verisi.
+ *
+ * Her iki revision da aynı varyanta ait olmalıdır; aksi halde karşılaştırma
+ * yapılmaz. Teknik değişiklikler ve görsel düzen değişiklikleri ayrı döner.
+ */
+export async function getRevisionComparisonData(
+  organizationId: string,
+  variantId: string,
+  fromRevisionId: string,
+  toRevisionId: string,
+) {
+  const [from, to] = await Promise.all([
+    getProcessVariantRevision(organizationId, fromRevisionId),
+    getProcessVariantRevision(organizationId, toRevisionId),
+  ]);
+
+  if (!from || !to) {
+    return null;
+  }
+
+  if (from.processVariantId !== variantId || to.processVariantId !== variantId) {
+    return null;
+  }
+
+  const [before, after] = await Promise.all([
+    getRevisionSnapshot(organizationId, from.id),
+    getRevisionSnapshot(organizationId, to.id),
+  ]);
+
+  const changes = compareRevisions(before, after);
+
+  return {
+    from,
+    to,
+    technical: technicalChanges(changes),
+    layout: layoutChanges(changes),
+  };
 }
 
 /**

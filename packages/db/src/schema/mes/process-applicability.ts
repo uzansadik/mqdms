@@ -36,6 +36,12 @@ export const processVariantApplicability = pgTable(
     /** Ait olduğu Process Variant Revision. */
     processVariantRevisionId: uuid("process_variant_revision_id").notNull(),
 
+    /** Revision'lar boyunca stabil teknik kimlik. */
+    logicalId: text("logical_id").notNull(),
+
+    /** Doğrudan türetildiği kaynak kaydın id'si. */
+    derivedFromId: uuid("derived_from_id"),
+
     name: text("name").notNull(),
 
     description: text("description"),
@@ -68,11 +74,23 @@ export const processVariantApplicability = pgTable(
       table.id,
     ),
 
+    // Aynı revision içinde logical id unique'tir.
+    unique("process_variant_applicability_revision_id_logical_id_unique").on(
+      table.processVariantRevisionId,
+      table.logicalId,
+    ),
+
     foreignKey({
       columns: [table.organizationId, table.processVariantRevisionId],
       foreignColumns: [processVariantRevision.organizationId, processVariantRevision.id],
       name: "process_variant_applicability_revision_org_fk",
     }).onDelete("cascade"),
+
+    foreignKey({
+      columns: [table.organizationId, table.derivedFromId],
+      foreignColumns: [table.organizationId, table.id],
+      name: "process_variant_applicability_derived_from_org_fk",
+    }).onDelete("no action"),
 
     index("process_variant_applicability_organization_id_idx").on(table.organizationId),
     index("process_variant_applicability_revision_id_idx").on(table.processVariantRevisionId),

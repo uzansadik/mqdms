@@ -15,7 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@mqdms/ui/components/t
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { requireAuthContext } from "@/features/auth/session";
+import { canAccess, requireAuthContext } from "@/features/auth/session";
 import {
   getProcessVariantDetailData,
   requireProcessVariantsAccess,
@@ -47,6 +47,8 @@ export default async function ProcessVariantDetailPage({ params }: PageProps) {
 
   const t = await getTranslations();
 
+  const canCompare = await canAccess(context, "processVariants", "compare");
+
   const basePath = `/master-processes/${data.variant.processId}/variants/${data.variant.id}`;
 
   return (
@@ -74,10 +76,18 @@ export default async function ProcessVariantDetailPage({ params }: PageProps) {
           </p>
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button asChild variant="outline">
             <Link href={`${basePath}/edit`}>{t("processVariants.actions.edit")}</Link>
           </Button>
+
+          {canCompare && (
+            <Button asChild variant="outline">
+              <Link href={`${basePath}/revisions/compare`}>
+                {t("processVariants.actions.compare")}
+              </Link>
+            </Button>
+          )}
 
           <Button asChild>
             <Link href={`${basePath}/revisions/new`}>

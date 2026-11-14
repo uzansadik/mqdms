@@ -8,7 +8,7 @@ import {
 } from "@/features/master-processes/server";
 
 type PageProps = {
-  params: Promise<{ id: string }>;
+  params: Promise<{ processId: string }>;
 };
 
 /** Master Process düzenleme ekranı. */
@@ -17,9 +17,9 @@ export default async function EditMasterProcessPage({ params }: PageProps) {
 
   await requireMasterProcessesAccess("update");
 
-  const { id } = await params;
+  const { processId } = await params;
 
-  const data = await getProcessDetailData(context.organizationId, id);
+  const data = await getProcessDetailData(context.organizationId, processId);
 
   if (!data) {
     notFound();
