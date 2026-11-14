@@ -1,4 +1,5 @@
 import { getTranslations } from "@mqdms/i18n/server";
+import { getPublicObjectUrl } from "@mqdms/storage/server";
 import { notFound } from "next/navigation";
 
 import { requireAuthContext } from "@/features/auth/session";
@@ -50,8 +51,10 @@ export default async function EditCustomerPage({ params }: PageProps) {
             website: record.website,
             countryCode: record.countryCode,
             preferredLanguage: record.preferredLanguage,
+            logoKey: record.logoKey,
             status: record.status,
           }}
+          logoUrl={record.logoKey ? getPublicObjectUrl(record.logoKey) : null}
         />
       </div>
     </div>
