@@ -341,17 +341,12 @@ async function seedSpecializedVariant(
     return;
   }
 
-  await createProcessVariant(context, {
-    processId: input.processId,
-    code: input.code,
-    name: input.name,
-    description: input.description,
-    variantType: "SPECIALIZED",
-    status: "ACTIVE",
-  });
-
-  result.variants += 1;
-
+  /*
+   * Varyant türetme sırasında oluşturulur: `deriveProcessVariant` hem
+   * varyantı hem de ilk `DRAFT` revision'ını kendisi oluşturur. Önce ayrıca
+   * `createProcessVariant` çağırmak aynı kodun ikinci kez kullanılmasına ve
+   * türetmenin reddedilmesine yol açardı.
+   */
   const derivation = await deriveProcessVariant(context, {
     sourceVariantRevisionId: input.sourceRevisionId,
     code: input.code,
@@ -368,6 +363,7 @@ async function seedSpecializedVariant(
   });
 
   result.revisions += 1;
+  result.variants += 1;
 
   await seedSpecializedContent(context, derivation.revisionId, input.kind);
 }
@@ -383,6 +379,15 @@ async function seedGenericContent(context: AuthContext, revisionId: string): Pro
 
   if (!data) {
     throw new ProcessLibrarySeedError("Jenerik revision okunamadı.", "FAILED");
+  }
+
+  /*
+   * Yayınlanmış revision değiştirilemez. İçerik ilk kurulumda yazıldığı için
+   * yeniden denemede atlanır; aksi halde kurulum ikinci çalıştırmada
+   * değiştirilemeyen bir revision'a yazmaya çalışıp başarısız olurdu.
+   */
+  if (data.revision.status !== "DRAFT") {
+    return;
   }
 
   // Akış.
@@ -609,6 +614,11 @@ async function seedSpecializedContent(
   const data = await getFlowEditorData(context.organizationId, revisionId);
 
   if (!data) {
+    return;
+  }
+
+  // Yayınlanmış revision değiştirilemez; yeniden denemede atlanır.
+  if (data.revision.status !== "DRAFT") {
     return;
   }
 

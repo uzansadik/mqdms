@@ -10,7 +10,7 @@ import {
 } from "@mqdms/db/schema";
 import { and, eq } from "drizzle-orm";
 
-import { assertRevisionEditable } from "@/features/process-variants/service";
+import { assertRevisionEditable, lockDraftRevision } from "@/features/process-variants/service";
 
 import { getNodeRevisionId, getWorkElement, listNodeWorkElements } from "./repository";
 import type { WorkElementFormValues } from "./schema";
@@ -102,6 +102,23 @@ export async function createWorkElement(
   await validateReferences(context.organizationId, input);
 
   return db.transaction(async (tx) => {
+    /*
+     * Revision satırı kilitlenerek düzenlenebilir durumu transaction
+     * içinde yeniden doğrulanır: incelemeye gönderilen bir
+     * revision'a içerik yazılamaz.
+     */
+    const editable = await lockDraftRevision(
+      tx,
+      context.organizationId,
+      input.processVariantRevisionId,
+    );
+
+    if (!editable) {
+      throw new WorkElementRuleError(
+        "Revision düzenlenemez; yalnızca taslak revision değiştirilebilir.",
+        "INVALID_STATE",
+      );
+    }
     const created = await tx
       .insert(processWorkElement)
       .values({
@@ -162,6 +179,23 @@ export async function updateWorkElement(
   await validateReferences(context.organizationId, input);
 
   await db.transaction(async (tx) => {
+    /*
+     * Revision satırı kilitlenerek düzenlenebilir durumu transaction
+     * içinde yeniden doğrulanır: incelemeye gönderilen bir
+     * revision'a içerik yazılamaz.
+     */
+    const editable = await lockDraftRevision(
+      tx,
+      context.organizationId,
+      target.processVariantRevisionId,
+    );
+
+    if (!editable) {
+      throw new WorkElementRuleError(
+        "Revision düzenlenemez; yalnızca taslak revision değiştirilebilir.",
+        "INVALID_STATE",
+      );
+    }
     await tx
       .update(processWorkElement)
       .set({
@@ -208,6 +242,23 @@ export async function deleteWorkElement(
   await assertRevisionEditable(context, target.processVariantRevisionId);
 
   await db.transaction(async (tx) => {
+    /*
+     * Revision satırı kilitlenerek düzenlenebilir durumu transaction
+     * içinde yeniden doğrulanır: incelemeye gönderilen bir
+     * revision'a içerik yazılamaz.
+     */
+    const editable = await lockDraftRevision(
+      tx,
+      context.organizationId,
+      target.processVariantRevisionId,
+    );
+
+    if (!editable) {
+      throw new WorkElementRuleError(
+        "Revision düzenlenemez; yalnızca taslak revision değiştirilebilir.",
+        "INVALID_STATE",
+      );
+    }
     await tx
       .delete(processWorkElement)
       .where(
@@ -285,6 +336,23 @@ export async function attachWorkElementToNode(
   }
 
   await db.transaction(async (tx) => {
+    /*
+     * Revision satırı kilitlenerek düzenlenebilir durumu transaction
+     * içinde yeniden doğrulanır: incelemeye gönderilen bir
+     * revision'a içerik yazılamaz.
+     */
+    const editable = await lockDraftRevision(
+      tx,
+      context.organizationId,
+      workElement.processVariantRevisionId,
+    );
+
+    if (!editable) {
+      throw new WorkElementRuleError(
+        "Revision düzenlenemez; yalnızca taslak revision değiştirilebilir.",
+        "INVALID_STATE",
+      );
+    }
     await tx.insert(flowNodeWorkElement).values({
       organizationId: context.organizationId,
       flowNodeId,
@@ -324,6 +392,23 @@ export async function detachWorkElementFromNode(
   await assertRevisionEditable(context, workElement.processVariantRevisionId);
 
   await db.transaction(async (tx) => {
+    /*
+     * Revision satırı kilitlenerek düzenlenebilir durumu transaction
+     * içinde yeniden doğrulanır: incelemeye gönderilen bir
+     * revision'a içerik yazılamaz.
+     */
+    const editable = await lockDraftRevision(
+      tx,
+      context.organizationId,
+      workElement.processVariantRevisionId,
+    );
+
+    if (!editable) {
+      throw new WorkElementRuleError(
+        "Revision düzenlenemez; yalnızca taslak revision değiştirilebilir.",
+        "INVALID_STATE",
+      );
+    }
     await tx
       .delete(flowNodeWorkElement)
       .where(
