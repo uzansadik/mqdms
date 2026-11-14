@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { canTransition, isEditable } from "./lifecycle";
+import { ALLOWED_TRANSITIONS, canTransition, isEditable } from "./lifecycle";
 
 describe("revision yaşam döngüsü", () => {
   it("normal akışı destekler", () => {
@@ -42,5 +42,16 @@ describe("revision yaşam döngüsü", () => {
     expect(isEditable("APPROVED")).toBe(false);
     expect(isEditable("RELEASED")).toBe(false);
     expect(isEditable("SUPERSEDED")).toBe(false);
+  });
+
+  it("geri alma yolu tek bir kaynak duruma bağlı değildir", () => {
+    /*
+     * Geri alma hem incelemede hem onaylanmış durumdan mümkündür. Servis bu
+     * yüzden beklenen durumu sabit bir değer olarak yazmaz, transaction
+     * içinde okunan mevcut durumu kullanır.
+     */
+    const sources = ALLOWED_TRANSITIONS.IN_REVIEW.concat(ALLOWED_TRANSITIONS.APPROVED);
+
+    expect(sources.filter((status) => status === "DRAFT")).toHaveLength(2);
   });
 });

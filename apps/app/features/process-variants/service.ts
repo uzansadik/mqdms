@@ -555,7 +555,7 @@ export async function approveProcessVariantRevision(
 }
 
 /**
- * Revision'ı gerekçeli olarak geri alır (`IN_REVIEW → DRAFT`).
+ * Revision'ı gerekçeli olarak geri alır (`IN_REVIEW → DRAFT`, `APPROVED → DRAFT`).
  *
  * Gerekçe audit kaydında saklanır; revision'ın teknik içeriği korunur.
  */
@@ -575,7 +575,31 @@ export async function rejectProcessVariantRevision(
   assertTransition(revision.status, "DRAFT");
 
   await db.transaction(async (tx) => {
-    await updateRevisionStatus(tx, context.organizationId, revisionId, "APPROVED", {
+    /*
+     * Geri alma iki durumdan da mümkündür (`IN_REVIEW` ve `APPROVED`). Beklenen
+     * durum transaction içinde, revision kilitliyken okunur: geçiş kuralı ile
+     * koşullu güncelleme aynı durumu görmelidir; aksi halde incelemede olan bir
+     * revision geri alınamaz.
+     */
+    const rows = await tx
+      .select({ status: processVariantRevision.status })
+      .from(processVariantRevision)
+      .where(
+        and(
+          eq(processVariantRevision.organizationId, context.organizationId),
+          eq(processVariantRevision.id, revisionId),
+        ),
+      )
+      .for("update")
+      .limit(1);
+
+    if (!rows[0]) {
+      throw new ProcessVariantRuleError("Revision bulunamadı.", "NOT_FOUND");
+    }
+
+    assertTransition(rows[0].status, "DRAFT");
+
+    await updateRevisionStatus(tx, context.organizationId, revisionId, rows[0].status, {
       status: "DRAFT",
       approvedAt: null,
       approvedById: null,
