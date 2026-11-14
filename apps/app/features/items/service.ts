@@ -1,13 +1,13 @@
 import { writeAuditLog } from "@mqdms/audit";
 import { type AuthContext, hasPermission } from "@mqdms/auth/permissions/server";
 import { db } from "@mqdms/db";
-import { item } from "@mqdms/db/schema";
+import { item, itemRevision } from "@mqdms/db/schema";
 import { and, eq } from "drizzle-orm";
 
 import { getItemGroup } from "@/features/item-groups/repository";
 import { getUnit } from "@/features/units/repository";
 
-import { findItemByCode, getItem } from "./repository";
+import { findItemByCode, findItemRevisionByValue, getItem, getItemRevision } from "./repository";
 import type { ItemFormValues } from "./schema";
 
 /**
@@ -252,6 +252,137 @@ export async function restoreItem(context: AuthContext, itemId: string): Promise
         action: "item.restored",
         target: { type: "item", id: itemId },
         metadata: { code: target.code },
+      },
+      tx,
+    );
+  });
+}
+
+/* -------------------------------------------------------------------------
+ * Item revision
+ * ---------------------------------------------------------------------- */
+
+/** Item revision hatası. */
+export class ItemRevisionRuleError extends Error {
+  constructor(
+    message: string,
+    readonly code: "NOT_FOUND" | "CONFLICT" | "INVALID_INPUT" | "FORBIDDEN",
+  ) {
+    super(message);
+    this.name = "ItemRevisionRuleError";
+  }
+}
+
+/**
+ * Item revision oluşturur.
+ *
+ * Bir item kartı revision bilgisi olmadan açılabilir; ancak yayınlanmış teknik
+ * yapılarda kullanılan ürünün revizyonu açıkça belirlenmelidir.
+ *
+ * Revision değeri **metin** olarak saklanır: sayısal artış zorunlu değildir.
+ */
+export async function createItemRevision(
+  context: AuthContext,
+  input: {
+    itemId: string;
+    revision: string;
+    description?: string | null;
+    changeReason?: string | null;
+    effectiveFrom?: string | null;
+  },
+): Promise<string> {
+  await requireItemPermission(context, "manageRevisions");
+
+  const revision = input.revision.trim();
+
+  return db.transaction(async (tx) => {
+    const target = await getItem(context.organizationId, input.itemId);
+
+    if (!target || target.archivedAt) {
+      throw new ItemRevisionRuleError("Ürün bulunamadı.", "NOT_FOUND");
+    }
+
+    const existing = await findItemRevisionByValue(context.organizationId, input.itemId, revision);
+
+    if (existing) {
+      throw new ItemRevisionRuleError(
+        "Bu revision değeri bu ürün için zaten kullanılıyor.",
+        "CONFLICT",
+      );
+    }
+
+    const created = await tx
+      .insert(itemRevision)
+      .values({
+        organizationId: context.organizationId,
+        itemId: input.itemId,
+        revision,
+        description: input.description ?? null,
+        changeReason: input.changeReason ?? null,
+        effectiveFrom: input.effectiveFrom ?? null,
+        status: "DRAFT",
+        createdById: context.userId,
+      })
+      .returning({ id: itemRevision.id });
+
+    const revisionId = created[0]?.id;
+
+    if (!revisionId) {
+      throw new ItemRevisionRuleError("Revision oluşturulamadı.", "INVALID_INPUT");
+    }
+
+    await writeAuditLog(
+      {
+        organizationId: context.organizationId,
+        actorId: context.userId,
+        action: "itemRevision.created",
+        target: { type: "itemRevision", id: revisionId },
+        metadata: { itemId: input.itemId, revision },
+      },
+      tx,
+    );
+
+    return revisionId;
+  });
+}
+
+/**
+ * Item revision'ını yayınlar.
+ *
+ * Yayınlanan revision teknik içerik olarak **değiştirilemez**; yeni bir teknik
+ * değişiklik için yeni revision oluşturulur. Önceki revision silinmez.
+ */
+export async function releaseItemRevision(context: AuthContext, revisionId: string): Promise<void> {
+  await requireItemPermission(context, "releaseRevision");
+
+  await db.transaction(async (tx) => {
+    const target = await getItemRevision(context.organizationId, revisionId);
+
+    if (!target) {
+      throw new ItemRevisionRuleError("Revision bulunamadı.", "NOT_FOUND");
+    }
+
+    if (target.status === "RELEASED") {
+      return;
+    }
+
+    await tx
+      .update(itemRevision)
+      .set({ status: "RELEASED", releasedAt: new Date(), releasedById: context.userId })
+      .where(
+        and(
+          eq(itemRevision.organizationId, context.organizationId),
+          eq(itemRevision.id, revisionId),
+        ),
+      );
+
+    await writeAuditLog(
+      {
+        organizationId: context.organizationId,
+        actorId: context.userId,
+        action: "itemRevision.released",
+        target: { type: "itemRevision", id: revisionId },
+        metadata: { itemId: target.itemId, revision: target.revision },
       },
       tx,
     );

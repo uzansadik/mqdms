@@ -661,6 +661,33 @@ export const en = {
   "items.detail.revisions.columns.revision": "Revision",
   "items.detail.revisions.columns.status": "Status",
   "items.detail.revisions.columns.description": "Description",
+  "items.detail.tabs.revisions": "Revisions",
+  "items.detail.tabs.boms": "BOMs",
+  "items.detail.tabs.usedIn": "Used in",
+
+  "items.detail.boms.title": "BOMs of this product",
+  "items.detail.boms.empty.title": "No BOM for this product yet",
+  "items.detail.boms.empty.description":
+    "Create a BOM to define which components this product is made of.",
+
+  "items.detail.usedIn.boms.title": "Used in BOMs",
+  "items.detail.usedIn.projects.title": "Used in projects",
+  "items.detail.usedIn.empty.title": "Not used anywhere yet",
+  "items.detail.usedIn.empty.description":
+    "This product is not a component of any BOM and is not part of a project.",
+
+  "items.revisions.form.title": "Add revision",
+  "items.revisions.form.description":
+    "A released revision is immutable; a new technical change needs a new revision.",
+  "items.revisions.form.revision.label": "Revision",
+  "items.revisions.form.revision.placeholder": "03",
+  "items.revisions.form.effectiveFrom.label": "Effective from",
+  "items.revisions.form.changeReason.label": "Change reason",
+  "items.revisions.form.description.label": "Description",
+  "items.revisions.form.submit": "Add revision",
+  "items.revisions.actions.created": "Revision created.",
+  "items.revisions.actions.released": "Revision released.",
+  "items.revisions.actions.release": "Release",
 
   "customerItems.empty.title": "No customer references yet",
   "customerItems.empty.description": "Add the customer part numbers this product is known by.",

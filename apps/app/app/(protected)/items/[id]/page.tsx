@@ -23,6 +23,8 @@ import {
   listCustomerItemsByItem,
 } from "@/features/customer-items/repository";
 import { listCustomerOptions } from "@/features/customers/repository";
+import { ItemRevisionActions } from "@/features/items/components/item-revision-actions";
+import { ItemRevisionForm } from "@/features/items/components/item-revision-form";
 import { listItemRevisions } from "@/features/items/repository";
 import { getItemDetailData, requireItemsAccess } from "@/features/items/server";
 import { StatusBadge } from "@/features/shared/status-badge";
@@ -34,8 +36,8 @@ type PageProps = {
 /**
  * Ürün detayı.
  *
- * Sekmeler: genel bakış ve müşteri referansları. Revision yönetimi ve BOM
- * sekmeleri ilgili modüller tamamlandığında eklenir.
+ * Sekmeler: genel bakış, revision'lar, müşteri referansları, BOM'lar,
+ * kullanım ve projeler.
  */
 export default async function ItemDetailPage({ params }: PageProps) {
   const context = await requireAuthContext();
@@ -91,9 +93,15 @@ export default async function ItemDetailPage({ params }: PageProps) {
         <TabsList>
           <TabsTrigger value="overview">{t("items.detail.tabs.overview")}</TabsTrigger>
 
+          <TabsTrigger value="revisions">{t("items.detail.tabs.revisions")}</TabsTrigger>
+
           <TabsTrigger value="customerReferences">
             {t("items.detail.tabs.customerReferences")}
           </TabsTrigger>
+
+          <TabsTrigger value="boms">{t("items.detail.tabs.boms")}</TabsTrigger>
+
+          <TabsTrigger value="usedIn">{t("items.detail.tabs.usedIn")}</TabsTrigger>
         </TabsList>
 
         <TabsContent className="mt-4 space-y-4" value="overview">
@@ -134,7 +142,9 @@ export default async function ItemDetailPage({ params }: PageProps) {
               </dl>
             </CardContent>
           </Card>
+        </TabsContent>
 
+        <TabsContent className="mt-4 space-y-4" value="revisions">
           <Card>
             <CardHeader>
               <CardTitle>{t("items.detail.revisions.title")}</CardTitle>
@@ -160,6 +170,10 @@ export default async function ItemDetailPage({ params }: PageProps) {
                       <TableHead>{t("items.detail.revisions.columns.status")}</TableHead>
 
                       <TableHead>{t("items.detail.revisions.columns.description")}</TableHead>
+
+                      <TableHead className="text-right">
+                        {t("items.list.columns.actions")}
+                      </TableHead>
                     </TableRow>
                   </TableHeader>
 
@@ -173,6 +187,13 @@ export default async function ItemDetailPage({ params }: PageProps) {
                         </TableCell>
 
                         <TableCell>{revision.description ?? "-"}</TableCell>
+
+                        <TableCell className="text-right">
+                          <ItemRevisionActions
+                            released={revision.status === "RELEASED"}
+                            revisionId={revision.id}
+                          />
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -180,6 +201,8 @@ export default async function ItemDetailPage({ params }: PageProps) {
               )}
             </CardContent>
           </Card>
+
+          <ItemRevisionForm itemId={data.item.id} />
         </TabsContent>
 
         <TabsContent className="mt-4 space-y-4" value="customerReferences">
@@ -200,6 +223,153 @@ export default async function ItemDetailPage({ params }: PageProps) {
           )}
 
           <CustomerItemForm customers={customers} itemId={data.item.id} />
+        </TabsContent>
+
+        <TabsContent className="mt-4 space-y-4" value="boms">
+          <Card>
+            <CardHeader>
+              <CardTitle>{t("items.detail.boms.title")}</CardTitle>
+            </CardHeader>
+
+            <CardContent>
+              {data.boms.length === 0 ? (
+                <Empty>
+                  <EmptyHeader>
+                    <EmptyTitle>{t("items.detail.boms.empty.title")}</EmptyTitle>
+
+                    <EmptyDescription>{t("items.detail.boms.empty.description")}</EmptyDescription>
+                  </EmptyHeader>
+                </Empty>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>{t("boms.list.columns.code")}</TableHead>
+
+                      <TableHead>{t("boms.list.columns.name")}</TableHead>
+
+                      <TableHead>{t("boms.list.columns.status")}</TableHead>
+                    </TableRow>
+                  </TableHeader>
+
+                  <TableBody>
+                    {data.boms.map((bom) => (
+                      <TableRow key={bom.id}>
+                        <TableCell className="font-medium">
+                          <Link className="hover:underline" href={`/boms/${bom.id}`}>
+                            {bom.code}
+                          </Link>
+                        </TableCell>
+
+                        <TableCell>{bom.name}</TableCell>
+
+                        <TableCell>
+                          <StatusBadge
+                            label={t(`items.status.${bom.status}`)}
+                            status={bom.status}
+                          />
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent className="mt-4 space-y-4" value="usedIn">
+          <Card>
+            <CardHeader>
+              <CardTitle>{t("items.detail.usedIn.boms.title")}</CardTitle>
+            </CardHeader>
+
+            <CardContent>
+              {data.usedInBoms.length === 0 ? (
+                <Empty>
+                  <EmptyHeader>
+                    <EmptyTitle>{t("items.detail.usedIn.empty.title")}</EmptyTitle>
+
+                    <EmptyDescription>
+                      {t("items.detail.usedIn.empty.description")}
+                    </EmptyDescription>
+                  </EmptyHeader>
+                </Empty>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>{t("boms.list.columns.code")}</TableHead>
+
+                      <TableHead>{t("boms.list.columns.name")}</TableHead>
+
+                      <TableHead>{t("boms.list.columns.currentRevision")}</TableHead>
+                    </TableRow>
+                  </TableHeader>
+
+                  <TableBody>
+                    {data.usedInBoms.map((usage) => (
+                      <TableRow key={`${usage.bomId}-${usage.revisionId}`}>
+                        <TableCell className="font-medium">
+                          <Link className="hover:underline" href={`/boms/${usage.bomId}`}>
+                            {usage.bomCode}
+                          </Link>
+                        </TableCell>
+
+                        <TableCell>{usage.bomName}</TableCell>
+
+                        <TableCell>{usage.revision}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>{t("items.detail.usedIn.projects.title")}</CardTitle>
+            </CardHeader>
+
+            <CardContent>
+              {data.usedInProjects.length === 0 ? (
+                <Empty>
+                  <EmptyHeader>
+                    <EmptyTitle>{t("items.detail.usedIn.empty.title")}</EmptyTitle>
+
+                    <EmptyDescription>
+                      {t("items.detail.usedIn.empty.description")}
+                    </EmptyDescription>
+                  </EmptyHeader>
+                </Empty>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>{t("projects.list.columns.code")}</TableHead>
+
+                      <TableHead>{t("projects.list.columns.name")}</TableHead>
+                    </TableRow>
+                  </TableHeader>
+
+                  <TableBody>
+                    {data.usedInProjects.map((project) => (
+                      <TableRow key={project.id}>
+                        <TableCell className="font-medium">
+                          <Link className="hover:underline" href={`/projects/${project.id}`}>
+                            {project.code}
+                          </Link>
+                        </TableCell>
+
+                        <TableCell>{project.name}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
     </div>

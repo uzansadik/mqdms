@@ -313,3 +313,35 @@ export async function listItemRevisionOptions(organizationId: string): Promise<
     .where(eq(itemRevision.organizationId, organizationId))
     .orderBy(asc(itemRevision.createdAt));
 }
+
+/**
+ * Revision değeri aynı item içinde unique'tir.
+ *
+ * Karşılaştırma metin olarak yapılır: revision değerleri sayısal olmak
+ * zorunda değildir.
+ */
+export async function findItemRevisionByValue(
+  organizationId: string,
+  itemId: string,
+  revision: string,
+  excludeId?: string,
+): Promise<{ id: string; revision: string; status: "DRAFT" | "RELEASED" | "SUPERSEDED" } | null> {
+  const rows = await db
+    .select({
+      id: itemRevision.id,
+      revision: itemRevision.revision,
+      status: itemRevision.status,
+    })
+    .from(itemRevision)
+    .where(
+      and(
+        eq(itemRevision.organizationId, organizationId),
+        eq(itemRevision.itemId, itemId),
+        eq(itemRevision.revision, revision),
+        excludeId ? sql`${itemRevision.id} <> ${excludeId}` : undefined,
+      ),
+    )
+    .limit(1);
+
+  return rows[0] ?? null;
+}

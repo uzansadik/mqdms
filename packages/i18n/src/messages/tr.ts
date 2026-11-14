@@ -660,6 +660,33 @@ export const tr = {
   "items.detail.revisions.columns.revision": "Revision",
   "items.detail.revisions.columns.status": "Durum",
   "items.detail.revisions.columns.description": "Açıklama",
+  "items.detail.tabs.revisions": "Revision'lar",
+  "items.detail.tabs.boms": "BOM'lar",
+  "items.detail.tabs.usedIn": "Kullanım",
+
+  "items.detail.boms.title": "Bu ürünün BOM'ları",
+  "items.detail.boms.empty.title": "Bu ürün için henüz BOM yok",
+  "items.detail.boms.empty.description":
+    "Bu ürünün hangi bileşenlerden oluştuğunu tanımlamak için BOM oluşturun.",
+
+  "items.detail.usedIn.boms.title": "Kullanıldığı BOM'lar",
+  "items.detail.usedIn.projects.title": "Kullanıldığı projeler",
+  "items.detail.usedIn.empty.title": "Henüz hiçbir yerde kullanılmıyor",
+  "items.detail.usedIn.empty.description":
+    "Bu ürün hiçbir BOM'un bileşeni değil ve bir proje kapsamında değil.",
+
+  "items.revisions.form.title": "Revision ekle",
+  "items.revisions.form.description":
+    "Yayınlanmış bir revision değiştirilemez; yeni bir teknik değişiklik yeni bir revision gerektirir.",
+  "items.revisions.form.revision.label": "Revision",
+  "items.revisions.form.revision.placeholder": "03",
+  "items.revisions.form.effectiveFrom.label": "Yürürlük tarihi",
+  "items.revisions.form.changeReason.label": "Değişiklik sebebi",
+  "items.revisions.form.description.label": "Açıklama",
+  "items.revisions.form.submit": "Revision ekle",
+  "items.revisions.actions.created": "Revision oluşturuldu.",
+  "items.revisions.actions.released": "Revision yayınlandı.",
+  "items.revisions.actions.release": "Yayınla",
 
   "customerItems.empty.title": "Henüz müşteri referansı yok",
   "customerItems.empty.description":
