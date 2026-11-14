@@ -43,6 +43,13 @@
       "when": 1794667221593,
       "tag": "0005_aromatic_hydra",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1794683243546,
+      "tag": "0006_lucky_abomination",
+      "breakpoints": true
     }
   ]
 }

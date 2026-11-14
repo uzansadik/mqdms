@@ -112,6 +112,7 @@ export async function createCustomer(
         website: toNull(input.website),
         countryCode: toCountryCode(input.countryCode),
         preferredLanguage: toNull(input.preferredLanguage),
+        logoKey: toNull(input.logoKey ?? undefined),
         status: input.status,
         createdById: context.userId,
       })
@@ -171,6 +172,7 @@ export async function updateCustomer(
         website: toNull(input.website),
         countryCode: toCountryCode(input.countryCode),
         preferredLanguage: toNull(input.preferredLanguage),
+        logoKey: toNull(input.logoKey ?? undefined),
         status: input.status,
       })
       .where(and(eq(customer.organizationId, context.organizationId), eq(customer.id, customerId)));
@@ -441,6 +443,46 @@ export async function archiveCustomerSite(context: AuthContext, siteId: string):
   });
 }
 
+/**
+ * Sitenin arşivden çıkarılması.
+ *
+ * Arşivleme tek yönlü olmamalıdır: arşivlenen site tekrar kullanılabilir
+ * hâle gelebilir.
+ */
+export async function restoreCustomerSite(context: AuthContext, siteId: string): Promise<void> {
+  await requireBusinessPermission(context, "customers", "restore");
+
+  await db.transaction(async (tx) => {
+    const target = await getCustomerSite(context.organizationId, siteId, tx);
+
+    if (!target) {
+      throw new BusinessRuleError("Site bulunamadı.", "NOT_FOUND");
+    }
+
+    if (!target.archivedAt) {
+      return;
+    }
+
+    await tx
+      .update(customerSite)
+      .set({ archivedAt: null })
+      .where(
+        and(eq(customerSite.organizationId, context.organizationId), eq(customerSite.id, siteId)),
+      );
+
+    await writeAuditLog(
+      {
+        organizationId: context.organizationId,
+        actorId: context.userId,
+        action: "customerSite.restored",
+        target: { type: "customerSite", id: siteId },
+        metadata: { customerId: target.customerId, code: target.code },
+      },
+      tx,
+    );
+  });
+}
+
 /* -------------------------------------------------------------------------
  * Müşteri temsilcisi
  * ---------------------------------------------------------------------- */
@@ -610,6 +652,52 @@ export async function archiveCustomerContact(
         organizationId: context.organizationId,
         actorId: context.userId,
         action: "customerContact.archived",
+        target: { type: "customerContact", id: contactId },
+        metadata: { customerId: target.customerId },
+      },
+      tx,
+    );
+  });
+}
+
+/**
+ * Temsilcinin arşivden çıkarılması.
+ *
+ * Arşivleme tek yönlü olmamalıdır: arşivlenen temsilci tekrar kullanılabilir
+ * hâle gelebilir.
+ */
+export async function restoreCustomerContact(
+  context: AuthContext,
+  contactId: string,
+): Promise<void> {
+  await requireBusinessPermission(context, "customers", "restore");
+
+  await db.transaction(async (tx) => {
+    const target = await getCustomerContact(context.organizationId, contactId, tx);
+
+    if (!target) {
+      throw new BusinessRuleError("Temsilci bulunamadı.", "NOT_FOUND");
+    }
+
+    if (!target.archivedAt) {
+      return;
+    }
+
+    await tx
+      .update(customerContact)
+      .set({ archivedAt: null })
+      .where(
+        and(
+          eq(customerContact.organizationId, context.organizationId),
+          eq(customerContact.id, contactId),
+        ),
+      );
+
+    await writeAuditLog(
+      {
+        organizationId: context.organizationId,
+        actorId: context.userId,
+        action: "customerContact.restored",
         target: { type: "customerContact", id: contactId },
         metadata: { customerId: target.customerId },
       },

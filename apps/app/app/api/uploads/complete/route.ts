@@ -5,7 +5,7 @@ import { z } from "zod";
 import { requireAuthContext } from "@/features/auth/session";
 
 const schema = z.object({
-  purpose: z.enum(["import-file"]),
+  purpose: z.enum(["import-file", "customer-logo"]),
   key: z.string().min(1),
 });
 

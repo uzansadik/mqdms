@@ -57,6 +57,14 @@ export const customer = pgTable(
     /** Tercih edilen iletişim dili (ör. `de`, `tr`). */
     preferredLanguage: text("preferred_language"),
 
+    /**
+     * Müşteri logosunun depolamadaki nesne anahtarı.
+     *
+     * Dosya içeriği veritabanında tutulmaz; nesne anahtarı saklanır ve
+     * görüntü `STORAGE_PUBLIC_URL` üzerinden sunulur.
+     */
+    logoKey: text("logo_key"),
+
     status: customerStatus("status").notNull().default("ACTIVE"),
 
     createdById: text("created_by_id").references(() => user.id, { onDelete: "set null" }),

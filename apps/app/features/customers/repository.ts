@@ -1,5 +1,6 @@
 import { type DbClient, db } from "@mqdms/db";
 import { customer, customerContact, customerSite, project } from "@mqdms/db/schema";
+import { getPublicObjectUrl } from "@mqdms/storage/server";
 import { and, asc, count, eq, ilike, isNull, or, type SQL, sql } from "drizzle-orm";
 
 /**
@@ -38,6 +39,9 @@ export type CustomerListItem = {
   status: "ACTIVE" | "INACTIVE";
   siteCount: number;
   activeProjectCount: number;
+
+  /** Logonun görüntülenebilir adresi. */
+  logoUrl: string | null;
   createdAt: Date;
   archivedAt: Date | null;
 };
@@ -52,6 +56,7 @@ export type CustomerRecord = {
   website: string | null;
   countryCode: string | null;
   preferredLanguage: string | null;
+  logoKey: string | null;
   status: "ACTIVE" | "INACTIVE";
   createdAt: Date;
   updatedAt: Date;
@@ -120,9 +125,14 @@ function customerFilters(query: CustomerListQuery): SQL[] {
   return conditions;
 }
 
-/** Müşteri listesi. */
-export async function listCustomers(query: CustomerListQuery): Promise<CustomerListItem[]> {
-  const rows = await db
+/**
+ * Müşteri listesi sorgusu.
+ *
+ * Sorgu kurucusu ayrıdır: sayaç alt sorgularının üretilen SQL'i test
+ * edilir (bkz. `customers.repository.test.ts`).
+ */
+export function buildCustomerListQuery(query: CustomerListQuery) {
+  return db
     .select({
       id: customer.id,
       code: customer.code,
@@ -132,18 +142,27 @@ export async function listCustomers(query: CustomerListQuery): Promise<CustomerL
       status: customer.status,
       createdAt: customer.createdAt,
       archivedAt: customer.archivedAt,
+      logoKey: customer.logoKey,
 
-      /* Arşivlenmemiş site sayısı. */
+      /*
+       * Sayaç alt sorgularında dış tablo **nitelikli** yazılır.
+       *
+       * Drizzle'in tek tablo (join'siz) seçim optimizasyonu, ham SQL içindeki
+       * kolon referanslarını niteliksizleştirir: `customer.id` → `"id"`. Alt
+       * sorgunun tablosu aynı kolon adına sahip olduğu için korelasyon bozulur
+       * ve sayaç kendine referanslı (`customer_site.customer_id = "id"`)
+       * hâle gelerek daima 0 döner.
+       */
       siteCount: sql<number>`(
         select count(*)::int from ${customerSite}
-        where ${customerSite.customerId} = ${customer.id}
+        where ${customerSite.customerId} = ${sql.identifier("customer")}.${sql.identifier("id")}
           and ${customerSite.archivedAt} is null
       )`,
 
       /* Arşivlenmemiş ve iptal edilmemiş aktif proje sayısı. */
       activeProjectCount: sql<number>`(
         select count(*)::int from ${project}
-        where ${project.customerId} = ${customer.id}
+        where ${project.customerId} = ${sql.identifier("customer")}.${sql.identifier("id")}
           and ${project.status} = 'ACTIVE'
           and ${project.archivedAt} is null
       )`,
@@ -153,8 +172,17 @@ export async function listCustomers(query: CustomerListQuery): Promise<CustomerL
     .orderBy(asc(customer.name))
     .limit(query.pageSize)
     .offset((query.page - 1) * query.pageSize);
+}
 
-  return rows;
+/** Müşteri listesi. */
+export async function listCustomers(query: CustomerListQuery): Promise<CustomerListItem[]> {
+  const rows = await buildCustomerListQuery(query);
+
+  /* Logolar depolamadan sunulur; adres sunucuda hesaplanır. */
+  return rows.map((row) => ({
+    ...row,
+    logoUrl: row.logoKey ? getPublicObjectUrl(row.logoKey) : null,
+  }));
 }
 
 /** Müşteri listesi için toplam kayıt sayısı. */
@@ -184,6 +212,7 @@ export async function getCustomer(
       website: customer.website,
       countryCode: customer.countryCode,
       preferredLanguage: customer.preferredLanguage,
+      logoKey: customer.logoKey,
       status: customer.status,
       createdAt: customer.createdAt,
       updatedAt: customer.updatedAt,
@@ -220,6 +249,7 @@ export async function lockCustomer(
       website: customer.website,
       countryCode: customer.countryCode,
       preferredLanguage: customer.preferredLanguage,
+      logoKey: customer.logoKey,
       status: customer.status,
       createdAt: customer.createdAt,
       updatedAt: customer.updatedAt,
@@ -256,6 +286,7 @@ export async function findCustomerByCode(
       website: customer.website,
       countryCode: customer.countryCode,
       preferredLanguage: customer.preferredLanguage,
+      logoKey: customer.logoKey,
       status: customer.status,
       createdAt: customer.createdAt,
       updatedAt: customer.updatedAt,

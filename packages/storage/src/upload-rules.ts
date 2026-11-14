@@ -38,6 +38,11 @@ export const uploadRules: Record<string, UploadRule> = {
     maxSize: MAX_IMAGE_SIZE,
   },
 
+  "customer-logo": {
+    contentTypes: IMAGE_TYPES,
+    maxSize: MAX_IMAGE_SIZE,
+  },
+
   "import-file": {
     contentTypes: SPREADSHEET_TYPES,
     maxSize: MAX_IMPORT_SIZE,

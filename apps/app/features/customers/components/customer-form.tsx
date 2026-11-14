@@ -19,6 +19,7 @@ import { useRouter } from "next/navigation";
 import { Controller, useForm } from "react-hook-form";
 
 import { createCustomerAction, updateCustomerAction } from "../actions";
+import { CustomerLogoField } from "./customer-logo-field";
 import type { CustomerFormValues } from "../schema";
 import { customerFormSchema } from "../schema";
 
@@ -33,8 +34,12 @@ type CustomerFormProps = {
     website: string | null;
     countryCode: string | null;
     preferredLanguage: string | null;
+    logoKey: string | null;
     status: "ACTIVE" | "INACTIVE";
   };
+
+  /** Logonun görüntülenebilir adresi; herkese açık depolama kullanılır. */
+  logoUrl?: string | null;
 };
 
 /**
@@ -43,7 +48,7 @@ type CustomerFormProps = {
  * Oluşturma ve güncelleme aynı formu paylaşır; tek fark sunucudaki aksiyondur.
  * Doğrulama hem istemcide (React Hook Form + Zod) hem sunucuda yapılır.
  */
-export function CustomerForm({ customer }: CustomerFormProps) {
+export function CustomerForm({ customer, logoUrl }: CustomerFormProps) {
   const router = useRouter();
   const { t } = useI18n();
 
@@ -59,6 +64,7 @@ export function CustomerForm({ customer }: CustomerFormProps) {
       website: customer?.website ?? "",
       countryCode: customer?.countryCode ?? "",
       preferredLanguage: customer?.preferredLanguage ?? "",
+      logoKey: customer?.logoKey ?? null,
       status: customer?.status ?? "ACTIVE",
     },
   });
@@ -236,6 +242,18 @@ export function CustomerForm({ customer }: CustomerFormProps) {
 
                   {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
                 </Field>
+              )}
+            />
+
+            <Controller
+              control={form.control}
+              name="logoKey"
+              render={({ field }) => (
+                <CustomerLogoField
+                  onChange={field.onChange}
+                  previewUrl={logoUrl ?? null}
+                  value={(field.value as string | null | undefined) ?? null}
+                />
               )}
             />
 

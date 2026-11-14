@@ -4,7 +4,7 @@
  * `import-file` Excel ve CSV içe aktarım dosyaları içindir; kuralları
  * `upload-rules.ts` dosyasında tanımlıdır.
  */
-export type UploadPurpose = "user-avatar" | "organization-logo" | "import-file";
+export type UploadPurpose = "user-avatar" | "organization-logo" | "customer-logo" | "import-file";
 
 export type CreateUploadInput = {
   purpose: UploadPurpose;
