@@ -10,7 +10,7 @@ import {
 } from "@mqdms/db/schema";
 import { and, eq } from "drizzle-orm";
 
-import { assertRevisionEditable } from "@/features/process-variants/service";
+import { assertRevisionEditable, lockDraftRevision } from "@/features/process-variants/service";
 
 import { getProcessApplicability, getProcessIoDefinition } from "./repository";
 import type { ProcessApplicabilityFormValues, ProcessIoFormValues } from "./schema";
@@ -99,6 +99,23 @@ export async function createProcessIoDefinition(
   await validateReferences(context.organizationId, input);
 
   return db.transaction(async (tx) => {
+    /*
+     * Revision satırı kilitlenerek düzenlenebilir durumu transaction
+     * içinde yeniden doğrulanır: incelemeye gönderilen bir
+     * revision'a içerik yazılamaz.
+     */
+    const editable = await lockDraftRevision(
+      tx,
+      context.organizationId,
+      input.processVariantRevisionId,
+    );
+
+    if (!editable) {
+      throw new ProcessIoRuleError(
+        "Revision düzenlenemez; yalnızca taslak revision değiştirilebilir.",
+        "INVALID_STATE",
+      );
+    }
     const created = await tx
       .insert(processIoDefinition)
       .values({
@@ -160,6 +177,23 @@ export async function updateProcessIoDefinition(
   await validateReferences(context.organizationId, input);
 
   await db.transaction(async (tx) => {
+    /*
+     * Revision satırı kilitlenerek düzenlenebilir durumu transaction
+     * içinde yeniden doğrulanır: incelemeye gönderilen bir
+     * revision'a içerik yazılamaz.
+     */
+    const editable = await lockDraftRevision(
+      tx,
+      context.organizationId,
+      target.processVariantRevisionId,
+    );
+
+    if (!editable) {
+      throw new ProcessIoRuleError(
+        "Revision düzenlenemez; yalnızca taslak revision değiştirilebilir.",
+        "INVALID_STATE",
+      );
+    }
     await tx
       .update(processIoDefinition)
       .set({
@@ -205,6 +239,23 @@ export async function deleteProcessIoDefinition(context: AuthContext, ioId: stri
   await assertRevisionEditable(context, target.processVariantRevisionId);
 
   await db.transaction(async (tx) => {
+    /*
+     * Revision satırı kilitlenerek düzenlenebilir durumu transaction
+     * içinde yeniden doğrulanır: incelemeye gönderilen bir
+     * revision'a içerik yazılamaz.
+     */
+    const editable = await lockDraftRevision(
+      tx,
+      context.organizationId,
+      target.processVariantRevisionId,
+    );
+
+    if (!editable) {
+      throw new ProcessIoRuleError(
+        "Revision düzenlenemez; yalnızca taslak revision değiştirilebilir.",
+        "INVALID_STATE",
+      );
+    }
     await tx
       .delete(processIoDefinition)
       .where(
@@ -241,6 +292,23 @@ export async function createProcessApplicability(
   await assertRevisionEditable(context, input.processVariantRevisionId);
 
   return db.transaction(async (tx) => {
+    /*
+     * Revision satırı kilitlenerek düzenlenebilir durumu transaction
+     * içinde yeniden doğrulanır: incelemeye gönderilen bir
+     * revision'a içerik yazılamaz.
+     */
+    const editable = await lockDraftRevision(
+      tx,
+      context.organizationId,
+      input.processVariantRevisionId,
+    );
+
+    if (!editable) {
+      throw new ProcessIoRuleError(
+        "Revision düzenlenemez; yalnızca taslak revision değiştirilebilir.",
+        "INVALID_STATE",
+      );
+    }
     const created = await tx
       .insert(processVariantApplicability)
       .values({
@@ -307,6 +375,23 @@ export async function deleteProcessApplicability(
   await assertRevisionEditable(context, target.processVariantRevisionId);
 
   await db.transaction(async (tx) => {
+    /*
+     * Revision satırı kilitlenerek düzenlenebilir durumu transaction
+     * içinde yeniden doğrulanır: incelemeye gönderilen bir
+     * revision'a içerik yazılamaz.
+     */
+    const editable = await lockDraftRevision(
+      tx,
+      context.organizationId,
+      target.processVariantRevisionId,
+    );
+
+    if (!editable) {
+      throw new ProcessIoRuleError(
+        "Revision düzenlenemez; yalnızca taslak revision değiştirilebilir.",
+        "INVALID_STATE",
+      );
+    }
     await tx
       .delete(processVariantApplicability)
       .where(

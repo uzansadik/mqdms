@@ -6,9 +6,9 @@ import {
   listProcessIoDefinitions,
 } from "@/features/process-io/repository";
 import {
-  listFunctionRequirements,
   listProcessFunctions,
   listProcessRequirements,
+  listRevisionFunctionRequirementLinks,
 } from "@/features/process-requirements/repository";
 import { listWorkElements } from "@/features/process-work-elements/repository";
 
@@ -133,10 +133,22 @@ export async function getProcessVariantRevisionContentData(
 
   const links: Record<string, string[]> = {};
 
-  for (const func of functions) {
-    const requirementLinks = await listFunctionRequirements(organizationId, func.id);
+  /*
+   * Bağlantılar tek sorguda okunur: fonksiyon sayısı arttıkça fonksiyon
+   * başına sorgu yapmak (N+1) sayfayı yavaşlatıyordu.
+   */
+  const functionLinks = await listRevisionFunctionRequirementLinks(organizationId, revisionId);
 
-    links[func.id] = requirementLinks.map((entry) => entry.id);
+  for (const func of functions) {
+    links[func.id] = [];
+  }
+
+  for (const link of functionLinks) {
+    const existing = links[link.processFunctionId];
+
+    if (existing) {
+      existing.push(link.processRequirementId);
+    }
   }
 
   return {

@@ -1,8 +1,9 @@
 import { db } from "@mqdms/db";
 import { flow, flowEdge, flowNode, processVariantRevisionFlow } from "@mqdms/db/schema";
-import { and, asc, eq, inArray } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 
 import type { FlowEdgeType, FlowNodeType } from "./schema";
+import type { GraphEdge, GraphNode } from "./validation";
 
 /**
  * Flow okuma katmanı.
@@ -141,93 +142,40 @@ export async function listFlowEdges(
     .orderBy(asc(flowEdge.sortOrder), asc(flowEdge.createdAt));
 }
 
-/** Akışın node id'leri (akış başına kontrol için). */
-export async function listNodeIdsByFlow(organizationId: string, flowId: string): Promise<string[]> {
-  const rows = await db
-    .select({ id: flowNode.id })
-    .from(flowNode)
-    .where(and(eq(flowNode.organizationId, organizationId), eq(flowNode.flowId, flowId)));
-
-  return rows.map((row) => row.id);
-}
-
 /**
- * Bir node id'si başka bir akışta kullanılıyor mu?
+ * Bir revision'ın doğrulama için grafiği.
  *
- * İstemciden gelen id'ler güvenilmez: başka bir akışın node'u ile çakışma
- * yazımda engellenir.
+ * Revision'a bağlı akış yoksa `null` döner: akış opsiyonel bir teknik
+ * içeriktir, ancak varsa yayınlamadan önce doğrulanmalıdır.
  */
-export async function findNodeOwnerFlow(
+export async function getRevisionGraph(
   organizationId: string,
-  nodeId: string,
-): Promise<string | null> {
-  const rows = await db
-    .select({ flowId: flowNode.flowId })
-    .from(flowNode)
-    .where(and(eq(flowNode.organizationId, organizationId), eq(flowNode.id, nodeId)))
-    .limit(1);
+  revisionId: string,
+): Promise<{ nodes: GraphNode[]; edges: GraphEdge[] } | null> {
+  const flowRecord = await getFlowByRevision(organizationId, revisionId);
 
-  return rows[0]?.flowId ?? null;
-}
-
-/** Bir edge id'si başka bir akışta kullanılıyor mu? */
-export async function findEdgeOwnerFlow(
-  organizationId: string,
-  edgeId: string,
-): Promise<string | null> {
-  const rows = await db
-    .select({ flowId: flowEdge.flowId })
-    .from(flowEdge)
-    .where(and(eq(flowEdge.organizationId, organizationId), eq(flowEdge.id, edgeId)))
-    .limit(1);
-
-  return rows[0]?.flowId ?? null;
-}
-
-/** Node'ların mevcut id'leri (verilen akışta). */
-export async function listExistingNodeIds(
-  organizationId: string,
-  flowId: string,
-  nodeIds: string[],
-): Promise<string[]> {
-  if (nodeIds.length === 0) {
-    return [];
+  if (!flowRecord) {
+    return null;
   }
 
-  const rows = await db
-    .select({ id: flowNode.id })
-    .from(flowNode)
-    .where(
-      and(
-        eq(flowNode.organizationId, organizationId),
-        eq(flowNode.flowId, flowId),
-        inArray(flowNode.id, nodeIds),
-      ),
-    );
+  const [nodes, edges] = await Promise.all([
+    listFlowNodes(organizationId, flowRecord.id),
+    listFlowEdges(organizationId, flowRecord.id),
+  ]);
 
-  return rows.map((row) => row.id);
-}
-
-/** Edge'lerin mevcut id'leri (verilen akışta). */
-export async function listExistingEdgeIds(
-  organizationId: string,
-  flowId: string,
-  edgeIds: string[],
-): Promise<string[]> {
-  if (edgeIds.length === 0) {
-    return [];
-  }
-
-  const rows = await db
-    .select({ id: flowEdge.id })
-    .from(flowEdge)
-    .where(
-      and(
-        eq(flowEdge.organizationId, organizationId),
-        eq(flowEdge.flowId, flowId),
-        inArray(flowEdge.id, edgeIds),
-      ),
-    );
-
-  return rows.map((row) => row.id);
+  return {
+    nodes: nodes.map((node) => ({
+      id: node.id,
+      nodeType: node.nodeType,
+      title: node.title,
+      logicalId: node.logicalId,
+    })),
+    edges: edges.map((edge) => ({
+      id: edge.id,
+      sourceNodeId: edge.sourceNodeId,
+      targetNodeId: edge.targetNodeId,
+      label: edge.label,
+      edgeType: edge.edgeType,
+    })),
+  };
 }

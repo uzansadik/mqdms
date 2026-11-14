@@ -2,7 +2,9 @@
 
 import { z } from "zod";
 
+import { getTranslations } from "@mqdms/i18n/server";
 import { requireAuthContext } from "@/features/auth/session";
+import { describeValidationCode } from "@/features/flow-editor/validation";
 import { deriveProcessVariant, DerivationRuleError } from "./derivation";
 import {
   processVariantFormSchema,
@@ -44,6 +46,17 @@ function toActionError(error: unknown): string {
   console.error("Proses varyantı işlemi başarısız:", error);
 
   return "İşlem tamamlanamadı. Lütfen tekrar deneyin.";
+}
+
+/**
+ * Grafik doğrulama hatalarını okunur mesaja çevirir.
+ *
+ * Hatalar yayınlamayı engeller: akış yayınlanmadan önce tutarlı olmalıdır.
+ */
+async function describeGraphErrors(codes: string[]): Promise<string> {
+  const t = await getTranslations();
+
+  return codes.map((code) => describeValidationCode(code, t)).join(" ");
 }
 
 /** Türetme isteği şeması. */
@@ -159,7 +172,7 @@ export async function getSourceUpdateChangesAction(
 
   try {
     const result = await getSourceUpdateChanges(
-      context.organizationId,
+      context,
       parsed.data.targetRevisionId,
       parsed.data.sourceRevisionId,
     );
@@ -328,6 +341,10 @@ export async function releaseProcessVariantRevisionAction(
 
     return { success: true };
   } catch (error) {
+    if (error instanceof ProcessVariantRuleError && error.code === "GRAPH_INVALID") {
+      return { success: false, error: await describeGraphErrors(error.details) };
+    }
+
     return { success: false, error: toActionError(error) };
   }
 }

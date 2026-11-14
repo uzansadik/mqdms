@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import {
   foreignKey,
   index,
@@ -6,6 +7,7 @@ import {
   text,
   timestamp,
   unique,
+  uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
 
@@ -119,6 +121,14 @@ export const processVariantRevision = pgTable(
       foreignColumns: [table.organizationId, table.id],
       name: "process_variant_revision_supersedes_org_fk",
     }).onDelete("no action"),
+
+    /*
+     * Aynı anda en fazla bir `RELEASED` revision olabilir; kural veritabanı
+     * seviyesinde de korunur (kısmi benzersizlik indeksi).
+     */
+    uniqueIndex("process_variant_revision_variant_id_released_unique")
+      .on(table.processVariantId)
+      .where(sql`${table.status} = 'RELEASED'`),
 
     index("process_variant_revision_organization_id_idx").on(table.organizationId),
     index("process_variant_revision_variant_id_idx").on(table.processVariantId),

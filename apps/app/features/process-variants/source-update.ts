@@ -67,8 +67,11 @@ export class SourceUpdateRuleError extends Error {
 }
 
 /** Yetki kontrolü. */
-async function requireSourceUpdatePermission(context: AuthContext): Promise<void> {
-  if (!(await hasPermission(context, "processVariants", "update"))) {
+async function requireSourceUpdatePermission(
+  context: AuthContext,
+  action: "update" | "compare" = "update",
+): Promise<void> {
+  if (!(await hasPermission(context, "processVariants", action))) {
     throw new SourceUpdateRuleError("Bu işlem için yetkiniz yok.", "FORBIDDEN");
   }
 }
@@ -432,12 +435,19 @@ export async function listSourceUpdateCandidates(
  * Lineage kaynağı ile seçilen yeni kaynak revision arasındaki fark.
  *
  * Teknik değişiklikler ve görsel düzen değişiklikleri ayrı döner.
+ *
+ * Karşılaştırma revision'ın teknik içeriğini okur; bu nedenle yetki
+ * kontrolü zorunludur.
  */
 export async function getSourceUpdateChanges(
-  organizationId: string,
+  context: AuthContext,
   targetRevisionId: string,
   sourceRevisionId: string,
 ): Promise<{ changes: RevisionChange[]; technical: RevisionChange[]; layout: RevisionChange[] }> {
+  await requireSourceUpdatePermission(context, "compare");
+
+  const organizationId = context.organizationId;
+
   const target = await getProcessVariantRevision(organizationId, targetRevisionId);
 
   if (!target) {
@@ -449,6 +459,28 @@ export async function getSourceUpdateChanges(
   if (!lineageSource) {
     throw new SourceUpdateRuleError(
       "Bu varyant bir kaynak revision'dan türetilmemiş.",
+      "INVALID_INPUT",
+    );
+  }
+
+  /*
+   * Karşılaştırılacak kaynak revision, lineage kaynağının aynı varyantında
+   * ve yayınlanmış olmalıdır: başka bir varyantın taslağı karşılaştırma
+   * tabanı olamaz.
+   */
+  const source = await getProcessVariantRevision(organizationId, sourceRevisionId);
+
+  if (!source) {
+    throw new SourceUpdateRuleError("Kaynak revision bulunamadı.", "NOT_FOUND");
+  }
+
+  if (source.status !== "RELEASED") {
+    throw new SourceUpdateRuleError("Kaynak revision yayınlanmış olmalıdır.", "INVALID_STATE");
+  }
+
+  if (source.processVariantId !== lineageSource.processVariantId) {
+    throw new SourceUpdateRuleError(
+      "Kaynak revision, lineage kaynağıyla aynı varyanta ait olmalıdır.",
       "INVALID_INPUT",
     );
   }
@@ -541,6 +573,47 @@ export async function applySourceUpdate(
 
   return db.transaction(async (tx) => {
     let applied = 0;
+
+    /*
+     * Revision satırı **önce** kilitlenir.
+     *
+     * Alt kayıtların yazımı, yabancı anahtar denetimi için revision satırında
+     * `KEY SHARE` kilidi tutar; kilit sonra alınırsa iki eşzamanlı güncelleme
+     * birbirinin kilidini bekler ve PostgreSQL kilit döngüsü (deadlock) ile
+     * birini iptal eder.
+     */
+    const locked = await tx
+      .select({
+        id: processVariantRevision.id,
+        version: processVariantRevision.version,
+        status: processVariantRevision.status,
+      })
+      .from(processVariantRevision)
+      .where(
+        and(
+          eq(processVariantRevision.organizationId, context.organizationId),
+          eq(processVariantRevision.id, target.id),
+        ),
+      )
+      .for("update")
+      .limit(1);
+
+    if (!locked[0]) {
+      throw new SourceUpdateRuleError("Hedef revision bulunamadı.", "NOT_FOUND");
+    }
+
+    /*
+     * Durum kilit altında yeniden doğrulanır: transaction dışındaki kontrol
+     * ile bu yazma arasında revision incelemeye gönderilmiş olabilir.
+     */
+    if (locked[0].status !== "DRAFT") {
+      throw new SourceUpdateRuleError(
+        "Güncelleme yalnızca taslak revision'a uygulanabilir.",
+        "INVALID_STATE",
+      );
+    }
+
+    const nextVersion = locked[0].version + 1;
 
     // Work element'ler.
     const targetWorkElements = await tx
@@ -807,7 +880,17 @@ export async function applySourceUpdate(
           processRequirementId: processFunctionRequirement.processRequirementId,
         })
         .from(processFunctionRequirement)
-        .where(eq(processFunctionRequirement.organizationId, context.organizationId));
+        .innerJoin(
+          processFunction,
+          eq(processFunction.id, processFunctionRequirement.processFunctionId),
+        )
+        .where(
+          and(
+            eq(processFunctionRequirement.organizationId, context.organizationId),
+            // Yalnızca kaynak revision'ın fonksiyonlarına ait bağlantılar.
+            eq(processFunction.processVariantRevisionId, source.id),
+          ),
+        );
 
       for (const link of sourceLinks) {
         const functionLogicalId = sourceFunctionById.get(link.processFunctionId);
@@ -1280,7 +1363,14 @@ export async function applySourceUpdate(
               description: flowNodeWorkElement.description,
             })
             .from(flowNodeWorkElement)
-            .where(eq(flowNodeWorkElement.organizationId, context.organizationId));
+            .innerJoin(flowNode, eq(flowNode.id, flowNodeWorkElement.flowNodeId))
+            .where(
+              and(
+                eq(flowNodeWorkElement.organizationId, context.organizationId),
+                // Yalnızca kaynak akışın node'larına ait bağlantılar.
+                eq(flowNode.flowId, sourceFlow.id),
+              ),
+            );
 
           for (const link of sourceNodeLinks) {
             const sourceNodeRows = await tx
@@ -1357,7 +1447,14 @@ export async function applySourceUpdate(
               processFunctionId: flowNodeFunction.processFunctionId,
             })
             .from(flowNodeFunction)
-            .where(eq(flowNodeFunction.organizationId, context.organizationId));
+            .innerJoin(flowNode, eq(flowNode.id, flowNodeFunction.flowNodeId))
+            .where(
+              and(
+                eq(flowNodeFunction.organizationId, context.organizationId),
+                // Yalnızca kaynak akışın node'larına ait bağlantılar.
+                eq(flowNode.flowId, sourceFlow.id),
+              ),
+            );
 
           for (const link of sourceFunctionLinks) {
             const sourceNodeRows = await tx
@@ -1430,10 +1527,20 @@ export async function applySourceUpdate(
       }
     }
 
-    // Taslak revision artık bu kaynak revision'ı yansıtır.
+    /*
+     * Taslak revision artık bu kaynak revision'ı yansıtır.
+     *
+     * Sürüm artırılır: teknik içerik değiştiği için, eski edit ekranından
+     * gelen kayıt (akış kaydetme) reddedilir. Aksi halde kullanıcının
+     * transfer edilen node'ları sessizce silinirdi.
+     */
     await tx
       .update(processVariantRevision)
-      .set({ sourceVariantRevisionId: source.id, updatedAt: new Date() })
+      .set({
+        sourceVariantRevisionId: source.id,
+        version: nextVersion,
+        updatedAt: new Date(),
+      })
       .where(eq(processVariantRevision.id, target.id));
 
     await writeAuditLog(

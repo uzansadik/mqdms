@@ -1,9 +1,17 @@
+import type { MessageKey } from "@mqdms/i18n";
+
 /**
  * Flow grafiği doğrulaması.
  *
  * Bu modül saf fonksiyonlardan oluşur: grafik kuralları veritabanından
  * bağımsız olarak test edilir.
  */
+
+/** Çeviri fonksiyonu. */
+export type ValidatorTranslator = (
+  key: MessageKey,
+  values?: Record<string, string | number>,
+) => string;
 
 /** Node tipleri. */
 export type FlowNodeType =
@@ -203,13 +211,27 @@ export function validateGraph(nodes: GraphNode[], edges: GraphEdge[]): GraphVali
 }
 
 /**
+ * Tek bir doğrulama hata kodunu okunur mesaja çevirir.
+ *
+ * Kod `BASE:etiket` biçimindeyse etiket mesaja eklenir: kullanıcı hangi
+ * kaydın düzeltilmesi gerektiğini görür.
+ */
+export function describeValidationCode(code: string, t: ValidatorTranslator): string {
+  const [base = code, ...rest] = code.split(":");
+  const label = rest.join(":");
+  const message = describeValidation({ errors: [base], warnings: [] }, t).errors[0] ?? base;
+
+  return label ? `${message} (${label})` : message;
+}
+
+/**
  * Doğrulama hatalarını okunur mesajlara çevirir.
  *
  * Hatalar kullanıcıya gösterilir; uyarılar bilgilendirme amaçlıdır.
  */
 export function describeValidation(
   validation: GraphValidation,
-  t: (key: string, values?: Record<string, string | number>) => string,
+  t: ValidatorTranslator,
 ): { errors: string[]; warnings: string[] } {
   const describe = (code: string): string => {
     const [base, id] = code.split(":");

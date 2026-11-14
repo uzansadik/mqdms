@@ -4,7 +4,8 @@ import { db } from "@mqdms/db";
 import { processFunction, processFunctionRequirement, processRequirement } from "@mqdms/db/schema";
 import { and, eq } from "drizzle-orm";
 
-import { assertRevisionEditable } from "@/features/process-variants/service";
+import { assertRevisionEditable, lockDraftRevision } from "@/features/process-variants/service";
+import { getWorkElement } from "@/features/process-work-elements/repository";
 
 import { getProcessFunction, getProcessRequirement, listFunctionRequirements } from "./repository";
 import type { ProcessFunctionFormValues, ProcessRequirementFormValues } from "./schema";
@@ -50,6 +51,35 @@ function toNull(value: string | undefined): string | null {
   return trimmed === "" ? null : trimmed;
 }
 
+/**
+ * Work element referansının aynı revision'a ait olduğunu doğrular.
+ *
+ * Fonksiyon, work element'e bağlandığında ikisi de aynı teknik revision
+ * kapsamında olmalıdır; aksi halde revision'lar arası sızıntı oluşur.
+ */
+async function assertWorkElementInRevision(
+  context: AuthContext,
+  processWorkElementId: string | null,
+  processVariantRevisionId: string,
+): Promise<void> {
+  if (!processWorkElementId) {
+    return;
+  }
+
+  const workElement = await getWorkElement(context.organizationId, processWorkElementId);
+
+  if (!workElement) {
+    throw new ProcessContentRuleError("Work element bulunamadı.", "NOT_FOUND");
+  }
+
+  if (workElement.processVariantRevisionId !== processVariantRevisionId) {
+    throw new ProcessContentRuleError(
+      "Work element aynı revision'a ait olmalıdır.",
+      "INVALID_INPUT",
+    );
+  }
+}
+
 /** Fonksiyon oluşturur. */
 export async function createProcessFunction(
   context: AuthContext,
@@ -59,7 +89,30 @@ export async function createProcessFunction(
 
   await assertRevisionEditable(context, input.processVariantRevisionId);
 
+  await assertWorkElementInRevision(
+    context,
+    input.processWorkElementId,
+    input.processVariantRevisionId,
+  );
+
   return db.transaction(async (tx) => {
+    /*
+     * Revision satırı kilitlenerek düzenlenebilir durumu transaction
+     * içinde yeniden doğrulanır: incelemeye gönderilen bir
+     * revision'a içerik yazılamaz.
+     */
+    const editable = await lockDraftRevision(
+      tx,
+      context.organizationId,
+      input.processVariantRevisionId,
+    );
+
+    if (!editable) {
+      throw new ProcessContentRuleError(
+        "Revision düzenlenemez; yalnızca taslak revision değiştirilebilir.",
+        "INVALID_STATE",
+      );
+    }
     const created = await tx
       .insert(processFunction)
       .values({
@@ -114,7 +167,30 @@ export async function updateProcessFunction(
 
   await assertRevisionEditable(context, target.processVariantRevisionId);
 
+  await assertWorkElementInRevision(
+    context,
+    input.processWorkElementId,
+    target.processVariantRevisionId,
+  );
+
   await db.transaction(async (tx) => {
+    /*
+     * Revision satırı kilitlenerek düzenlenebilir durumu transaction
+     * içinde yeniden doğrulanır: incelemeye gönderilen bir
+     * revision'a içerik yazılamaz.
+     */
+    const editable = await lockDraftRevision(
+      tx,
+      context.organizationId,
+      target.processVariantRevisionId,
+    );
+
+    if (!editable) {
+      throw new ProcessContentRuleError(
+        "Revision düzenlenemez; yalnızca taslak revision değiştirilebilir.",
+        "INVALID_STATE",
+      );
+    }
     await tx
       .update(processFunction)
       .set({
@@ -159,6 +235,23 @@ export async function deleteProcessFunction(
   await assertRevisionEditable(context, target.processVariantRevisionId);
 
   await db.transaction(async (tx) => {
+    /*
+     * Revision satırı kilitlenerek düzenlenebilir durumu transaction
+     * içinde yeniden doğrulanır: incelemeye gönderilen bir
+     * revision'a içerik yazılamaz.
+     */
+    const editable = await lockDraftRevision(
+      tx,
+      context.organizationId,
+      target.processVariantRevisionId,
+    );
+
+    if (!editable) {
+      throw new ProcessContentRuleError(
+        "Revision düzenlenemez; yalnızca taslak revision değiştirilebilir.",
+        "INVALID_STATE",
+      );
+    }
     await tx
       .delete(processFunction)
       .where(
@@ -191,6 +284,23 @@ export async function createProcessRequirement(
   await assertRevisionEditable(context, input.processVariantRevisionId);
 
   return db.transaction(async (tx) => {
+    /*
+     * Revision satırı kilitlenerek düzenlenebilir durumu transaction
+     * içinde yeniden doğrulanır: incelemeye gönderilen bir
+     * revision'a içerik yazılamaz.
+     */
+    const editable = await lockDraftRevision(
+      tx,
+      context.organizationId,
+      input.processVariantRevisionId,
+    );
+
+    if (!editable) {
+      throw new ProcessContentRuleError(
+        "Revision düzenlenemez; yalnızca taslak revision değiştirilebilir.",
+        "INVALID_STATE",
+      );
+    }
     const created = await tx
       .insert(processRequirement)
       .values({
@@ -249,6 +359,23 @@ export async function updateProcessRequirement(
   await assertRevisionEditable(context, target.processVariantRevisionId);
 
   await db.transaction(async (tx) => {
+    /*
+     * Revision satırı kilitlenerek düzenlenebilir durumu transaction
+     * içinde yeniden doğrulanır: incelemeye gönderilen bir
+     * revision'a içerik yazılamaz.
+     */
+    const editable = await lockDraftRevision(
+      tx,
+      context.organizationId,
+      target.processVariantRevisionId,
+    );
+
+    if (!editable) {
+      throw new ProcessContentRuleError(
+        "Revision düzenlenemez; yalnızca taslak revision değiştirilebilir.",
+        "INVALID_STATE",
+      );
+    }
     await tx
       .update(processRequirement)
       .set({
@@ -295,6 +422,23 @@ export async function deleteProcessRequirement(
   await assertRevisionEditable(context, target.processVariantRevisionId);
 
   await db.transaction(async (tx) => {
+    /*
+     * Revision satırı kilitlenerek düzenlenebilir durumu transaction
+     * içinde yeniden doğrulanır: incelemeye gönderilen bir
+     * revision'a içerik yazılamaz.
+     */
+    const editable = await lockDraftRevision(
+      tx,
+      context.organizationId,
+      target.processVariantRevisionId,
+    );
+
+    if (!editable) {
+      throw new ProcessContentRuleError(
+        "Revision düzenlenemez; yalnızca taslak revision değiştirilebilir.",
+        "INVALID_STATE",
+      );
+    }
     await tx
       .delete(processRequirement)
       .where(
@@ -357,6 +501,23 @@ export async function linkFunctionRequirement(
   }
 
   await db.transaction(async (tx) => {
+    /*
+     * Revision satırı kilitlenerek düzenlenebilir durumu transaction
+     * içinde yeniden doğrulanır: incelemeye gönderilen bir
+     * revision'a içerik yazılamaz.
+     */
+    const editable = await lockDraftRevision(
+      tx,
+      context.organizationId,
+      functionRecord.processVariantRevisionId,
+    );
+
+    if (!editable) {
+      throw new ProcessContentRuleError(
+        "Revision düzenlenemez; yalnızca taslak revision değiştirilebilir.",
+        "INVALID_STATE",
+      );
+    }
     await tx.insert(processFunctionRequirement).values({
       organizationId: context.organizationId,
       processFunctionId: functionId,
@@ -393,6 +554,23 @@ export async function unlinkFunctionRequirement(
   await assertRevisionEditable(context, functionRecord.processVariantRevisionId);
 
   await db.transaction(async (tx) => {
+    /*
+     * Revision satırı kilitlenerek düzenlenebilir durumu transaction
+     * içinde yeniden doğrulanır: incelemeye gönderilen bir
+     * revision'a içerik yazılamaz.
+     */
+    const editable = await lockDraftRevision(
+      tx,
+      context.organizationId,
+      functionRecord.processVariantRevisionId,
+    );
+
+    if (!editable) {
+      throw new ProcessContentRuleError(
+        "Revision düzenlenemez; yalnızca taslak revision değiştirilebilir.",
+        "INVALID_STATE",
+      );
+    }
     await tx
       .delete(processFunctionRequirement)
       .where(

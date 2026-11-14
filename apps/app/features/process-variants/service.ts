@@ -1,8 +1,11 @@
 import { writeAuditLog } from "@mqdms/audit";
 import { type AuthContext, hasPermission } from "@mqdms/auth/permissions/server";
-import { db } from "@mqdms/db";
+import { db, type DbClient } from "@mqdms/db";
 import { process, processVariant, processVariantRevision } from "@mqdms/db/schema";
 import { and, eq } from "drizzle-orm";
+
+import { getRevisionGraph } from "@/features/flow-editor/repository";
+import { validateGraph } from "@/features/flow-editor/validation";
 
 import { canTransition } from "./lifecycle";
 import {
@@ -10,7 +13,6 @@ import {
   findProcessVariantRevisionByValue,
   getProcessVariant,
   getProcessVariantRevision,
-  getReleasedRevision,
 } from "./repository";
 import type { ProcessVariantFormValues, ProcessVariantRevisionFormValues } from "./schema";
 
@@ -36,7 +38,10 @@ export class ProcessVariantRuleError extends Error {
       | "CONFLICT"
       | "INVALID_INPUT"
       | "FORBIDDEN"
-      | "INVALID_STATE" = "INVALID_INPUT",
+      | "INVALID_STATE"
+      | "GRAPH_INVALID" = "INVALID_INPUT",
+    /** Hata kodları; kullanıcıya çevrilmek üzere saklanır. */
+    readonly details: string[] = [],
   ) {
     super(message);
     this.name = "ProcessVariantRuleError";
@@ -45,6 +50,49 @@ export class ProcessVariantRuleError extends Error {
 
 /** Revision durumu. */
 type RevisionStatus = "DRAFT" | "IN_REVIEW" | "APPROVED" | "RELEASED" | "SUPERSEDED";
+
+/**
+ * Revision durumunu **beklenen durum koşuluyla** günceller.
+ *
+ * Durum denetimi transaction içinde yazılır: eşzamanlı bir işlem durumu
+ * değiştirdiyse hiçbir satır güncellenmez ve işlem reddedilir. Yalnızca önce
+ * okunan duruma göre yazmak, onaylanmış bir revision'ın eşzamanlı bir
+ * yayınlamadan sonra taslağa döndürülmesine yol açardı.
+ */
+async function updateRevisionStatus(
+  tx: DbClient,
+  organizationId: string,
+  revisionId: string,
+  expectedStatus: RevisionStatus,
+  values: {
+    status: RevisionStatus;
+    submittedAt?: Date | null;
+    submittedById?: string | null;
+    approvedAt?: Date | null;
+    approvedById?: string | null;
+    releasedAt?: Date | null;
+    releasedById?: string | null;
+  },
+): Promise<void> {
+  const updated = await tx
+    .update(processVariantRevision)
+    .set(values)
+    .where(
+      and(
+        eq(processVariantRevision.organizationId, organizationId),
+        eq(processVariantRevision.id, revisionId),
+        eq(processVariantRevision.status, expectedStatus),
+      ),
+    )
+    .returning({ id: processVariantRevision.id });
+
+  if (updated.length === 0) {
+    throw new ProcessVariantRuleError(
+      "Revision durumu eşzamanlı olarak değişti. Sayfayı yenileyin.",
+      "CONFLICT",
+    );
+  }
+}
 
 /**
  * Geçişin izinli olup olmadığını denetler.
@@ -61,11 +109,28 @@ function assertTransition(from: RevisionStatus, to: RevisionStatus): void {
   }
 }
 
+/**
+ * `masterProcesses:manageVariants` yetkisinin kapsadığı varyant işlemleri.
+ *
+ * Ana proses kütüphanesini yöneten roller varyantları da yönetebilir:
+ * katalogda iki yol tanımlıdır ve ikisi de geçerlidir.
+ */
+const MANAGE_VARIANT_ACTIONS = new Set(["create", "update", "archive", "restore"]);
+
 /** Yetki kontrolü. */
 async function requireVariantPermission(context: AuthContext, action: string): Promise<void> {
-  if (!(await hasPermission(context, "processVariants", action))) {
-    throw new ProcessVariantRuleError("Bu işlem için yetkiniz yok.", "FORBIDDEN");
+  if (await hasPermission(context, "processVariants", action)) {
+    return;
   }
+
+  if (
+    MANAGE_VARIANT_ACTIONS.has(action) &&
+    (await hasPermission(context, "masterProcesses", "manageVariants"))
+  ) {
+    return;
+  }
+
+  throw new ProcessVariantRuleError("Bu işlem için yetkiniz yok.", "FORBIDDEN");
 }
 
 /** Boş string'i `null`'a çevirir. */
@@ -77,6 +142,35 @@ function toNull(value: string | undefined): string | null {
   const trimmed = value.trim();
 
   return trimmed === "" ? null : trimmed;
+}
+
+/**
+ * Revision satırını kilitler ve düzenlenebilir durumda olduğunu doğrular.
+ *
+ * Kilit (FOR UPDATE) yaşam döngüsü geçişlerinin güncellediği aynı satırı
+ * tutar: içerik yazımı ile durum değişimi birbirini beklemez. Böylece
+ * revision incelemeye gönderildikten sonra içerik eklenmesi engellenir.
+ *
+ * @returns revision düzenlenebilir durumdaysa `true`.
+ */
+export async function lockDraftRevision(
+  tx: DbClient,
+  organizationId: string,
+  revisionId: string,
+): Promise<boolean> {
+  const rows = await tx
+    .select({ status: processVariantRevision.status })
+    .from(processVariantRevision)
+    .where(
+      and(
+        eq(processVariantRevision.organizationId, organizationId),
+        eq(processVariantRevision.id, revisionId),
+      ),
+    )
+    .for("update")
+    .limit(1);
+
+  return rows[0]?.status === "DRAFT";
 }
 
 /**
@@ -400,15 +494,11 @@ export async function submitProcessVariantRevision(
   assertTransition(revision.status, "IN_REVIEW");
 
   await db.transaction(async (tx) => {
-    await tx
-      .update(processVariantRevision)
-      .set({ status: "IN_REVIEW", submittedAt: new Date(), submittedById: context.userId })
-      .where(
-        and(
-          eq(processVariantRevision.organizationId, context.organizationId),
-          eq(processVariantRevision.id, revisionId),
-        ),
-      );
+    await updateRevisionStatus(tx, context.organizationId, revisionId, "DRAFT", {
+      status: "IN_REVIEW",
+      submittedAt: new Date(),
+      submittedById: context.userId,
+    });
 
     await writeAuditLog(
       {
@@ -442,15 +532,11 @@ export async function approveProcessVariantRevision(
   assertTransition(revision.status, "APPROVED");
 
   await db.transaction(async (tx) => {
-    await tx
-      .update(processVariantRevision)
-      .set({ status: "APPROVED", approvedAt: new Date(), approvedById: context.userId })
-      .where(
-        and(
-          eq(processVariantRevision.organizationId, context.organizationId),
-          eq(processVariantRevision.id, revisionId),
-        ),
-      );
+    await updateRevisionStatus(tx, context.organizationId, revisionId, "IN_REVIEW", {
+      status: "APPROVED",
+      approvedAt: new Date(),
+      approvedById: context.userId,
+    });
 
     await writeAuditLog(
       {
@@ -469,7 +555,7 @@ export async function approveProcessVariantRevision(
 }
 
 /**
- * Revision'ı gerekçeli olarak geri alır (`IN_REVIEW → DRAFT`).
+ * Revision'ı gerekçeli olarak geri alır (`IN_REVIEW → DRAFT`, `APPROVED → DRAFT`).
  *
  * Gerekçe audit kaydında saklanır; revision'ın teknik içeriği korunur.
  */
@@ -489,15 +575,35 @@ export async function rejectProcessVariantRevision(
   assertTransition(revision.status, "DRAFT");
 
   await db.transaction(async (tx) => {
-    await tx
-      .update(processVariantRevision)
-      .set({ status: "DRAFT", approvedAt: null, approvedById: null })
+    /*
+     * Geri alma iki durumdan da mümkündür (`IN_REVIEW` ve `APPROVED`). Beklenen
+     * durum transaction içinde, revision kilitliyken okunur: geçiş kuralı ile
+     * koşullu güncelleme aynı durumu görmelidir; aksi halde incelemede olan bir
+     * revision geri alınamaz.
+     */
+    const rows = await tx
+      .select({ status: processVariantRevision.status })
+      .from(processVariantRevision)
       .where(
         and(
           eq(processVariantRevision.organizationId, context.organizationId),
           eq(processVariantRevision.id, revisionId),
         ),
-      );
+      )
+      .for("update")
+      .limit(1);
+
+    if (!rows[0]) {
+      throw new ProcessVariantRuleError("Revision bulunamadı.", "NOT_FOUND");
+    }
+
+    assertTransition(rows[0].status, "DRAFT");
+
+    await updateRevisionStatus(tx, context.organizationId, revisionId, rows[0].status, {
+      status: "DRAFT",
+      approvedAt: null,
+      approvedById: null,
+    });
 
     await writeAuditLog(
       {
@@ -537,30 +643,113 @@ export async function releaseProcessVariantRevision(
 
   assertTransition(revision.status, "RELEASED");
 
-  await db.transaction(async (tx) => {
-    const previous = await getReleasedRevision(context.organizationId, revision.processVariantId);
+  /*
+   * Yayınlamadan önce grafik tutarlılığı doğrulanır: akış varsa START ve END
+   * noktaları tanımlı olmalı, edge'ler aynı akışın node'larına bağlanmalıdır.
+   *
+   * Akış opsiyonel bir teknik içeriktir; akışı olmayan revision yayınlanabilir.
+   * Uyarılar (erişilemeyen node gibi) yayınlamayı engellemez.
+   */
+  const graph = await getRevisionGraph(context.organizationId, revisionId);
 
-    if (previous && previous.id !== revisionId) {
+  if (graph) {
+    const validation = validateGraph(graph.nodes, graph.edges);
+
+    if (validation.errors.length > 0) {
+      const labels = new Map(graph.nodes.map((node) => [node.id, node.title]));
+
+      for (const edge of graph.edges) {
+        labels.set(edge.id, edge.label ?? "");
+      }
+
+      /*
+       * Hata kodları kayıt etiketiyle zenginleştirilir: kullanıcı hangi
+       * node'un düzeltilmesi gerektiğini görür.
+       */
+      const details = validation.errors.map((code) => {
+        const separator = code.indexOf(":");
+
+        if (separator === -1) {
+          return code;
+        }
+
+        const base = code.slice(0, separator);
+        const label = labels.get(code.slice(separator + 1));
+
+        return label ? `${base}:${label}` : code;
+      });
+
+      throw new ProcessVariantRuleError("Akış doğrulaması başarısız.", "GRAPH_INVALID", details);
+    }
+  }
+
+  await db.transaction(async (tx) => {
+    /*
+     * Hedef revision kilitlenerek **transaction içinde yeniden** okunur.
+     *
+     * Durum denetimi transaction dışında yapılırsa, bekleyen bir çağrı
+     * eskimiş bir durumla devam edebilir: hedef revision başka bir işlemle
+     * yayınlanmış veya geçersiz kılınmış olabilir. Kilit, hedef satırı
+     * kilitleyen eşzamanlı işlemlerle sıralanır ve geçiş yeniden doğrulanır.
+     */
+    const targetRows = await tx
+      .select({ id: processVariantRevision.id, status: processVariantRevision.status })
+      .from(processVariantRevision)
+      .where(
+        and(
+          eq(processVariantRevision.organizationId, context.organizationId),
+          eq(processVariantRevision.id, revisionId),
+        ),
+      )
+      .for("update")
+      .limit(1);
+
+    if (!targetRows[0]) {
+      throw new ProcessVariantRuleError("Revision bulunamadı.", "NOT_FOUND");
+    }
+
+    assertTransition(targetRows[0].status, "RELEASED");
+
+    /*
+     * Yayınlanmış revision aynı transaction içinde ve kilitli olarak okunur.
+     *
+     * Kilit (FOR UPDATE) eşzamanlı iki yayını sıralar: aksi halde iki revision
+     * da aynı anda RELEASED olabilirdi. Satır kilidi farklı bağlantı üzerinden
+     * okuma yapılmasını da engeller.
+     */
+    const previous = await tx
+      .select({ id: processVariantRevision.id })
+      .from(processVariantRevision)
+      .where(
+        and(
+          eq(processVariantRevision.organizationId, context.organizationId),
+          eq(processVariantRevision.processVariantId, revision.processVariantId),
+          eq(processVariantRevision.status, "RELEASED"),
+        ),
+      )
+      .for("update")
+      .limit(1);
+
+    const previousId = previous[0]?.id;
+
+    if (previousId && previousId !== revisionId) {
       await tx
         .update(processVariantRevision)
         .set({ status: "SUPERSEDED" })
         .where(
           and(
             eq(processVariantRevision.organizationId, context.organizationId),
-            eq(processVariantRevision.id, previous.id),
+            eq(processVariantRevision.id, previousId),
+            eq(processVariantRevision.status, "RELEASED"),
           ),
         );
     }
 
-    await tx
-      .update(processVariantRevision)
-      .set({ status: "RELEASED", releasedAt: new Date(), releasedById: context.userId })
-      .where(
-        and(
-          eq(processVariantRevision.organizationId, context.organizationId),
-          eq(processVariantRevision.id, revisionId),
-        ),
-      );
+    await updateRevisionStatus(tx, context.organizationId, revisionId, "APPROVED", {
+      status: "RELEASED",
+      releasedAt: new Date(),
+      releasedById: context.userId,
+    });
 
     await writeAuditLog(
       {
@@ -571,7 +760,7 @@ export async function releaseProcessVariantRevision(
         metadata: {
           processVariantId: revision.processVariantId,
           revision: revision.revision,
-          supersededRevisionId: previous?.id ?? null,
+          supersededRevisionId: previousId ?? null,
         },
       },
       tx,
