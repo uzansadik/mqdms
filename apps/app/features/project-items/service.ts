@@ -6,11 +6,10 @@ import { and, eq } from "drizzle-orm";
 
 import { getBom, getBomRevision } from "@/features/boms/repository";
 import { getCustomerItem, getCustomerItemRevision } from "@/features/customer-items/repository";
-import { getCustomer } from "@/features/customers/repository";
-import { getItem, getItemRevision } from "@/features/items/repository";
+import { findActiveItemsByIds, getItem, getItemRevision } from "@/features/items/repository";
 import { getProject } from "@/features/projects/repository";
 
-import { findActiveProjectItem, getProjectItem } from "./repository";
+import { findActiveProjectItem, findActiveProjectItems, getProjectItem } from "./repository";
 import type { ProjectItemFormValues } from "./schema";
 
 /**
@@ -296,5 +295,78 @@ export async function archiveProjectItem(
       },
       tx,
     );
+  });
+}
+
+/**
+ * Ürünleri projeye toplu ekler.
+ *
+ * Kullanıcı item kütüphanesinden çoklu item seçip hepsini bir projeye
+ * ekleyebilir (ör. elli FRP'yi kalite çalışması için kapsama almak).
+ *
+ * Zaten projede olan item'lar **sessizce atlanır**: toplu ekleme başarısız
+ * olmaz, yalnızca eklenenler raporlanır.
+ */
+export async function addProjectItems(
+  context: AuthContext,
+  projectId: string,
+  itemIds: string[],
+): Promise<{ created: number; skipped: number }> {
+  await requireProjectItemPermission(context, "manageItems");
+
+  const uniqueItemIds = [...new Set(itemIds)];
+
+  if (uniqueItemIds.length === 0) {
+    return { created: 0, skipped: 0 };
+  }
+
+  return db.transaction(async (tx) => {
+    const projectRecord = await getProject(context.organizationId, projectId);
+
+    if (!projectRecord || projectRecord.archivedAt) {
+      throw new ProjectItemRuleError("Proje bulunamadı.", "NOT_FOUND");
+    }
+
+    const existing = await findActiveProjectItems(context.organizationId, projectId, uniqueItemIds);
+
+    const existingIds = new Set(existing.map((row) => row.itemId));
+
+    /*
+     * Aday item'lar tek sorguda doğrulanır: arşivlenmiş ya da başka
+     * organizasyona ait item'lar projeye eklenmez.
+     */
+    const candidates = uniqueItemIds.filter((itemId) => !existingIds.has(itemId));
+
+    const validItems = await findActiveItemsByIds(context.organizationId, candidates);
+
+    const validIds = new Set(validItems.map((row) => row.id));
+
+    if (validIds.size > 0) {
+      await tx.insert(projectItem).values(
+        [...validIds].map((itemId) => ({
+          organizationId: context.organizationId,
+          projectId,
+          itemId,
+          itemRole: "COMPONENT" as const,
+          status: "ACTIVE" as const,
+          createdById: context.userId,
+        })),
+      );
+    }
+
+    const created = validIds.size;
+
+    await writeAuditLog(
+      {
+        organizationId: context.organizationId,
+        actorId: context.userId,
+        action: "projectItem.assigned",
+        target: { type: "project", id: projectId },
+        metadata: { added: created, skipped: uniqueItemIds.length - created },
+      },
+      tx,
+    );
+
+    return { created, skipped: uniqueItemIds.length - created };
   });
 }

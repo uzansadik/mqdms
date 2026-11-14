@@ -914,6 +914,20 @@ export const tr = {
   "projectItems.role.RAW_MATERIAL": "Hammadde",
   "projectItems.role.AUXILIARY": "Yardımcı",
 
+  "projectItems.bulk.title": "Toplu ürün ekle",
+  "projectItems.bulk.description":
+    "Item kütüphanesinden ya da bir BOM'un bileşenlerinden çoklu ürün seçip projeye ekleyin.",
+  "projectItems.bulk.source.label": "Kaynak",
+  "projectItems.bulk.source.library": "Item kütüphanesi",
+  "projectItems.bulk.filter.label": "Filtre",
+  "projectItems.bulk.filter.placeholder": "Kod veya ad ara",
+  "projectItems.bulk.loading": "BOM bileşenleri yükleniyor...",
+  "projectItems.bulk.empty": "Eşleşen ürün yok.",
+  "projectItems.bulk.inProject": "Projede",
+  "projectItems.bulk.selectAll": "Tümünü seç",
+  "projectItems.bulk.submit": "{count} ürünü projeye ekle",
+  "projectItems.bulk.addedSuccess": "{count} ürün projeye eklendi.",
+
   "projects.detail.tabs.structure": "Ürün yapısı",
 
   "productStructure.deliverable": "Satılan ürün",

@@ -11,7 +11,7 @@ import {
   project,
   projectItem,
 } from "@mqdms/db/schema";
-import { and, asc, eq, isNull, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull } from "drizzle-orm";
 
 /**
  * Proje ürünü okuma katmanı.
@@ -201,4 +201,31 @@ export async function listBomsUsingItem(
     .innerJoin(bom, eq(bom.id, bomRevision.bomId))
     .where(and(eq(bomLine.organizationId, organizationId), eq(bomLine.childItemId, itemId)))
     .orderBy(asc(bom.code));
+}
+
+/**
+ * Projede zaten aktif olan item'lar.
+ *
+ * Toplu eklemede sessizce atlanacak kayıtlar bu sorguyla belirlenir.
+ */
+export async function findActiveProjectItems(
+  organizationId: string,
+  projectId: string,
+  itemIds: string[],
+): Promise<{ id: string; itemId: string }[]> {
+  if (itemIds.length === 0) {
+    return [];
+  }
+
+  return db
+    .select({ id: projectItem.id, itemId: projectItem.itemId })
+    .from(projectItem)
+    .where(
+      and(
+        eq(projectItem.organizationId, organizationId),
+        eq(projectItem.projectId, projectId),
+        inArray(projectItem.itemId, itemIds),
+        isNull(projectItem.archivedAt),
+      ),
+    );
 }

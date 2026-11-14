@@ -913,6 +913,20 @@ export const en = {
   "projectItems.role.RAW_MATERIAL": "Raw material",
   "projectItems.role.AUXILIARY": "Auxiliary",
 
+  "projectItems.bulk.title": "Add items in bulk",
+  "projectItems.bulk.description":
+    "Select several items from the item library or from the components of a BOM and add them to the project.",
+  "projectItems.bulk.source.label": "Source",
+  "projectItems.bulk.source.library": "Item library",
+  "projectItems.bulk.filter.label": "Filter",
+  "projectItems.bulk.filter.placeholder": "Search by code or name",
+  "projectItems.bulk.loading": "Loading BOM components...",
+  "projectItems.bulk.empty": "No matching items.",
+  "projectItems.bulk.inProject": "In project",
+  "projectItems.bulk.selectAll": "Select all",
+  "projectItems.bulk.submit": "Add {count} items to the project",
+  "projectItems.bulk.addedSuccess": "{count} items added to the project.",
+
   "projects.detail.tabs.structure": "Product structure",
 
   "productStructure.deliverable": "Deliverable",

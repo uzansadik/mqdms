@@ -1,6 +1,6 @@
 import { db } from "@mqdms/db";
 import { customerItem, item, itemGroup, itemRevision, itemUnit } from "@mqdms/db/schema";
-import { and, asc, count, eq, ilike, isNull, or, type SQL, sql } from "drizzle-orm";
+import { and, asc, count, eq, ilike, inArray, isNull, or, type SQL, sql } from "drizzle-orm";
 
 /**
  * Ürün okuma katmanı.
@@ -232,6 +232,32 @@ export async function listItemOptions(
       ),
     )
     .orderBy(asc(item.name));
+}
+
+/**
+ * Verilen id'lerle eşleşen arşivlenmemiş ürünler.
+ *
+ * Toplu işlemlerde (ör. elli item'ı projeye ekleme) her item için ayrı sorgu
+ * atmak yerine tek sorgu kullanılır.
+ */
+export async function findActiveItemsByIds(
+  organizationId: string,
+  itemIds: string[],
+): Promise<{ id: string }[]> {
+  if (itemIds.length === 0) {
+    return [];
+  }
+
+  return db
+    .select({ id: item.id })
+    .from(item)
+    .where(
+      and(
+        eq(item.organizationId, organizationId),
+        isNull(item.archivedAt),
+        inArray(item.id, itemIds),
+      ),
+    );
 }
 
 /** Ürünün revision kayıtları (en yeni önce). */

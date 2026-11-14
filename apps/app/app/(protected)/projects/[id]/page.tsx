@@ -18,6 +18,7 @@ import { notFound } from "next/navigation";
 import { requireAuthContext } from "@/features/auth/session";
 import { analyzeProductStructure } from "@/features/product-structure/analysis";
 import { ProductStructurePanel } from "@/features/product-structure/components/product-structure-panel";
+import { BulkProjectItemForm } from "@/features/project-items/components/bulk-project-item-form";
 import { ProjectItemForm } from "@/features/project-items/components/project-item-form";
 import {
   getCustomerItemOptions,
@@ -426,6 +427,13 @@ export default async function ProjectDetailPage({ params, searchParams }: PagePr
             customerId={data.project.customerId}
             customerItems={customerItemOptions}
             itemRevisions={projectItemOptions.itemRevisions}
+            items={projectItemOptions.items}
+            projectId={data.project.id}
+          />
+
+          <BulkProjectItemForm
+            bomSources={deliverableBomRevisions}
+            existingItemIds={projectItems.map((projectItem) => projectItem.itemId)}
             items={projectItemOptions.items}
             projectId={data.project.id}
           />
