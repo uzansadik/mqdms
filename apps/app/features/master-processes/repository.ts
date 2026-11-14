@@ -178,37 +178,3 @@ export async function findProcessByCode(
 
   return rows[0] ?? null;
 }
-
-/** Bir Master Process'in varyantları. */
-export async function listProcessVariants(
-  organizationId: string,
-  processId: string,
-): Promise<
-  {
-    id: string;
-    code: string;
-    name: string;
-    variantType: "GENERIC" | "SPECIALIZED";
-    status: "ACTIVE" | "INACTIVE";
-    archivedAt: Date | null;
-  }[]
-> {
-  return db
-    .select({
-      id: processVariant.id,
-      code: processVariant.code,
-      name: processVariant.name,
-      variantType: processVariant.variantType,
-      status: processVariant.status,
-      archivedAt: processVariant.archivedAt,
-    })
-    .from(processVariant)
-    .where(
-      and(
-        eq(processVariant.organizationId, organizationId),
-        eq(processVariant.processId, processId),
-        isNull(processVariant.archivedAt),
-      ),
-    )
-    .orderBy(asc(processVariant.code));
-}

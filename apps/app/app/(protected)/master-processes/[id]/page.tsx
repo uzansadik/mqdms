@@ -17,11 +17,12 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { requireAuthContext } from "@/features/auth/session";
-import { listProcessVariants } from "@/features/master-processes/repository";
 import {
   getProcessDetailData,
   requireMasterProcessesAccess,
 } from "@/features/master-processes/server";
+import { ProcessVariantRowActions } from "@/features/process-variants/components/process-variant-row-actions";
+import { listVariantsOfProcess } from "@/features/process-variants/repository";
 import { StatusBadge } from "@/features/shared/status-badge";
 
 type PageProps = {
@@ -49,7 +50,7 @@ export default async function MasterProcessDetailPage({ params }: PageProps) {
   }
 
   const [variants, history] = await Promise.all([
-    listProcessVariants(context.organizationId, id),
+    listVariantsOfProcess(context.organizationId, id),
     listAuditLogs({
       organizationId: context.organizationId,
       targetType: "process",
@@ -160,23 +161,59 @@ export default async function MasterProcessDetailPage({ params }: PageProps) {
 
                       <TableHead>{t("processes.detail.variants.columns.type")}</TableHead>
 
+                      <TableHead>
+                        {t("processes.detail.variants.columns.currentRevision")}
+                      </TableHead>
+
                       <TableHead>{t("processes.detail.variants.columns.status")}</TableHead>
+
+                      <TableHead className="text-right">
+                        {t("processes.detail.variants.columns.actions")}
+                      </TableHead>
                     </TableRow>
                   </TableHeader>
 
                   <TableBody>
                     {variants.map((variant) => (
                       <TableRow key={variant.id}>
-                        <TableCell className="font-medium">{variant.code}</TableCell>
+                        <TableCell className="font-medium">
+                          <Link
+                            className="hover:underline"
+                            href={`/master-processes/${data.process.id}/variants/${variant.id}`}
+                          >
+                            {variant.code}
+                          </Link>
+                        </TableCell>
 
                         <TableCell>{variant.name}</TableCell>
 
                         <TableCell>{t(`processVariants.types.${variant.variantType}`)}</TableCell>
 
                         <TableCell>
+                          {variant.currentRevision && variant.currentRevisionId ? (
+                            <Link
+                              className="hover:underline"
+                              href={`/master-processes/${data.process.id}/variants/${variant.id}/revisions/${variant.currentRevisionId}`}
+                            >
+                              {variant.currentRevision}
+                            </Link>
+                          ) : (
+                            "-"
+                          )}
+                        </TableCell>
+
+                        <TableCell>
                           <StatusBadge
                             label={t(`items.status.${variant.status}`)}
                             status={variant.status}
+                          />
+                        </TableCell>
+
+                        <TableCell className="text-right">
+                          <ProcessVariantRowActions
+                            archived={variant.archivedAt !== null}
+                            processId={data.process.id}
+                            variantId={variant.id}
                           />
                         </TableCell>
                       </TableRow>
