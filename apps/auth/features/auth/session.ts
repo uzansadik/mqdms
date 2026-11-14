@@ -59,11 +59,20 @@ export async function redirectIfAuthenticated(redirectTo = "/dashboard") {
   }
 
   /*
-   * Birden fazla organizasyona üye olup aktif organizasyon seçilmemişse
-   * seçim ekranı gerekir. Tek organizasyon durumunda iş uygulaması üyeliği
-   * kendisi çözer.
+   * Birden fazla organizasyona üye olup aktif organizasyon **geçerli bir
+   * üyeliğe** karşılık gelmiyorsa seçim ekranı gerekir.
+   *
+   * Oturum, kullanıcı ayrıldığı organizasyonun id'sini taşıyor olabilir;
+   * bu durumda iş uygulaması bağlamı çözemez ve kullanıcı seçim ekranına
+   * gidemez. Tek organizasyon durumunda iş uygulaması üyeliği kendisi çözer.
    */
-  if (organizations.length > 1 && !session.session.activeOrganizationId) {
+  const activeOrganizationId = session.session.activeOrganizationId;
+
+  const hasValidActiveOrganization =
+    typeof activeOrganizationId === "string" &&
+    organizations.some((organization) => organization.id === activeOrganizationId);
+
+  if (organizations.length > 1 && !hasValidActiveOrganization) {
     redirect("/select-organization");
   }
 
