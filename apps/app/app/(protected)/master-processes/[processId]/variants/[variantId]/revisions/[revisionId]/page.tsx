@@ -1,5 +1,6 @@
 import { getTranslations } from "@mqdms/i18n/server";
 import { Badge } from "@mqdms/ui/components/badge";
+import { Button } from "@mqdms/ui/components/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@mqdms/ui/components/card";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -73,14 +74,24 @@ export default async function ProcessVariantRevisionPage({ params }: PageProps) 
           </p>
         </div>
 
-        <ProcessVariantRevisionActions
-          canApprove={canApprove}
-          canRelease={canRelease}
-          canReject={canReject}
-          canSubmit={canSubmit}
-          revisionId={data.revision.id}
-          status={data.revision.status}
-        />
+        <div className="flex flex-wrap items-center gap-2">
+          <Button asChild variant="outline">
+            <Link
+              href={`/master-processes/${data.variant.processId}/variants/${data.variant.id}/revisions/${data.revision.id}/flow`}
+            >
+              {t("flow.title")}
+            </Link>
+          </Button>
+
+          <ProcessVariantRevisionActions
+            canApprove={canApprove}
+            canRelease={canRelease}
+            canReject={canReject}
+            canSubmit={canSubmit}
+            revisionId={data.revision.id}
+            status={data.revision.status}
+          />
+        </div>
       </div>
 
       <Card>
