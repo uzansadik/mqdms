@@ -130,8 +130,8 @@ describe("fabrika rol seed sürümleri", () => {
     }
   });
 
-  it("güncel sürüm üçtür", () => {
-    expect(FACTORY_SEED_VERSION).toBe("3");
+  it("güncel sürüm dördtür", () => {
+    expect(FACTORY_SEED_VERSION).toBe("4");
   });
 
   it("sürüm izinleri permission kataloğunda yer alır", () => {

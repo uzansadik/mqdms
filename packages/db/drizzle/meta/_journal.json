@@ -5,14 +5,14 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1794505947861,
+      "when": 1794378000000,
       "tag": "0000_pink_leo",
       "breakpoints": true
     },
     {
       "idx": 1,
       "version": "7",
-      "when": 1794565687314,
+      "when": 1794500000000,
       "tag": "0001_icy_pet_avengers",
       "breakpoints": true
     },
@@ -28,6 +28,13 @@
       "version": "7",
       "when": 1794644360804,
       "tag": "0003_slow_nick_fury",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1794658551360,
+      "tag": "0004_bent_jane_foster",
       "breakpoints": true
     }
   ]

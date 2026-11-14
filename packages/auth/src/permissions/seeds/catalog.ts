@@ -98,6 +98,9 @@ export const factoryRoleTemplates: readonly FactoryRoleTemplate[] = [
       itemGroups: ["read", "create", "update", "archive"],
       boms: ["read", "create", "update", "submit", "release", "archive", "compare"],
       imports: ["read", "create", "execute"],
+
+      masterProcesses: ["read"],
+      processVariants: ["read", "approve", "release"],
     },
     versionPermissions: {
       "2": {
@@ -111,6 +114,11 @@ export const factoryRoleTemplates: readonly FactoryRoleTemplate[] = [
         itemGroups: ["read", "create", "update", "archive"],
         boms: ["read", "create", "update", "submit", "release", "archive", "compare"],
         imports: ["read", "create", "execute"],
+      },
+
+      "4": {
+        masterProcesses: ["read"],
+        processVariants: ["read", "approve", "release"],
       },
     },
   },
@@ -133,6 +141,9 @@ export const factoryRoleTemplates: readonly FactoryRoleTemplate[] = [
       reports: ["read"],
       customers: ["read"],
       plants: ["read"],
+
+      masterProcesses: ["read"],
+      processVariants: ["read"],
     },
     versionPermissions: {
       "2": {
@@ -146,6 +157,11 @@ export const factoryRoleTemplates: readonly FactoryRoleTemplate[] = [
         itemGroups: ["read"],
         boms: ["read", "create", "update", "submit"],
         imports: ["read", "execute"],
+      },
+
+      "4": {
+        masterProcesses: ["read"],
+        processVariants: ["read"],
       },
     },
   },
@@ -167,6 +183,9 @@ export const factoryRoleTemplates: readonly FactoryRoleTemplate[] = [
       reports: ["read"],
       customers: ["read"],
       plants: ["read"],
+
+      masterProcesses: ["read"],
+      processVariants: ["read"],
     },
     versionPermissions: {
       "2": {
@@ -178,6 +197,11 @@ export const factoryRoleTemplates: readonly FactoryRoleTemplate[] = [
         itemGroups: ["read"],
         boms: ["read"],
         imports: ["read"],
+      },
+
+      "4": {
+        masterProcesses: ["read"],
+        processVariants: ["read"],
       },
     },
   },
@@ -200,6 +224,9 @@ export const factoryRoleTemplates: readonly FactoryRoleTemplate[] = [
       reports: ["read", "export"],
       customers: ["read"],
       plants: ["read"],
+
+      masterProcesses: ["read"],
+      processVariants: ["read", "approve", "reject"],
     },
     versionPermissions: {
       "2": {
@@ -211,6 +238,11 @@ export const factoryRoleTemplates: readonly FactoryRoleTemplate[] = [
         itemGroups: ["read"],
         boms: ["read"],
         imports: ["read"],
+      },
+
+      "4": {
+        masterProcesses: ["read"],
+        processVariants: ["read", "approve", "reject"],
       },
     },
   },
@@ -232,6 +264,17 @@ export const factoryRoleTemplates: readonly FactoryRoleTemplate[] = [
       reports: ["read"],
       customers: ["read"],
       plants: ["read"],
+
+      masterProcesses: [
+        "read",
+        "create",
+        "update",
+        "archive",
+        "restore",
+        "manageVariants",
+        "derive",
+      ],
+      processVariants: ["read", "create", "update", "submit", "compare"],
     },
     versionPermissions: {
       "2": {
@@ -242,6 +285,19 @@ export const factoryRoleTemplates: readonly FactoryRoleTemplate[] = [
         itemGroups: ["read"],
         boms: ["read"],
         imports: ["read"],
+      },
+
+      "4": {
+        masterProcesses: [
+          "read",
+          "create",
+          "update",
+          "archive",
+          "restore",
+          "manageVariants",
+          "derive",
+        ],
+        processVariants: ["read", "create", "update", "submit", "compare"],
       },
     },
   },
@@ -262,6 +318,9 @@ export const factoryRoleTemplates: readonly FactoryRoleTemplate[] = [
       reports: ["read"],
       customers: ["read"],
       plants: ["read"],
+
+      masterProcesses: ["read"],
+      processVariants: ["read"],
     },
     versionPermissions: {
       "2": {
@@ -271,6 +330,11 @@ export const factoryRoleTemplates: readonly FactoryRoleTemplate[] = [
       "3": {
         itemGroups: ["read"],
         boms: ["read"],
+      },
+
+      "4": {
+        masterProcesses: ["read"],
+        processVariants: ["read"],
       },
     },
   },
@@ -289,6 +353,9 @@ export const factoryRoleTemplates: readonly FactoryRoleTemplate[] = [
       // Bu rol proje, ürün ve tesis kayıtlarına erişmez; sürüm 3'te izni yok.
       "2": {},
       "3": {},
+
+      // Bu rol proses kütüphanesine erişmez.
+      "4": {},
     },
   },
   {
@@ -307,6 +374,9 @@ export const factoryRoleTemplates: readonly FactoryRoleTemplate[] = [
       boms: ["read"],
       customers: ["read"],
       plants: ["read"],
+
+      masterProcesses: ["read"],
+      processVariants: ["read"],
     },
     versionPermissions: {
       "2": {
@@ -316,6 +386,11 @@ export const factoryRoleTemplates: readonly FactoryRoleTemplate[] = [
       "3": {
         itemGroups: ["read"],
         boms: ["read"],
+      },
+
+      "4": {
+        masterProcesses: ["read"],
+        processVariants: ["read"],
       },
     },
   },
@@ -335,6 +410,9 @@ export const factoryRoleTemplates: readonly FactoryRoleTemplate[] = [
       boms: ["read"],
       customers: ["read"],
       plants: ["read"],
+
+      masterProcesses: ["read"],
+      processVariants: ["read"],
     },
     versionPermissions: {
       "2": {
@@ -344,6 +422,11 @@ export const factoryRoleTemplates: readonly FactoryRoleTemplate[] = [
       "3": {
         itemGroups: ["read"],
         boms: ["read"],
+      },
+
+      "4": {
+        masterProcesses: ["read"],
+        processVariants: ["read"],
       },
     },
   },
@@ -363,6 +446,9 @@ export const factoryRoleTemplates: readonly FactoryRoleTemplate[] = [
       boms: ["read"],
       customers: ["read"],
       plants: ["read"],
+
+      masterProcesses: ["read"],
+      processVariants: ["read"],
     },
     versionPermissions: {
       "2": {
@@ -372,6 +458,11 @@ export const factoryRoleTemplates: readonly FactoryRoleTemplate[] = [
       "3": {
         itemGroups: ["read"],
         boms: ["read"],
+      },
+
+      "4": {
+        masterProcesses: ["read"],
+        processVariants: ["read"],
       },
     },
   },
@@ -393,12 +484,17 @@ export const factoryRoleTemplates: readonly FactoryRoleTemplate[] = [
         boms: ["read"],
         imports: ["read"],
       },
+
+      "4": {
+        masterProcesses: ["read"],
+        processVariants: ["read"],
+      },
     },
   },
 ];
 
 /** Seed katalogunun sürümü. */
-export const FACTORY_SEED_VERSION = "3";
+export const FACTORY_SEED_VERSION = "4";
 
 /**
  * Seed rolünün izin çiftleri.

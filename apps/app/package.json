@@ -44,6 +44,7 @@
     "@mqdms/typescript-config": "workspace:*",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
+    "@xyflow/react": "^12.12.1",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "typescript": "^5"

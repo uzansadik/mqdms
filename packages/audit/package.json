@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@mqdms/db": "workspace:*"
+    "@mqdms/db": "workspace:*",
+    "drizzle-orm": "^0.45.0"
   },
   "devDependencies": {
     "@mqdms/typescript-config": "workspace:*",

@@ -78,6 +78,25 @@ export const resources = {
     label: "İçe Aktarım",
     actions: ["read", "create", "execute"],
   },
+  masterProcesses: {
+    label: "Ana Prosesler",
+    actions: ["read", "create", "update", "archive", "restore", "manageVariants", "derive"],
+  },
+  processVariants: {
+    label: "Proses Varyantları",
+    actions: [
+      "read",
+      "create",
+      "update",
+      "submit",
+      "approve",
+      "reject",
+      "release",
+      "archive",
+      "restore",
+      "compare",
+    ],
+  },
   reports: {
     label: "Raporlar",
     actions: ["read", "export"],
