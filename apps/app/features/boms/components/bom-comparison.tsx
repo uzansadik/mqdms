@@ -116,8 +116,10 @@ export async function BomComparison({
           </TableHeader>
 
           <TableBody>
-            {changes.map((change, index) => (
-              <TableRow key={`${change.type}-${index}`}>
+            {changes.map((change) => (
+              <TableRow
+                key={`${change.type}-${change.referenceDesignation ?? change.childItemId}-${change.lineNumber ?? change.previousLineNumber}`}
+              >
                 <TableCell>
                   <Badge variant="outline">{t(`boms.changeType.${change.type}`)}</Badge>
                 </TableCell>

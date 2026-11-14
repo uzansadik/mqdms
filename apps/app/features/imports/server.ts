@@ -52,8 +52,18 @@ export async function getImportJobDetail(organizationId: string, importJobId: st
   /*
    * Eşleştirme yapılmış işlerde önizleme doğrudan gösterilir: kullanıcı
    * sayfayı yenilediğinde çakışma kararları ve onay durumu korunur.
+   *
+   * Dosya limitleri aşıyorsa (ör. satır sayısı) önizleme üretilemez;
+   * hata mesajı kullanıcıya gösterilir.
    */
-  const preview = await getImportPreview(organizationId, importJobId);
+  let preview = null;
+  let previewError: string | null = null;
 
-  return { job, errors, headers, sampleRows, preview };
+  try {
+    preview = await getImportPreview(organizationId, importJobId);
+  } catch (error) {
+    previewError = error instanceof Error ? error.message : "Dosya okunamadı.";
+  }
+
+  return { job, errors, headers, sampleRows, preview, previewError };
 }

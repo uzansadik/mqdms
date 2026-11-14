@@ -20,7 +20,7 @@ import {
   selectConflictRows,
   selectInvalidRows,
 } from "./conflicts";
-import { type ImportSheet, parseCsv, parseXlsx } from "./parser";
+import { ImportParserError, type ImportSheet, parseCsv, parseXlsx } from "./parser";
 import {
   createImportJob as createImportJobRecord,
   getImportJob,
@@ -109,11 +109,19 @@ export async function readSheet(
 
   const bytes = await getObjectBytes(job.fileKey);
 
-  const sheet = job.fileKey.endsWith(".xlsx")
-    ? await parseXlsx(bytes)
-    : parseCsv(new TextDecoder().decode(bytes));
+  try {
+    const sheet = job.fileKey.endsWith(".xlsx")
+      ? await parseXlsx(bytes)
+      : parseCsv(new TextDecoder().decode(bytes));
 
-  return { sheet, bytes };
+    return { sheet, bytes };
+  } catch (error) {
+    if (error instanceof ImportParserError) {
+      throw new ImportRuleError(error.message, "INVALID_INPUT");
+    }
+
+    throw error;
+  }
 }
 
 /** Dosyanın içerik hash'i. */
@@ -340,6 +348,23 @@ export async function executeImportJob(input: {
 
   await updateImportJob(organizationId, importJobId, { status: "RUNNING" });
 
+  /*
+   * Import başlangıcı audit'e yazılır. Satır sayısı yüksek olduğu için
+   * satır başına kayıt üretilmez; yalnızca iş seviyesinde özet tutulur.
+   */
+  await writeAuditLog({
+    organizationId,
+    actorId,
+    action: "import.started",
+    target: { type: "importJob", id: importJobId },
+    metadata: {
+      importType: job.importType,
+      fileName: job.fileName,
+      totalRows: preview.totalRows,
+      rowsToWrite: applicable.length,
+    },
+  });
+
   try {
     const result = await db.transaction(async (tx) => {
       let created = 0;
@@ -387,6 +412,23 @@ export async function executeImportJob(input: {
     return { created: result.created, updated: result.updated, skipped };
   } catch (error) {
     await updateImportJob(organizationId, importJobId, { status: "FAILED" });
+
+    /*
+     * Hata audit'e yazılır: transaction geri alındığı için "completed"
+     * kaydı yoktur, ama başarısız deneme de izlenebilir olmalıdır.
+     */
+    await writeAuditLog({
+      organizationId,
+      actorId,
+      action: "import.failed",
+      target: { type: "importJob", id: importJobId },
+      metadata: {
+        importType: job.importType,
+        fileName: job.fileName,
+        totalRows: preview.totalRows,
+        reason: error instanceof Error ? error.message : "Bilinmeyen hata",
+      },
+    });
 
     throw error;
   }

@@ -23,6 +23,31 @@ export type ImportSheet = {
   delimiter: string;
 };
 
+/**
+ * Azami satır sayısı.
+ *
+ * Dosya boyutu sınırının yanında satır sayısı da sınırlanır: on binlerce
+ * satırlık bir dosya tek transaction'da yazılamaz ve doğrulama çok uzun sürer.
+ */
+export const MAX_IMPORT_ROWS = 50_000;
+
+/** Ayrıştırma sınırı aşıldığında fırlatılan hata. */
+export class ImportParserError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "ImportParserError";
+  }
+}
+
+/** Satır sayısı sınırını denetler. */
+function assertRowLimit(rowCount: number): void {
+  if (rowCount > MAX_IMPORT_ROWS) {
+    throw new ImportParserError(
+      `Dosya en fazla ${MAX_IMPORT_ROWS} satır içerebilir; dosyada ${rowCount} satır var.`,
+    );
+  }
+}
+
 /** CSV ayraç adayları. */
 const DELIMITERS = [",", ";", "\t", "|"];
 
@@ -151,6 +176,8 @@ export function parseCsv(content: string, delimiter?: string): ImportSheet {
     return { headers: [], rows: [], delimiter: resolved };
   }
 
+  assertRowLimit(raw.length - 1);
+
   const headers = (raw[0] ?? []).map((header) => header.trim());
 
   const rows = raw
@@ -175,6 +202,8 @@ export async function parseXlsx(bytes: Uint8Array): Promise<ImportSheet> {
   if (raw.length === 0) {
     return { headers: [], rows: [], delimiter: "," };
   }
+
+  assertRowLimit(raw.length - 1);
 
   const headers = (raw[0] ?? []).map((cell) => String(cell ?? "").trim());
 

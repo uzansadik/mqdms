@@ -15,9 +15,10 @@ import { Input } from "@mqdms/ui/components/input";
 import { NativeSelect, NativeSelectOption } from "@mqdms/ui/components/native-select";
 import { Textarea } from "@mqdms/ui/components/textarea";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
 import { Controller, useForm, useWatch } from "react-hook-form";
 import { toast } from "sonner";
+
+import { ItemCombobox } from "@/features/items/components/item-combobox";
 
 import { addBomLineAction } from "../actions";
 import type { BomLineFormValues } from "../schema";
@@ -151,26 +152,17 @@ export function BomLineForm({
                       {t("boms.lines.form.childItem.label")}
                     </FieldLabel>
 
-                    <NativeSelect
-                      {...field}
-                      aria-invalid={fieldState.invalid}
+                    <ItemCombobox
                       id={field.name}
-                      onChange={(event) => {
-                        field.onChange(event.target.value);
+                      invalid={fieldState.invalid}
+                      items={items}
+                      onValueChange={(itemId) => {
+                        field.onChange(itemId);
                         form.setValue("childItemRevisionId", "");
                         form.setValue("childBomRevisionId", "");
                       }}
-                    >
-                      <NativeSelectOption value="">
-                        {t("boms.lines.form.childItem.placeholder")}
-                      </NativeSelectOption>
-
-                      {items.map((item) => (
-                        <NativeSelectOption key={item.id} value={item.id}>
-                          {item.code} · {item.name}
-                        </NativeSelectOption>
-                      ))}
-                    </NativeSelect>
+                      value={field.value}
+                    />
 
                     {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
                   </Field>

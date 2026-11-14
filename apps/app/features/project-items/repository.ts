@@ -179,16 +179,29 @@ export async function listProjectsUsingItem(
 /**
  * Bir item'ın BOM'ları.
  *
- * "Used In" görünümünde, item'ın hangi BOM'larda doğrudan kullanıldığı
- * gösterilir.
+ * "Used In" görünümünde, item'ın hangi BOM'larda **doğrudan veya dolaylı**
+ * olarak kullanıldığı gösterilir:
+ *
+ * - **Doğrudan**: item, BOM'un satırında bileşen olarak yer alır.
+ * - **Dolaylı**: item, BOM'un alt BOM'unda yer alır; yani üst BOM, item'ın
+ *   içinde bulunduğu alt BOM'u bir bileşen olarak kullanır.
+ *
+ * Dolaylı kullanım, alt BOM zinciri boyunca yukarı doğru yürüyerek bulunur.
  */
 export async function listBomsUsingItem(
   organizationId: string,
   itemId: string,
 ): Promise<
-  { bomId: string; bomCode: string; bomName: string; revisionId: string; revision: string }[]
+  {
+    bomId: string;
+    bomCode: string;
+    bomName: string;
+    revisionId: string;
+    revision: string;
+    usageType: "DIRECT" | "INDIRECT";
+  }[]
 > {
-  return db
+  const direct = await db
     .selectDistinct({
       bomId: bom.id,
       bomCode: bom.code,
@@ -201,6 +214,67 @@ export async function listBomsUsingItem(
     .innerJoin(bom, eq(bom.id, bomRevision.bomId))
     .where(and(eq(bomLine.organizationId, organizationId), eq(bomLine.childItemId, itemId)))
     .orderBy(asc(bom.code));
+
+  /*
+   * Dolaylı kullanım: item'ın içinde bulunduğu revision'ları, o revision'ları
+   * alt BOM olarak kullanan üst revision'lar zincirleme aranır.
+   */
+  const knownRevisionIds = new Set(direct.map((row) => row.revisionId));
+
+  let frontier = [...knownRevisionIds];
+  const indirectRevisionIds = new Set<string>();
+
+  while (frontier.length > 0) {
+    const parents = await db
+      .selectDistinct({ revisionId: bomLine.bomRevisionId })
+      .from(bomLine)
+      .where(
+        and(
+          eq(bomLine.organizationId, organizationId),
+          inArray(bomLine.childBomRevisionId, frontier),
+        ),
+      );
+
+    const next = parents
+      .map((row) => row.revisionId)
+      .filter((revisionId) => !knownRevisionIds.has(revisionId));
+
+    if (next.length === 0) {
+      break;
+    }
+
+    for (const revisionId of next) {
+      indirectRevisionIds.add(revisionId);
+    }
+
+    frontier = next;
+  }
+
+  const indirect =
+    indirectRevisionIds.size === 0
+      ? []
+      : await db
+          .selectDistinct({
+            bomId: bom.id,
+            bomCode: bom.code,
+            bomName: bom.name,
+            revisionId: bomRevision.id,
+            revision: bomRevision.revision,
+          })
+          .from(bomRevision)
+          .innerJoin(bom, eq(bom.id, bomRevision.bomId))
+          .where(
+            and(
+              eq(bomRevision.organizationId, organizationId),
+              inArray(bomRevision.id, [...indirectRevisionIds]),
+            ),
+          )
+          .orderBy(asc(bom.code));
+
+  return [
+    ...direct.map((row) => ({ ...row, usageType: "DIRECT" as const })),
+    ...indirect.map((row) => ({ ...row, usageType: "INDIRECT" as const })),
+  ];
 }
 
 /**
