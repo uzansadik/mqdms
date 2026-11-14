@@ -583,7 +583,11 @@ export async function applySourceUpdate(
      * birini iptal eder.
      */
     const locked = await tx
-      .select({ id: processVariantRevision.id, version: processVariantRevision.version })
+      .select({
+        id: processVariantRevision.id,
+        version: processVariantRevision.version,
+        status: processVariantRevision.status,
+      })
       .from(processVariantRevision)
       .where(
         and(
@@ -596,6 +600,17 @@ export async function applySourceUpdate(
 
     if (!locked[0]) {
       throw new SourceUpdateRuleError("Hedef revision bulunamadı.", "NOT_FOUND");
+    }
+
+    /*
+     * Durum kilit altında yeniden doğrulanır: transaction dışındaki kontrol
+     * ile bu yazma arasında revision incelemeye gönderilmiş olabilir.
+     */
+    if (locked[0].status !== "DRAFT") {
+      throw new SourceUpdateRuleError(
+        "Güncelleme yalnızca taslak revision'a uygulanabilir.",
+        "INVALID_STATE",
+      );
     }
 
     const nextVersion = locked[0].version + 1;
