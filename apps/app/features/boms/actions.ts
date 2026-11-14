@@ -1,9 +1,11 @@
 "use server";
 
+import { hasPermission } from "@mqdms/auth/permissions/server";
 import type { z } from "zod";
 
 import { requireAuthContext } from "@/features/auth/session";
 
+import { flattenBom } from "./explosion";
 import { bomFormSchema, bomLineFormSchema, bomRevisionFormSchema } from "./schema";
 import {
   addBomLine,
@@ -175,5 +177,53 @@ export async function removeBomLineAction(lineId: string): Promise<BomActionResu
     return { success: true };
   } catch (error) {
     return { success: false, error: toActionError(error) };
+  }
+}
+
+/** BOM bileşen listesi sonucu. */
+export type BomComponentOptionsResult =
+  | { success: true; items: { id: string; code: string; name: string }[] }
+  | { success: false; error: string };
+
+/**
+ * Bir BOM revision'ının bileşenlerini döndürür.
+ *
+ * Çözümlenen alt BOM'lar da dahil edilir: kalite çalışması için gerekli
+ * bütün alt bileşenler (FRP, metal vb.) tek listede toplanır. Aynı item
+ * birden çok yerde geçiyorsa listede bir kez görünür.
+ */
+export async function listBomComponentOptionsAction(
+  bomRevisionId: string,
+): Promise<BomComponentOptionsResult> {
+  const context = await requireAuthContext();
+
+  if (!(await hasPermission(context, "boms", "read"))) {
+    return { success: false, error: "Bu işlem için yetkiniz yok." };
+  }
+
+  try {
+    const lines = await flattenBom(context.organizationId, bomRevisionId, {
+      includeIntermediate: true,
+    });
+
+    const items = new Map<string, { id: string; code: string; name: string }>();
+
+    for (const line of lines) {
+      if (items.has(line.childItemId)) {
+        continue;
+      }
+
+      items.set(line.childItemId, {
+        id: line.childItemId,
+        code: line.childItemCode ?? "",
+        name: line.childItemName ?? "",
+      });
+    }
+
+    return { success: true, items: [...items.values()] };
+  } catch (error) {
+    console.error("BOM bileşenleri okunamadı:", error);
+
+    return { success: false, error: "BOM bileşenleri okunamadı. Lütfen tekrar deneyin." };
   }
 }

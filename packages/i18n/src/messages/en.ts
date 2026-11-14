@@ -173,6 +173,7 @@ export const en = {
   "app.nav.itemGroups": "Item groups",
   "app.nav.boms": "BOMs",
   "app.nav.units": "Units",
+  "app.nav.imports": "Imports",
 
   "app.dashboard.welcome": "Welcome back, {name}",
   "app.dashboard.description": "Here is an overview of {organization}.",
@@ -660,6 +661,33 @@ export const en = {
   "items.detail.revisions.columns.revision": "Revision",
   "items.detail.revisions.columns.status": "Status",
   "items.detail.revisions.columns.description": "Description",
+  "items.detail.tabs.revisions": "Revisions",
+  "items.detail.tabs.boms": "BOMs",
+  "items.detail.tabs.usedIn": "Used in",
+
+  "items.detail.boms.title": "BOMs of this product",
+  "items.detail.boms.empty.title": "No BOM for this product yet",
+  "items.detail.boms.empty.description":
+    "Create a BOM to define which components this product is made of.",
+
+  "items.detail.usedIn.boms.title": "Used in BOMs",
+  "items.detail.usedIn.projects.title": "Used in projects",
+  "items.detail.usedIn.empty.title": "Not used anywhere yet",
+  "items.detail.usedIn.empty.description":
+    "This product is not a component of any BOM and is not part of a project.",
+
+  "items.revisions.form.title": "Add revision",
+  "items.revisions.form.description":
+    "A released revision is immutable; a new technical change needs a new revision.",
+  "items.revisions.form.revision.label": "Revision",
+  "items.revisions.form.revision.placeholder": "03",
+  "items.revisions.form.effectiveFrom.label": "Effective from",
+  "items.revisions.form.changeReason.label": "Change reason",
+  "items.revisions.form.description.label": "Description",
+  "items.revisions.form.submit": "Add revision",
+  "items.revisions.actions.created": "Revision created.",
+  "items.revisions.actions.released": "Revision released.",
+  "items.revisions.actions.release": "Release",
 
   "customerItems.empty.title": "No customer references yet",
   "customerItems.empty.description": "Add the customer part numbers this product is known by.",
@@ -850,6 +878,13 @@ export const en = {
 
   "projects.detail.tabs.items": "Items",
 
+  "projects.detail.tabs.boms": "BOMs",
+
+  "projects.boms.empty.title": "No BOM linked to this project",
+  "projects.boms.empty.description":
+    "Components appear here once a BOM revision is selected on one of the project items.",
+  "projects.boms.open": "Open BOM",
+
   "projectItems.title": "Project items",
   "projectItems.empty.title": "No items in this project yet",
   "projectItems.empty.description":
@@ -885,6 +920,20 @@ export const en = {
   "projectItems.role.RAW_MATERIAL": "Raw material",
   "projectItems.role.AUXILIARY": "Auxiliary",
 
+  "projectItems.bulk.title": "Add items in bulk",
+  "projectItems.bulk.description":
+    "Select several items from the item library or from the components of a BOM and add them to the project.",
+  "projectItems.bulk.source.label": "Source",
+  "projectItems.bulk.source.library": "Item library",
+  "projectItems.bulk.filter.label": "Filter",
+  "projectItems.bulk.filter.placeholder": "Search by code or name",
+  "projectItems.bulk.loading": "Loading BOM components...",
+  "projectItems.bulk.empty": "No matching items.",
+  "projectItems.bulk.inProject": "In project",
+  "projectItems.bulk.selectAll": "Select all",
+  "projectItems.bulk.submit": "Add {count} items to the project",
+  "projectItems.bulk.addedSuccess": "{count} items added to the project.",
+
   "projects.detail.tabs.structure": "Product structure",
 
   "productStructure.deliverable": "Deliverable",
@@ -909,6 +958,105 @@ export const en = {
   "productStructure.category.CONSUMABLE": "Consumables",
   "productStructure.category.UNCLASSIFIED": "Unclassified",
   "productStructure.category.OTHER": "Other",
+
+  "imports.title": "Imports",
+  "imports.description":
+    "Bring your product and BOM data in from an Excel or CSV file. Nothing is written before you confirm the preview.",
+
+  "imports.types.ITEM": "Items",
+  "imports.types.ITEM_GROUP_MAPPING": "Item group assignment",
+  "imports.types.CUSTOMER_ITEM": "Customer part numbers",
+  "imports.types.BOM": "BOM lines",
+
+  "imports.status.PENDING": "Waiting",
+  "imports.status.PARSING": "Reading",
+  "imports.status.VALIDATING": "Validating",
+  "imports.status.READY": "Ready",
+  "imports.status.CONFLICT": "Waiting for conflict resolution",
+  "imports.status.RUNNING": "Running",
+  "imports.status.COMPLETED": "Completed",
+  "imports.status.FAILED": "Failed",
+  "imports.status.CANCELLED": "Cancelled",
+
+  "imports.upload.title": "Upload a file",
+  "imports.upload.description":
+    "Excel (.xlsx) and CSV files are supported. The file is validated before anything is written.",
+  "imports.upload.importType.label": "Import type",
+  "imports.upload.sourceSystem.label": "Source system",
+  "imports.upload.sourceSystem.placeholder": "DINAMO",
+  "imports.upload.file.label": "File",
+  "imports.upload.hint": "Maximum 25 MB. Formulas are not executed.",
+  "imports.upload.uploading": "Uploading...",
+  "imports.actions.uploaded": "File uploaded.",
+
+  "imports.mapping.title": "Column mapping",
+  "imports.mapping.description":
+    "Match the columns of your file to the mQDMS fields, then validate the rows.",
+  "imports.mapping.notMapped": "Not mapped",
+  "imports.mapping.validate": "Validate rows",
+  "imports.mapping.execute": "Import",
+  "imports.mapping.validated": "The rows are valid.",
+  "imports.mapping.executed": "Import completed.",
+  "imports.mapping.queued": "The import is queued. The result appears when the page refreshes.",
+  "imports.mapping.hasErrors": "Some rows are invalid. Fix them and validate again.",
+
+  "imports.preview.title": "Preview",
+  "imports.preview.summary":
+    "{total} rows: {create} to create, {update} to update, {error} with errors.",
+  "imports.preview.blocked": "The import is blocked until every invalid row is fixed.",
+  "imports.preview.columns.row": "Row",
+  "imports.preview.columns.record": "Record",
+  "imports.preview.columns.status": "Status",
+  "imports.preview.columns.details": "Details",
+  "imports.preview.status.CREATE": "To create",
+  "imports.preview.status.UPDATE": "To update",
+  "imports.preview.status.ERROR": "Invalid",
+  "imports.preview.status.SKIP": "Skipped",
+
+  "imports.conflicts.title": "Conflict resolution",
+  "imports.conflicts.description":
+    "Decide what happens to the rows that target an existing record: keep the record as it is or update it with the values from the file.",
+  "imports.conflicts.skipInvalid": "Skip the invalid rows and continue the import.",
+  "imports.conflicts.invalidRow": "Row {row} ({label})",
+  "imports.conflicts.applyAll": "Update all",
+  "imports.conflicts.skipAll": "Keep all",
+  "imports.conflicts.undecided": "Not decided",
+  "imports.conflicts.decision.APPLY": "Update",
+  "imports.conflicts.decision.SKIP": "Keep existing",
+  "imports.conflicts.columns.values": "Values in the file",
+  "imports.conflicts.columns.decision": "Decision",
+  "imports.conflicts.submit": "Resolve conflicts",
+  "imports.conflicts.resolved": "Conflicts resolved.",
+
+  "imports.fields.code": "Internal code",
+  "imports.fields.name": "Name",
+  "imports.fields.itemGroup": "Item group code",
+  "imports.fields.itemType": "Item type",
+  "imports.fields.supplyType": "Supply type",
+  "imports.fields.unit": "Unit code",
+  "imports.fields.revision": "Revision",
+  "imports.fields.erpReference": "ERP reference",
+  "imports.fields.itemCode": "Internal item code",
+  "imports.fields.groupCode": "Item group code",
+  "imports.fields.customerCode": "Customer code",
+  "imports.fields.customerPartNumber": "Customer part number",
+  "imports.fields.customerPartName": "Customer part name",
+  "imports.fields.customerRevision": "Customer revision",
+  "imports.fields.internalRevision": "Internal revision",
+  "imports.fields.parentItemCode": "Parent item code",
+  "imports.fields.childItemCode": "Child item code",
+  "imports.fields.quantity": "Quantity",
+  "imports.fields.lineNumber": "Line number",
+  "imports.fields.bomRevision": "BOM code",
+  "imports.fields.parentItemRevision": "Parent item revision",
+  "imports.fields.childItemRevision": "Child item revision",
+
+  "imports.history.columns.file": "File",
+  "imports.history.columns.type": "Type",
+  "imports.history.columns.status": "Status",
+  "imports.history.columns.rows": "Rows",
+  "imports.history.columns.createdAt": "Created",
+  "imports.errors.title": "Errors",
 } as const;
 
 export type MessageKey = keyof typeof en;

@@ -2,6 +2,7 @@ import { queueConfig } from "@mqdms/queue";
 import { createRedisWorkerConnection } from "@mqdms/redis/worker";
 import { Worker } from "bullmq";
 
+import { processImportExecute } from "../jobs/import-execute";
 import { processSystemPing } from "../jobs/system-ping";
 
 export function createDefaultWorker() {
@@ -13,6 +14,9 @@ export function createDefaultWorker() {
       switch (job.name) {
         case "system.ping":
           return processSystemPing(job);
+
+        case "import.execute":
+          return processImportExecute(job);
 
         default:
           throw new Error(`Unknown job "${job.name}" in default queue`);

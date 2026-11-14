@@ -174,6 +174,7 @@ export const tr = {
   "app.nav.itemGroups": "Ürün grupları",
   "app.nav.boms": "BOM'lar",
   "app.nav.units": "Birimler",
+  "app.nav.imports": "İçe aktarım",
 
   "app.dashboard.welcome": "Tekrar hoş geldin, {name}",
   "app.dashboard.description": "{organization} için genel bakış.",
@@ -659,6 +660,33 @@ export const tr = {
   "items.detail.revisions.columns.revision": "Revision",
   "items.detail.revisions.columns.status": "Durum",
   "items.detail.revisions.columns.description": "Açıklama",
+  "items.detail.tabs.revisions": "Revision'lar",
+  "items.detail.tabs.boms": "BOM'lar",
+  "items.detail.tabs.usedIn": "Kullanım",
+
+  "items.detail.boms.title": "Bu ürünün BOM'ları",
+  "items.detail.boms.empty.title": "Bu ürün için henüz BOM yok",
+  "items.detail.boms.empty.description":
+    "Bu ürünün hangi bileşenlerden oluştuğunu tanımlamak için BOM oluşturun.",
+
+  "items.detail.usedIn.boms.title": "Kullanıldığı BOM'lar",
+  "items.detail.usedIn.projects.title": "Kullanıldığı projeler",
+  "items.detail.usedIn.empty.title": "Henüz hiçbir yerde kullanılmıyor",
+  "items.detail.usedIn.empty.description":
+    "Bu ürün hiçbir BOM'un bileşeni değil ve bir proje kapsamında değil.",
+
+  "items.revisions.form.title": "Revision ekle",
+  "items.revisions.form.description":
+    "Yayınlanmış bir revision değiştirilemez; yeni bir teknik değişiklik yeni bir revision gerektirir.",
+  "items.revisions.form.revision.label": "Revision",
+  "items.revisions.form.revision.placeholder": "03",
+  "items.revisions.form.effectiveFrom.label": "Yürürlük tarihi",
+  "items.revisions.form.changeReason.label": "Değişiklik sebebi",
+  "items.revisions.form.description.label": "Açıklama",
+  "items.revisions.form.submit": "Revision ekle",
+  "items.revisions.actions.created": "Revision oluşturuldu.",
+  "items.revisions.actions.released": "Revision yayınlandı.",
+  "items.revisions.actions.release": "Yayınla",
 
   "customerItems.empty.title": "Henüz müşteri referansı yok",
   "customerItems.empty.description":
@@ -851,6 +879,13 @@ export const tr = {
 
   "projects.detail.tabs.items": "Ürünler",
 
+  "projects.detail.tabs.boms": "BOM'lar",
+
+  "projects.boms.empty.title": "Bu projeye bağlanmış BOM yok",
+  "projects.boms.empty.description":
+    "Proje ürünlerinden birine BOM revision'ı seçtiğinizde bileşenler burada görünür.",
+  "projects.boms.open": "BOM'u aç",
+
   "projectItems.title": "Proje ürünleri",
   "projectItems.empty.title": "Bu projede henüz ürün yok",
   "projectItems.empty.description":
@@ -886,6 +921,20 @@ export const tr = {
   "projectItems.role.RAW_MATERIAL": "Hammadde",
   "projectItems.role.AUXILIARY": "Yardımcı",
 
+  "projectItems.bulk.title": "Toplu ürün ekle",
+  "projectItems.bulk.description":
+    "Item kütüphanesinden ya da bir BOM'un bileşenlerinden çoklu ürün seçip projeye ekleyin.",
+  "projectItems.bulk.source.label": "Kaynak",
+  "projectItems.bulk.source.library": "Item kütüphanesi",
+  "projectItems.bulk.filter.label": "Filtre",
+  "projectItems.bulk.filter.placeholder": "Kod veya ad ara",
+  "projectItems.bulk.loading": "BOM bileşenleri yükleniyor...",
+  "projectItems.bulk.empty": "Eşleşen ürün yok.",
+  "projectItems.bulk.inProject": "Projede",
+  "projectItems.bulk.selectAll": "Tümünü seç",
+  "projectItems.bulk.submit": "{count} ürünü projeye ekle",
+  "projectItems.bulk.addedSuccess": "{count} ürün projeye eklendi.",
+
   "projects.detail.tabs.structure": "Ürün yapısı",
 
   "productStructure.deliverable": "Satılan ürün",
@@ -910,4 +959,103 @@ export const tr = {
   "productStructure.category.CONSUMABLE": "Sarf malzemeleri",
   "productStructure.category.UNCLASSIFIED": "Sınıflandırılmamış",
   "productStructure.category.OTHER": "Diğer",
+
+  "imports.title": "İçe aktarım",
+  "imports.description":
+    "Ürün ve BOM verilerinizi Excel veya CSV dosyasından alın. Onaylamadan önce hiçbir veri yazılmaz.",
+
+  "imports.types.ITEM": "Ürünler",
+  "imports.types.ITEM_GROUP_MAPPING": "Ürün grubu ataması",
+  "imports.types.CUSTOMER_ITEM": "Müşteri parça numaraları",
+  "imports.types.BOM": "BOM satırları",
+
+  "imports.status.PENDING": "Bekliyor",
+  "imports.status.PARSING": "Okunuyor",
+  "imports.status.VALIDATING": "Doğrulanıyor",
+  "imports.status.READY": "Hazır",
+  "imports.status.CONFLICT": "Çakışma çözümü bekliyor",
+  "imports.status.RUNNING": "Çalışıyor",
+  "imports.status.COMPLETED": "Tamamlandı",
+  "imports.status.FAILED": "Başarısız",
+  "imports.status.CANCELLED": "İptal edildi",
+
+  "imports.upload.title": "Dosya yükle",
+  "imports.upload.description":
+    "Excel (.xlsx) ve CSV dosyaları desteklenir. Dosya yazılmadan önce doğrulanır.",
+  "imports.upload.importType.label": "İçe aktarım türü",
+  "imports.upload.sourceSystem.label": "Kaynak sistem",
+  "imports.upload.sourceSystem.placeholder": "DINAMO",
+  "imports.upload.file.label": "Dosya",
+  "imports.upload.hint": "En fazla 25 MB. Formüller çalıştırılmaz.",
+  "imports.upload.uploading": "Yükleniyor...",
+  "imports.actions.uploaded": "Dosya yüklendi.",
+
+  "imports.mapping.title": "Kolon eşleştirme",
+  "imports.mapping.description":
+    "Dosyanızın kolonlarını mQDMS alanlarıyla eşleştirin, sonra satırları doğrulayın.",
+  "imports.mapping.notMapped": "Eşleştirilmedi",
+  "imports.mapping.validate": "Satırları doğrula",
+  "imports.mapping.execute": "İçe aktar",
+  "imports.mapping.validated": "Satırlar geçerli.",
+  "imports.mapping.executed": "İçe aktarım tamamlandı.",
+  "imports.mapping.queued": "İçe aktarım kuyruğa alındı. Sonuç sayfa yenilendiğinde görünür.",
+  "imports.mapping.hasErrors": "Bazı satırlar geçersiz. Düzeltip yeniden doğrulayın.",
+
+  "imports.preview.title": "Önizleme",
+  "imports.preview.summary":
+    "{total} satır: {create} oluşturulacak, {update} güncellenecek, {error} hatalı.",
+  "imports.preview.blocked": "Hatalı satırlar düzeltilene kadar içe aktarım engellenir.",
+  "imports.preview.columns.row": "Satır",
+  "imports.preview.columns.record": "Kayıt",
+  "imports.preview.columns.status": "Durum",
+  "imports.preview.columns.details": "Ayrıntı",
+  "imports.preview.status.CREATE": "Oluşturulacak",
+  "imports.preview.status.UPDATE": "Güncellenecek",
+  "imports.preview.status.ERROR": "Geçersiz",
+  "imports.preview.status.SKIP": "Atlandı",
+
+  "imports.conflicts.title": "Çakışma çözümü",
+  "imports.conflicts.description":
+    "Dosyada mevcut bir kaydı hedefleyen satırlar için karar verin: mevcut kayıt korunur ya da dosyadaki değerlerle güncellenir.",
+  "imports.conflicts.skipInvalid": "Hatalı satırları atlayarak içe aktarıma devam et.",
+  "imports.conflicts.invalidRow": "Satır {row} ({label})",
+  "imports.conflicts.applyAll": "Tümünü güncelle",
+  "imports.conflicts.skipAll": "Tümünü koru",
+  "imports.conflicts.undecided": "Karar verilmedi",
+  "imports.conflicts.decision.APPLY": "Güncelle",
+  "imports.conflicts.decision.SKIP": "Mevcut kaydı koru",
+  "imports.conflicts.columns.values": "Dosyadaki değerler",
+  "imports.conflicts.columns.decision": "Karar",
+  "imports.conflicts.submit": "Çakışmaları çöz",
+  "imports.conflicts.resolved": "Çakışmalar çözüldü.",
+
+  "imports.fields.code": "Şirket içi kod",
+  "imports.fields.name": "Ad",
+  "imports.fields.itemGroup": "Ürün grubu kodu",
+  "imports.fields.itemType": "Ürün tipi",
+  "imports.fields.supplyType": "Tedarik şekli",
+  "imports.fields.unit": "Birim kodu",
+  "imports.fields.revision": "Revision",
+  "imports.fields.erpReference": "ERP referansı",
+  "imports.fields.itemCode": "Şirket içi ürün kodu",
+  "imports.fields.groupCode": "Ürün grubu kodu",
+  "imports.fields.customerCode": "Müşteri kodu",
+  "imports.fields.customerPartNumber": "Müşteri parça numarası",
+  "imports.fields.customerPartName": "Müşteri parça adı",
+  "imports.fields.customerRevision": "Müşteri revision'ı",
+  "imports.fields.internalRevision": "İç revision",
+  "imports.fields.parentItemCode": "Üst ürün kodu",
+  "imports.fields.childItemCode": "Alt ürün kodu",
+  "imports.fields.quantity": "Miktar",
+  "imports.fields.lineNumber": "Satır numarası",
+  "imports.fields.bomRevision": "BOM kodu",
+  "imports.fields.parentItemRevision": "Üst ürün revision'ı",
+  "imports.fields.childItemRevision": "Alt ürün revision'ı",
+
+  "imports.history.columns.file": "Dosya",
+  "imports.history.columns.type": "Tür",
+  "imports.history.columns.status": "Durum",
+  "imports.history.columns.rows": "Satır",
+  "imports.history.columns.createdAt": "Oluşturulma",
+  "imports.errors.title": "Hatalar",
 } satisfies Record<MessageKey, string>;

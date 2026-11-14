@@ -1,5 +1,7 @@
 import { requirePermission } from "@/features/auth/session";
+import { listBomsByItem } from "@/features/boms/repository";
 import { listItemGroupOptions } from "@/features/item-groups/repository";
+import { listBomsUsingItem, listProjectsUsingItem } from "@/features/project-items/repository";
 import { listUnitOptions } from "@/features/units/repository";
 
 import {
@@ -47,9 +49,14 @@ export async function getItemDetailData(organizationId: string, itemId: string) 
     return null;
   }
 
-  const revisions = await listItemRevisions(organizationId, itemId);
+  const [revisions, boms, usedInBoms, usedInProjects] = await Promise.all([
+    listItemRevisions(organizationId, itemId),
+    listBomsByItem(organizationId, itemId),
+    listBomsUsingItem(organizationId, itemId),
+    listProjectsUsingItem(organizationId, itemId),
+  ]);
 
-  return { item: record, revisions };
+  return { item: record, revisions, boms, usedInBoms, usedInProjects };
 }
 
 /** Formun ihtiyaç duyduğu seçim listeleri. */

@@ -1,12 +1,9 @@
-import { DeleteObjectCommand, HeadObjectCommand } from "@aws-sdk/client-s3";
+import { DeleteObjectCommand, GetObjectCommand, HeadObjectCommand } from "@aws-sdk/client-s3";
 import { storageEnv as env } from "@mqdms/env/storage";
 
 import { storageClient } from "./client";
 import type { UploadPurpose } from "./types";
-
-const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
-
-const IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+import { isUploadAllowed } from "./upload-rules";
 
 type VerifyUploadedObjectInput = {
   key: string;
@@ -31,10 +28,12 @@ export async function verifyUploadedObject({ key, purpose, ownerId }: VerifyUplo
   const size = result.ContentLength ?? 0;
   const contentType = result.ContentType;
 
-  if (size <= 0 || size > MAX_IMAGE_SIZE || !contentType || !IMAGE_TYPES.has(contentType)) {
+  const check = isUploadAllowed(purpose, contentType ?? "", size);
+
+  if (!check.allowed) {
     await deleteObject(key);
 
-    throw new Error("Uploaded file is invalid.");
+    throw new Error(check.reason ?? "Uploaded file is invalid.");
   }
 
   return {
@@ -52,6 +51,29 @@ export async function deleteObject(key: string) {
       Key: key,
     }),
   );
+}
+
+/**
+ * Nesneyi indirir.
+ *
+ * Sunucu tarafında kullanılır: içe aktarım dosyası belleğe okunup ayrıştırılır.
+ * Excel formülleri **çalıştırılmaz**; dosyadaki değerler okunur.
+ */
+export async function getObjectBytes(key: string): Promise<Uint8Array> {
+  const result = await storageClient.send(
+    new GetObjectCommand({
+      Bucket: env.STORAGE_BUCKET,
+      Key: key,
+    }),
+  );
+
+  if (!result.Body) {
+    throw new Error("The object could not be read.");
+  }
+
+  const bytes = await result.Body.transformToByteArray();
+
+  return bytes;
 }
 
 export function getPublicObjectUrl(key: string) {

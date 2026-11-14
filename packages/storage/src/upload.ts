@@ -5,20 +5,15 @@ import { storageEnv as env } from "@mqdms/env/storage";
 import { storageClient } from "./client";
 import { createObjectKey } from "./keys";
 import type { CreateUploadInput, PresignedUpload } from "./types";
-
-const IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
-
-const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
+import { isUploadAllowed } from "./upload-rules";
 
 const UPLOAD_EXPIRES_IN = 60;
 
 export async function createPresignedUpload(input: CreateUploadInput): Promise<PresignedUpload> {
-  if (!IMAGE_TYPES.has(input.contentType)) {
-    throw new Error("Unsupported file type.");
-  }
+  const check = isUploadAllowed(input.purpose, input.contentType, input.size);
 
-  if (input.size > MAX_IMAGE_SIZE) {
-    throw new Error("File must be smaller than 5 MB.");
+  if (!check.allowed) {
+    throw new Error(check.reason ?? "The file cannot be uploaded.");
   }
 
   const key = createObjectKey(input);

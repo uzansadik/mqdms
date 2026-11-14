@@ -11,6 +11,7 @@
   "dependencies": {
     "@mqdms/email": "workspace:*",
     "@mqdms/env": "workspace:*",
+    "@mqdms/imports": "workspace:*",
     "@mqdms/queue": "workspace:*",
     "@mqdms/redis": "workspace:*",
     "bullmq": "^6.3.2"

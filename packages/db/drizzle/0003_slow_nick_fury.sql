@@ -1,0 +1,1 @@
+ALTER TABLE "import_job" ADD COLUMN "conflict_resolution" jsonb DEFAULT '{"rows":{},"skipInvalidRows":false}'::jsonb NOT NULL;

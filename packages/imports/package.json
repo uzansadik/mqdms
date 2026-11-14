@@ -1,0 +1,27 @@
+{
+  "name": "@mqdms/imports",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./schema": "./src/schema.ts",
+    "./types": "./src/types.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@mqdms/audit": "workspace:*",
+    "@mqdms/db": "workspace:*",
+    "@mqdms/storage": "workspace:*",
+    "drizzle-orm": "^0.45.0",
+    "read-excel-file": "^9.3.15",
+    "zod": "^4.0.0"
+  },
+  "devDependencies": {
+    "@mqdms/typescript-config": "workspace:*",
+    "@types/node": "^20",
+    "typescript": "^5"
+  }
+}

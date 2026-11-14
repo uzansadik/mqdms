@@ -6,6 +6,7 @@ import { requireAuthContext } from "@/features/auth/session";
 
 import { projectItemFormSchema } from "./schema";
 import {
+  addProjectItems,
   archiveProjectItem,
   createProjectItem,
   ProjectItemRuleError,
@@ -78,5 +79,31 @@ export async function archiveProjectItemAction(
     return { success: true };
   } catch (error) {
     return { success: false, error: toActionError(error) };
+  }
+}
+
+/**
+ * Ürünleri projeye toplu ekler.
+ *
+ * Zaten projede olan item'lar sessizce atlanır; eklenenler audit'e yazılır.
+ */
+export async function addProjectItemsAction(
+  projectId: string,
+  itemIds: string[],
+): Promise<ProjectItemActionResult> {
+  const context = await requireAuthContext();
+
+  try {
+    await addProjectItems(context, projectId, itemIds);
+
+    return { success: true };
+  } catch (error) {
+    if (error instanceof ProjectItemRuleError) {
+      return { success: false, error: error.message };
+    }
+
+    console.error("Toplu ürün ekleme başarısız:", error);
+
+    return { success: false, error: "İşlem tamamlanamadı. Lütfen tekrar deneyin." };
   }
 }
