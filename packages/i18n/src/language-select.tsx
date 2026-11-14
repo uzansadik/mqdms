@@ -9,7 +9,17 @@ import {
   SelectValue,
 } from "@mqdms/ui/components/select";
 
-export function LanguageSelect() {
+type LanguageSelectProps = {
+  /**
+   * Seçiciye verilen erişilebilir ad.
+   *
+   * Görünen etiket seçiciyle ilişkilendirilemiyorsa (ör. ayar kartında
+   * başlık ayrı bir bileşende) erişilebilir ad verilmelidir.
+   */
+  ariaLabel?: string;
+};
+
+export function LanguageSelect({ ariaLabel }: LanguageSelectProps) {
   const { locale, setLocale, isPending, t } = useI18n();
 
   return (
@@ -18,7 +28,7 @@ export function LanguageSelect() {
       onValueChange={(value) => setLocale(value as "en" | "tr")}
       disabled={isPending}
     >
-      <SelectTrigger className="w-40">
+      <SelectTrigger aria-label={ariaLabel} className="w-40">
         <SelectValue />
       </SelectTrigger>
 

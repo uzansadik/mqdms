@@ -180,6 +180,7 @@ export const en = {
   "app.userMenu.profile": "Profile",
   "app.userMenu.settings": "Settings",
   "app.userMenu.signOut": "Sign out",
+  "app.userMenu.signOutFailed": "Could not sign out.",
   "app.userMenu.signingOut": "Signing out...",
   "app.settings.title": "Settings",
   "app.settings.description": "Language and theme preferences.",

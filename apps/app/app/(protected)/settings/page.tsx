@@ -39,7 +39,7 @@ export default async function SettingsPage() {
           </CardHeader>
 
           <CardContent>
-            <LanguageSelect />
+            <LanguageSelect ariaLabel={t("app.settings.language.title")} />
           </CardContent>
         </Card>
 
@@ -52,6 +52,7 @@ export default async function SettingsPage() {
 
           <CardContent>
             <ThemeSelect
+              ariaLabel={t("app.settings.theme.title")}
               labels={{
                 light: t("app.settings.theme.light"),
                 dark: t("app.settings.theme.dark"),

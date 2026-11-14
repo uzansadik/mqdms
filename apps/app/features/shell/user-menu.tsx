@@ -14,6 +14,7 @@ import {
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@mqdms/ui/components/sidebar";
 import { ChevronsUpDown, LogOut, Settings, User } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { useState } from "react";
 
 type UserMenuProps = {
@@ -37,7 +38,19 @@ export function UserMenu({ user }: UserMenuProps) {
   async function handleSignOut() {
     setIsSigningOut(true);
 
-    await authClient.signOut();
+    const { error } = await authClient.signOut();
+
+    if (error) {
+      /*
+       * Çıkış başarısızsa yönlendirme yapılmaz: kullanıcı oturumu hâlâ
+       * geçerliyken giriş ekranına düşerse ne olacağı belirsiz hâle gelir.
+       */
+      toast.error(error.message ?? t("app.userMenu.signOutFailed"));
+
+      setIsSigningOut(false);
+
+      return;
+    }
 
     window.location.assign(`${env.NEXT_PUBLIC_AUTH_URL}/login`);
   }

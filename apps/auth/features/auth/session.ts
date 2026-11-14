@@ -3,6 +3,8 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { cache } from "react";
 
+import { getOrganizations } from "@/features/organization/server";
+
 /**
  * Oturumu okur.
  *
@@ -35,10 +37,35 @@ export async function requireSession(returnTo?: string) {
   return session;
 }
 
+/**
+ * Oturum varsa hedefe yönlendirir.
+ *
+ * Organizasyon erişimi yoksa iş uygulamasına yönlendirme **yapılmaz**: iş
+ * uygulaması kullanıcıyı geri giriş ekranına gönderir ve yönlendirme döngüsü
+ * oluşur. Böyle durumlarda organizasyon seçimine ya da erişim uyarısına
+ * gidilir.
+ */
 export async function redirectIfAuthenticated(redirectTo = "/dashboard") {
   const session = await getSession();
 
-  if (session) {
-    redirect(redirectTo);
+  if (!session) {
+    return;
   }
+
+  const organizations = await getOrganizations();
+
+  if (organizations.length === 0) {
+    redirect("/no-access");
+  }
+
+  /*
+   * Birden fazla organizasyona üye olup aktif organizasyon seçilmemişse
+   * seçim ekranı gerekir. Tek organizasyon durumunda iş uygulaması üyeliği
+   * kendisi çözer.
+   */
+  if (organizations.length > 1 && !session.session.activeOrganizationId) {
+    redirect("/select-organization");
+  }
+
+  redirect(redirectTo);
 }

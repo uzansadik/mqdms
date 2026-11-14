@@ -17,6 +17,9 @@ type ThemeSelectProps = {
     dark: string;
     system: string;
   };
+
+  /** Seçiciye verilen erişilebilir ad. */
+  ariaLabel: string;
 };
 
 /**
@@ -25,7 +28,7 @@ type ThemeSelectProps = {
  * `next-themes` üzerine kuruludur: seçim `localStorage` ve çerezde saklanır,
  * "sistem" seçeneği işletim sistemi tercihini izler.
  */
-export function ThemeSelect({ labels }: ThemeSelectProps) {
+export function ThemeSelect({ labels, ariaLabel }: ThemeSelectProps) {
   const { theme, setTheme } = useTheme();
 
   /*
@@ -42,7 +45,7 @@ export function ThemeSelect({ labels }: ThemeSelectProps) {
   if (!mounted) {
     return (
       <Select disabled value="system">
-        <SelectTrigger className="w-40">
+        <SelectTrigger aria-label={ariaLabel} className="w-40">
           <SelectValue />
         </SelectTrigger>
 
@@ -55,7 +58,7 @@ export function ThemeSelect({ labels }: ThemeSelectProps) {
 
   return (
     <Select onValueChange={(value) => setTheme(value)} value={theme}>
-      <SelectTrigger className="w-40">
+      <SelectTrigger aria-label={ariaLabel} className="w-40">
         <SelectValue />
       </SelectTrigger>
 

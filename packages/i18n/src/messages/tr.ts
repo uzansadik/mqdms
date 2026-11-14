@@ -181,6 +181,7 @@ export const tr = {
   "app.userMenu.profile": "Profil",
   "app.userMenu.settings": "Ayarlar",
   "app.userMenu.signOut": "Çıkış yap",
+  "app.userMenu.signOutFailed": "Çıkış yapılamadı.",
   "app.userMenu.signingOut": "Çıkılıyor...",
   "app.settings.title": "Ayarlar",
   "app.settings.description": "Dil ve tema tercihleri.",
