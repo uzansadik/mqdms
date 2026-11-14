@@ -201,12 +201,25 @@ export function FlowEditor({ initialData }: { initialData: FlowEditorInitialData
     setIsDirty(true);
   }
 
+  function onNodeDragStart() {
+    if (!editable) {
+      return;
+    }
+
+    /*
+     * Geçmiş, sürükleme başlamadan önce alınır: konum değişiklikleri React
+     * Flow tarafından sürükleme sırasında uygulanır. Sürükleme bitiminde
+     * alınan anlık görüntü zaten taşınmış konumları içerirdi ve geri alma
+     * işe yaramazdı.
+     */
+    snapshot();
+  }
+
   function onNodeDragStop() {
     if (!editable) {
       return;
     }
 
-    snapshot();
     setIsDirty(true);
   }
 
@@ -605,6 +618,7 @@ export function FlowEditor({ initialData }: { initialData: FlowEditorInitialData
               setSelectedNodeId(node.id);
               setSelectedEdgeId(null);
             }}
+            onNodeDragStart={onNodeDragStart}
             onNodeDragStop={onNodeDragStop}
             onNodesChange={onNodesChange}
             onNodesDelete={onNodesDelete}

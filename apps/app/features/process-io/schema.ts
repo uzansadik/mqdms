@@ -66,7 +66,12 @@ export const processApplicabilityFormSchema = z.object({
   isActive: z.boolean(),
 
   /** Kapsama dahil edilecek item grupları. */
-  itemGroupIds: z.array(z.string().uuid()),
+  itemGroupIds: z
+    .array(z.string().uuid())
+    .max(50, "En fazla 50 item grubu seçilebilir.")
+    .refine((ids) => new Set(ids).size === ids.length, {
+      message: "Aynı item grubu birden fazla kez seçilemez.",
+    }),
 });
 
 export type ProcessApplicabilityFormValues = z.infer<typeof processApplicabilityFormSchema>;

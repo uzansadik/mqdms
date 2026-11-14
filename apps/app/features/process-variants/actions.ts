@@ -172,7 +172,7 @@ export async function getSourceUpdateChangesAction(
 
   try {
     const result = await getSourceUpdateChanges(
-      context.organizationId,
+      context,
       parsed.data.targetRevisionId,
       parsed.data.sourceRevisionId,
     );

@@ -1,5 +1,10 @@
 import { db } from "@mqdms/db";
-import { flowNode, flowNodeWorkElement, processWorkElement } from "@mqdms/db/schema";
+import {
+  flowNode,
+  flowNodeWorkElement,
+  processVariantRevisionFlow,
+  processWorkElement,
+} from "@mqdms/db/schema";
 import { and, asc, eq } from "drizzle-orm";
 
 import type { WorkElementCategory } from "./schema";
@@ -129,4 +134,24 @@ export async function getNodeFlowId(
     .limit(1);
 
   return rows[0]?.flowId ?? null;
+}
+
+/**
+ * Node'un ait olduğu revision.
+ *
+ * Akış, revision'a bağlıdır; node da akışın parçasıdır. Böylece node ile
+ * work element'in aynı revision kapsamında olduğu doğrulanabilir.
+ */
+export async function getNodeRevisionId(
+  organizationId: string,
+  nodeId: string,
+): Promise<string | null> {
+  const rows = await db
+    .select({ processVariantRevisionId: processVariantRevisionFlow.processVariantRevisionId })
+    .from(flowNode)
+    .innerJoin(processVariantRevisionFlow, eq(processVariantRevisionFlow.flowId, flowNode.flowId))
+    .where(and(eq(flowNode.organizationId, organizationId), eq(flowNode.id, nodeId)))
+    .limit(1);
+
+  return rows[0]?.processVariantRevisionId ?? null;
 }

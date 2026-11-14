@@ -5,6 +5,7 @@ import { processFunction, processFunctionRequirement, processRequirement } from 
 import { and, eq } from "drizzle-orm";
 
 import { assertRevisionEditable } from "@/features/process-variants/service";
+import { getWorkElement } from "@/features/process-work-elements/repository";
 
 import { getProcessFunction, getProcessRequirement, listFunctionRequirements } from "./repository";
 import type { ProcessFunctionFormValues, ProcessRequirementFormValues } from "./schema";
@@ -50,6 +51,35 @@ function toNull(value: string | undefined): string | null {
   return trimmed === "" ? null : trimmed;
 }
 
+/**
+ * Work element referansının aynı revision'a ait olduğunu doğrular.
+ *
+ * Fonksiyon, work element'e bağlandığında ikisi de aynı teknik revision
+ * kapsamında olmalıdır; aksi halde revision'lar arası sızıntı oluşur.
+ */
+async function assertWorkElementInRevision(
+  context: AuthContext,
+  processWorkElementId: string | null,
+  processVariantRevisionId: string,
+): Promise<void> {
+  if (!processWorkElementId) {
+    return;
+  }
+
+  const workElement = await getWorkElement(context.organizationId, processWorkElementId);
+
+  if (!workElement) {
+    throw new ProcessContentRuleError("Work element bulunamadı.", "NOT_FOUND");
+  }
+
+  if (workElement.processVariantRevisionId !== processVariantRevisionId) {
+    throw new ProcessContentRuleError(
+      "Work element aynı revision'a ait olmalıdır.",
+      "INVALID_INPUT",
+    );
+  }
+}
+
 /** Fonksiyon oluşturur. */
 export async function createProcessFunction(
   context: AuthContext,
@@ -58,6 +88,12 @@ export async function createProcessFunction(
   await requireContentPermission(context, "update");
 
   await assertRevisionEditable(context, input.processVariantRevisionId);
+
+  await assertWorkElementInRevision(
+    context,
+    input.processWorkElementId,
+    input.processVariantRevisionId,
+  );
 
   return db.transaction(async (tx) => {
     const created = await tx
@@ -113,6 +149,12 @@ export async function updateProcessFunction(
   }
 
   await assertRevisionEditable(context, target.processVariantRevisionId);
+
+  await assertWorkElementInRevision(
+    context,
+    input.processWorkElementId,
+    target.processVariantRevisionId,
+  );
 
   await db.transaction(async (tx) => {
     await tx

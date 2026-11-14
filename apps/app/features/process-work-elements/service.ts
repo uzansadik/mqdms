@@ -12,7 +12,7 @@ import { and, eq } from "drizzle-orm";
 
 import { assertRevisionEditable } from "@/features/process-variants/service";
 
-import { getWorkElement, listNodeWorkElements } from "./repository";
+import { getNodeRevisionId, getWorkElement, listNodeWorkElements } from "./repository";
 import type { WorkElementFormValues } from "./schema";
 
 /**
@@ -258,6 +258,24 @@ export async function attachWorkElementToNode(
 
   if (!nodeRows[0]) {
     throw new WorkElementRuleError("Node bulunamadı.", "NOT_FOUND");
+  }
+
+  /*
+   * Node ve work element aynı teknik revision kapsamında olmalıdır: başka bir
+   * revision'ın (örneğin yayınlanmış bir revision'ın) akışına bağlantı
+   * yapılamaz.
+   */
+  const nodeRevisionId = await getNodeRevisionId(context.organizationId, flowNodeId);
+
+  if (!nodeRevisionId) {
+    throw new WorkElementRuleError("Node'un revision'ı bulunamadı.", "NOT_FOUND");
+  }
+
+  if (nodeRevisionId !== workElement.processVariantRevisionId) {
+    throw new WorkElementRuleError(
+      "Node ve work element aynı revision'a ait olmalıdır.",
+      "INVALID_INPUT",
+    );
   }
 
   const existing = await listNodeWorkElements(context.organizationId, flowNodeId);

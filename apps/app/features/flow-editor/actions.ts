@@ -2,10 +2,12 @@
 
 import type { z } from "zod";
 
+import { getTranslations } from "@mqdms/i18n/server";
 import { requireAuthContext } from "@/features/auth/session";
 
 import { flowSaveSchema } from "./schema";
 import { FlowRuleError, saveFlowGraph } from "./service";
+import { describeValidationCode } from "./validation";
 
 /** Aksiyon sonucu. */
 export type FlowActionResult =
@@ -48,6 +50,15 @@ export async function saveFlowGraphAction(input: unknown): Promise<FlowActionRes
 
     return { success: true, ...result };
   } catch (error) {
+    if (error instanceof FlowRuleError && error.code === "GRAPH_INVALID") {
+      const t = await getTranslations();
+
+      return {
+        success: false,
+        error: error.details.map((code) => describeValidationCode(code, t)).join(" "),
+      };
+    }
+
     return { success: false, error: toActionError(error) };
   }
 }

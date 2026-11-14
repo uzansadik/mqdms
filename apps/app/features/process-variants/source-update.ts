@@ -67,8 +67,11 @@ export class SourceUpdateRuleError extends Error {
 }
 
 /** Yetki kontrolü. */
-async function requireSourceUpdatePermission(context: AuthContext): Promise<void> {
-  if (!(await hasPermission(context, "processVariants", "update"))) {
+async function requireSourceUpdatePermission(
+  context: AuthContext,
+  action: "update" | "compare" = "update",
+): Promise<void> {
+  if (!(await hasPermission(context, "processVariants", action))) {
     throw new SourceUpdateRuleError("Bu işlem için yetkiniz yok.", "FORBIDDEN");
   }
 }
@@ -432,12 +435,19 @@ export async function listSourceUpdateCandidates(
  * Lineage kaynağı ile seçilen yeni kaynak revision arasındaki fark.
  *
  * Teknik değişiklikler ve görsel düzen değişiklikleri ayrı döner.
+ *
+ * Karşılaştırma revision'ın teknik içeriğini okur; bu nedenle yetki
+ * kontrolü zorunludur.
  */
 export async function getSourceUpdateChanges(
-  organizationId: string,
+  context: AuthContext,
   targetRevisionId: string,
   sourceRevisionId: string,
 ): Promise<{ changes: RevisionChange[]; technical: RevisionChange[]; layout: RevisionChange[] }> {
+  await requireSourceUpdatePermission(context, "compare");
+
+  const organizationId = context.organizationId;
+
   const target = await getProcessVariantRevision(organizationId, targetRevisionId);
 
   if (!target) {
@@ -807,7 +817,17 @@ export async function applySourceUpdate(
           processRequirementId: processFunctionRequirement.processRequirementId,
         })
         .from(processFunctionRequirement)
-        .where(eq(processFunctionRequirement.organizationId, context.organizationId));
+        .innerJoin(
+          processFunction,
+          eq(processFunction.id, processFunctionRequirement.processFunctionId),
+        )
+        .where(
+          and(
+            eq(processFunctionRequirement.organizationId, context.organizationId),
+            // Yalnızca kaynak revision'ın fonksiyonlarına ait bağlantılar.
+            eq(processFunction.processVariantRevisionId, source.id),
+          ),
+        );
 
       for (const link of sourceLinks) {
         const functionLogicalId = sourceFunctionById.get(link.processFunctionId);
@@ -1280,7 +1300,14 @@ export async function applySourceUpdate(
               description: flowNodeWorkElement.description,
             })
             .from(flowNodeWorkElement)
-            .where(eq(flowNodeWorkElement.organizationId, context.organizationId));
+            .innerJoin(flowNode, eq(flowNode.id, flowNodeWorkElement.flowNodeId))
+            .where(
+              and(
+                eq(flowNodeWorkElement.organizationId, context.organizationId),
+                // Yalnızca kaynak akışın node'larına ait bağlantılar.
+                eq(flowNode.flowId, sourceFlow.id),
+              ),
+            );
 
           for (const link of sourceNodeLinks) {
             const sourceNodeRows = await tx
@@ -1357,7 +1384,14 @@ export async function applySourceUpdate(
               processFunctionId: flowNodeFunction.processFunctionId,
             })
             .from(flowNodeFunction)
-            .where(eq(flowNodeFunction.organizationId, context.organizationId));
+            .innerJoin(flowNode, eq(flowNode.id, flowNodeFunction.flowNodeId))
+            .where(
+              and(
+                eq(flowNodeFunction.organizationId, context.organizationId),
+                // Yalnızca kaynak akışın node'larına ait bağlantılar.
+                eq(flowNode.flowId, sourceFlow.id),
+              ),
+            );
 
           for (const link of sourceFunctionLinks) {
             const sourceNodeRows = await tx
@@ -1430,10 +1464,32 @@ export async function applySourceUpdate(
       }
     }
 
-    // Taslak revision artık bu kaynak revision'ı yansıtır.
+    /*
+     * Taslak revision artık bu kaynak revision'ı yansıtır.
+     *
+     * Sürüm artırılır: teknik içerik değiştiği için, eski edit ekranından
+     * gelen kayıt (akış kaydetme) reddedilir. Aksi halde kullanıcının
+     * transfer edilen node'ları sessizce silinirdi.
+     */
+    const locked = await tx
+      .select({ id: processVariantRevision.id, version: processVariantRevision.version })
+      .from(processVariantRevision)
+      .where(
+        and(
+          eq(processVariantRevision.organizationId, context.organizationId),
+          eq(processVariantRevision.id, target.id),
+        ),
+      )
+      .for("update")
+      .limit(1);
+
     await tx
       .update(processVariantRevision)
-      .set({ sourceVariantRevisionId: source.id, updatedAt: new Date() })
+      .set({
+        sourceVariantRevisionId: source.id,
+        version: (locked[0]?.version ?? target.version) + 1,
+        updatedAt: new Date(),
+      })
       .where(eq(processVariantRevision.id, target.id));
 
     await writeAuditLog(

@@ -1,7 +1,6 @@
-import { requireAuthContext } from "@/features/auth/session";
+import { requireAuthContext, requirePermission } from "@/features/auth/session";
 import { DeriveVariantForm } from "@/features/process-variants/components/derive-variant-form";
 import { listGenericSourceRevisions } from "@/features/process-variants/repository";
-import { requireProcessVariantsAccess } from "@/features/process-variants/server";
 
 type PageProps = {
   params: Promise<{ processId: string }>;
@@ -11,7 +10,12 @@ type PageProps = {
 export default async function DeriveProcessVariantPage({ params }: PageProps) {
   const context = await requireAuthContext();
 
-  await requireProcessVariantsAccess("read");
+  /*
+   * Türetme `masterProcesses:derive` yetkisi gerektirir; okuma yetkisi olan
+   * bir kullanıcıya formu göstermek, hata mesajını ancak gönderimde
+   * göstermek anlamına gelirdi.
+   */
+  await requirePermission("masterProcesses", "derive");
 
   const { processId } = await params;
 

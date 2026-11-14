@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX "process_variant_revision_variant_id_released_unique" ON "process_variant_revision" USING btree ("process_variant_id") WHERE "process_variant_revision"."status" = 'RELEASED';

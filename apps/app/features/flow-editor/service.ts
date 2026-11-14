@@ -40,7 +40,10 @@ export class FlowRuleError extends Error {
       | "CONFLICT"
       | "INVALID_INPUT"
       | "FORBIDDEN"
-      | "INVALID_STATE" = "INVALID_INPUT",
+      | "INVALID_STATE"
+      | "GRAPH_INVALID" = "INVALID_INPUT",
+    /** Doğrulama hata kodları; kullanıcıya çevrilmek üzere saklanır. */
+    readonly details: string[] = [],
   ) {
     super(message);
     this.name = "FlowRuleError";
@@ -148,7 +151,26 @@ export async function saveFlowGraph(
   );
 
   if (validation.errors.length > 0) {
-    throw new FlowRuleError(`Akış geçersiz: ${validation.errors.join(", ")}`, "INVALID_INPUT");
+    /*
+     * Hata kodları kayıt etiketiyle zenginleştirilir: kullanıcı hangi
+     * node'un düzeltilmesi gerektiğini görür.
+     */
+    const labels = new Map(input.graph.nodes.map((node) => [node.id, node.title] as const));
+
+    const details = validation.errors.map((code) => {
+      const separator = code.indexOf(":");
+
+      if (separator === -1) {
+        return code;
+      }
+
+      const base = code.slice(0, separator);
+      const label = labels.get(code.slice(separator + 1));
+
+      return label ? `${base}:${label}` : code;
+    });
+
+    throw new FlowRuleError("Akış geçersiz.", "GRAPH_INVALID", details);
   }
 
   return db.transaction(async (tx) => {

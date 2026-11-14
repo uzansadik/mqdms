@@ -402,7 +402,14 @@ export async function deriveProcessVariant(
               description: flowNodeWorkElement.description,
             })
             .from(flowNodeWorkElement)
-            .where(eq(flowNodeWorkElement.organizationId, context.organizationId));
+            .innerJoin(flowNode, eq(flowNode.id, flowNodeWorkElement.flowNodeId))
+            .where(
+              and(
+                eq(flowNodeWorkElement.organizationId, context.organizationId),
+                // Yalnızca kaynak akışın node'larına ait bağlantılar.
+                eq(flowNode.flowId, sourceFlow.id),
+              ),
+            );
 
           for (const link of sourceLinks) {
             const newNodeId = nodeMap.get(link.flowNodeId);
@@ -522,7 +529,17 @@ export async function deriveProcessVariant(
             processRequirementId: processFunctionRequirement.processRequirementId,
           })
           .from(processFunctionRequirement)
-          .where(eq(processFunctionRequirement.organizationId, context.organizationId));
+          .innerJoin(
+            processFunction,
+            eq(processFunction.id, processFunctionRequirement.processFunctionId),
+          )
+          .where(
+            and(
+              eq(processFunctionRequirement.organizationId, context.organizationId),
+              // Yalnızca kaynak revision'ın fonksiyonlarına ait bağlantılar.
+              eq(processFunction.processVariantRevisionId, source.id),
+            ),
+          );
 
         for (const link of sourceLinks) {
           const newFunctionId = functionMap.get(link.processFunctionId);
@@ -543,14 +560,37 @@ export async function deriveProcessVariant(
 
     // 7. Node ↔ fonksiyon bağlantıları.
     if (input.selections.flow && input.selections.functions) {
-      const sourceLinks = await tx
-        .select({
-          id: flowNodeFunction.id,
-          flowNodeId: flowNodeFunction.flowNodeId,
-          processFunctionId: flowNodeFunction.processFunctionId,
-        })
-        .from(flowNodeFunction)
-        .where(eq(flowNodeFunction.organizationId, context.organizationId));
+      const sourceFlowRows = await tx
+        .select({ id: flow.id })
+        .from(processVariantRevisionFlow)
+        .innerJoin(flow, eq(flow.id, processVariantRevisionFlow.flowId))
+        .where(
+          and(
+            eq(processVariantRevisionFlow.organizationId, context.organizationId),
+            eq(processVariantRevisionFlow.processVariantRevisionId, source.id),
+          ),
+        )
+        .limit(1);
+
+      const sourceFlowId = sourceFlowRows[0]?.id;
+
+      const sourceLinks = sourceFlowId
+        ? await tx
+            .select({
+              id: flowNodeFunction.id,
+              flowNodeId: flowNodeFunction.flowNodeId,
+              processFunctionId: flowNodeFunction.processFunctionId,
+            })
+            .from(flowNodeFunction)
+            .innerJoin(flowNode, eq(flowNode.id, flowNodeFunction.flowNodeId))
+            .where(
+              and(
+                eq(flowNodeFunction.organizationId, context.organizationId),
+                // Yalnızca kaynak akışın node'larına ait bağlantılar.
+                eq(flowNode.flowId, sourceFlowId),
+              ),
+            )
+        : [];
 
       for (const link of sourceLinks) {
         const newNodeId = nodeMap.get(link.flowNodeId);

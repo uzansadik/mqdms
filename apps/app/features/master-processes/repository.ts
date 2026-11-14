@@ -99,7 +99,8 @@ export async function listProcesses(query: ProcessListQuery): Promise<ProcessLis
       status: process.status,
       updatedAt: process.updatedAt,
       archivedAt: process.archivedAt,
-      variantCount: count(processVariant.id),
+      // Arşivlenen varyantlar sayılmaz: varyant sekmesiyle aynı kapsam.
+      variantCount: sql<number>`count(${processVariant.id}) filter (where ${processVariant.archivedAt} is null)`,
     })
     .from(process)
     .leftJoin(processVariant, eq(processVariant.processId, process.id))

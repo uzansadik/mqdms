@@ -173,3 +173,31 @@ export async function listFunctionRequirements(
     )
     .orderBy(asc(processRequirement.code));
 }
+
+/**
+ * Revision'ın tüm fonksiyon ↔ gereklilik bağlantıları.
+ *
+ * Tek sorguyla okunur: fonksiyon sayısı arttıkça fonksiyon başına sorgu
+ * yapmak (N+1) sayfayı yavaşlatıyordu.
+ */
+export async function listRevisionFunctionRequirementLinks(
+  organizationId: string,
+  revisionId: string,
+): Promise<{ processFunctionId: string; processRequirementId: string }[]> {
+  return db
+    .select({
+      processFunctionId: processFunctionRequirement.processFunctionId,
+      processRequirementId: processFunctionRequirement.processRequirementId,
+    })
+    .from(processFunctionRequirement)
+    .innerJoin(
+      processFunction,
+      eq(processFunction.id, processFunctionRequirement.processFunctionId),
+    )
+    .where(
+      and(
+        eq(processFunctionRequirement.organizationId, organizationId),
+        eq(processFunction.processVariantRevisionId, revisionId),
+      ),
+    );
+}

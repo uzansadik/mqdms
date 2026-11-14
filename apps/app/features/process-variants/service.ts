@@ -13,7 +13,6 @@ import {
   findProcessVariantRevisionByValue,
   getProcessVariant,
   getProcessVariantRevision,
-  getReleasedRevision,
 } from "./repository";
 import type { ProcessVariantFormValues, ProcessVariantRevisionFormValues } from "./schema";
 
@@ -67,11 +66,28 @@ function assertTransition(from: RevisionStatus, to: RevisionStatus): void {
   }
 }
 
+/**
+ * `masterProcesses:manageVariants` yetkisinin kapsadığı varyant işlemleri.
+ *
+ * Ana proses kütüphanesini yöneten roller varyantları da yönetebilir:
+ * katalogda iki yol tanımlıdır ve ikisi de geçerlidir.
+ */
+const MANAGE_VARIANT_ACTIONS = new Set(["create", "update", "archive", "restore"]);
+
 /** Yetki kontrolü. */
 async function requireVariantPermission(context: AuthContext, action: string): Promise<void> {
-  if (!(await hasPermission(context, "processVariants", action))) {
-    throw new ProcessVariantRuleError("Bu işlem için yetkiniz yok.", "FORBIDDEN");
+  if (await hasPermission(context, "processVariants", action)) {
+    return;
   }
+
+  if (
+    MANAGE_VARIANT_ACTIONS.has(action) &&
+    (await hasPermission(context, "masterProcesses", "manageVariants"))
+  ) {
+    return;
+  }
+
+  throw new ProcessVariantRuleError("Bu işlem için yetkiniz yok.", "FORBIDDEN");
 }
 
 /** Boş string'i `null`'a çevirir. */
@@ -584,16 +600,36 @@ export async function releaseProcessVariantRevision(
   }
 
   await db.transaction(async (tx) => {
-    const previous = await getReleasedRevision(context.organizationId, revision.processVariantId);
+    /*
+     * Yayınlanmış revision aynı transaction içinde ve kilitli olarak okunur.
+     *
+     * Kilit (FOR UPDATE) eşzamanlı iki yayını sıralar: aksi halde iki revision
+     * da aynı anda RELEASED olabilirdi. Satır kilidi farklı bağlantı üzerinden
+     * okuma yapılmasını da engeller.
+     */
+    const previous = await tx
+      .select({ id: processVariantRevision.id })
+      .from(processVariantRevision)
+      .where(
+        and(
+          eq(processVariantRevision.organizationId, context.organizationId),
+          eq(processVariantRevision.processVariantId, revision.processVariantId),
+          eq(processVariantRevision.status, "RELEASED"),
+        ),
+      )
+      .for("update")
+      .limit(1);
 
-    if (previous && previous.id !== revisionId) {
+    const previousId = previous[0]?.id;
+
+    if (previousId && previousId !== revisionId) {
       await tx
         .update(processVariantRevision)
         .set({ status: "SUPERSEDED" })
         .where(
           and(
             eq(processVariantRevision.organizationId, context.organizationId),
-            eq(processVariantRevision.id, previous.id),
+            eq(processVariantRevision.id, previousId),
           ),
         );
     }
@@ -617,7 +653,7 @@ export async function releaseProcessVariantRevision(
         metadata: {
           processVariantId: revision.processVariantId,
           revision: revision.revision,
-          supersededRevisionId: previous?.id ?? null,
+          supersededRevisionId: previousId ?? null,
         },
       },
       tx,
