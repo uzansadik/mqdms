@@ -28,6 +28,7 @@ import {
   Ruler,
   Upload,
   UserRound,
+  Workflow,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -125,6 +126,15 @@ export function AppSidebar({ organization, user, visibleModules }: AppSidebarPro
     },
   ].filter((item) => visibleModules.includes(item.module));
 
+  const engineeringLibrary = [
+    {
+      title: t("app.nav.masterProcesses"),
+      href: "/master-processes",
+      icon: Workflow,
+      module: "masterProcesses",
+    },
+  ].filter((item) => visibleModules.includes(item.module));
+
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader>
@@ -208,6 +218,33 @@ export function AppSidebar({ organization, user, visibleModules }: AppSidebarPro
             <SidebarGroupContent>
               <SidebarMenu>
                 {productManagement.map((item) => {
+                  const Icon = item.icon;
+
+                  const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
+
+                  return (
+                    <SidebarMenuItem key={item.href}>
+                      <SidebarMenuButton asChild isActive={isActive} tooltip={item.title}>
+                        <Link href={item.href}>
+                          <Icon />
+                          <span>{item.title}</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                })}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
+
+        {engineeringLibrary.length > 0 && (
+          <SidebarGroup>
+            <SidebarGroupLabel>{t("app.nav.engineeringLibrary")}</SidebarGroupLabel>
+
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {engineeringLibrary.map((item) => {
                   const Icon = item.icon;
 
                   const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
