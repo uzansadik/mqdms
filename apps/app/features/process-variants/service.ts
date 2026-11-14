@@ -661,6 +661,32 @@ export async function releaseProcessVariantRevision(
 
   await db.transaction(async (tx) => {
     /*
+     * Hedef revision kilitlenerek **transaction içinde yeniden** okunur.
+     *
+     * Durum denetimi transaction dışında yapılırsa, bekleyen bir çağrı
+     * eskimiş bir durumla devam edebilir: hedef revision başka bir işlemle
+     * yayınlanmış veya geçersiz kılınmış olabilir. Kilit, hedef satırı
+     * kilitleyen eşzamanlı işlemlerle sıralanır ve geçiş yeniden doğrulanır.
+     */
+    const targetRows = await tx
+      .select({ id: processVariantRevision.id, status: processVariantRevision.status })
+      .from(processVariantRevision)
+      .where(
+        and(
+          eq(processVariantRevision.organizationId, context.organizationId),
+          eq(processVariantRevision.id, revisionId),
+        ),
+      )
+      .for("update")
+      .limit(1);
+
+    if (!targetRows[0]) {
+      throw new ProcessVariantRuleError("Revision bulunamadı.", "NOT_FOUND");
+    }
+
+    assertTransition(targetRows[0].status, "RELEASED");
+
+    /*
      * Yayınlanmış revision aynı transaction içinde ve kilitli olarak okunur.
      *
      * Kilit (FOR UPDATE) eşzamanlı iki yayını sıralar: aksi halde iki revision

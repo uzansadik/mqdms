@@ -574,6 +574,32 @@ export async function applySourceUpdate(
   return db.transaction(async (tx) => {
     let applied = 0;
 
+    /*
+     * Revision satırı **önce** kilitlenir.
+     *
+     * Alt kayıtların yazımı, yabancı anahtar denetimi için revision satırında
+     * `KEY SHARE` kilidi tutar; kilit sonra alınırsa iki eşzamanlı güncelleme
+     * birbirinin kilidini bekler ve PostgreSQL kilit döngüsü (deadlock) ile
+     * birini iptal eder.
+     */
+    const locked = await tx
+      .select({ id: processVariantRevision.id, version: processVariantRevision.version })
+      .from(processVariantRevision)
+      .where(
+        and(
+          eq(processVariantRevision.organizationId, context.organizationId),
+          eq(processVariantRevision.id, target.id),
+        ),
+      )
+      .for("update")
+      .limit(1);
+
+    if (!locked[0]) {
+      throw new SourceUpdateRuleError("Hedef revision bulunamadı.", "NOT_FOUND");
+    }
+
+    const nextVersion = locked[0].version + 1;
+
     // Work element'ler.
     const targetWorkElements = await tx
       .select({
@@ -1493,23 +1519,11 @@ export async function applySourceUpdate(
      * gelen kayıt (akış kaydetme) reddedilir. Aksi halde kullanıcının
      * transfer edilen node'ları sessizce silinirdi.
      */
-    const locked = await tx
-      .select({ id: processVariantRevision.id, version: processVariantRevision.version })
-      .from(processVariantRevision)
-      .where(
-        and(
-          eq(processVariantRevision.organizationId, context.organizationId),
-          eq(processVariantRevision.id, target.id),
-        ),
-      )
-      .for("update")
-      .limit(1);
-
     await tx
       .update(processVariantRevision)
       .set({
         sourceVariantRevisionId: source.id,
-        version: (locked[0]?.version ?? target.version) + 1,
+        version: nextVersion,
         updatedAt: new Date(),
       })
       .where(eq(processVariantRevision.id, target.id));
