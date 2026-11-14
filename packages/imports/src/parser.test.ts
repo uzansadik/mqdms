@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { detectDelimiter, parseCsv } from "./parser";
+import { detectDelimiter, ImportParserError, MAX_IMPORT_ROWS, parseCsv } from "./parser";
 
 describe("CSV ayrıştırma", () => {
   it("başlıkları ve satırları ayırır", () => {
@@ -79,5 +79,19 @@ describe("CSV ayrıştırma", () => {
 
     expect(sheet.headers).toEqual([]);
     expect(sheet.rows).toEqual([]);
+  });
+
+  it("satır sayısı sınırını aşan dosyayı reddeder", () => {
+    const rows = Array.from({ length: MAX_IMPORT_ROWS + 2 }, (_, index) => `KOD-${index}`).join(
+      "\n",
+    );
+
+    expect(() => parseCsv(`code\n${rows}\n`)).toThrow(ImportParserError);
+  });
+
+  it("sınır içindeki dosyayı kabul eder", () => {
+    const rows = Array.from({ length: 10 }, (_, index) => `KOD-${index}`).join("\n");
+
+    expect(parseCsv(`code\n${rows}\n`).rows).toHaveLength(10);
   });
 });
