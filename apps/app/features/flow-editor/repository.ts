@@ -3,6 +3,7 @@ import { flow, flowEdge, flowNode, processVariantRevisionFlow } from "@mqdms/db/
 import { and, asc, eq, inArray } from "drizzle-orm";
 
 import type { FlowEdgeType, FlowNodeType } from "./schema";
+import type { GraphEdge, GraphNode } from "./validation";
 
 /**
  * Flow okuma katmanı.
@@ -182,6 +183,44 @@ export async function findEdgeOwnerFlow(
     .limit(1);
 
   return rows[0]?.flowId ?? null;
+}
+
+/**
+ * Bir revision'ın doğrulama için grafiği.
+ *
+ * Revision'a bağlı akış yoksa `null` döner: akış opsiyonel bir teknik
+ * içeriktir, ancak varsa yayınlamadan önce doğrulanmalıdır.
+ */
+export async function getRevisionGraph(
+  organizationId: string,
+  revisionId: string,
+): Promise<{ nodes: GraphNode[]; edges: GraphEdge[] } | null> {
+  const flowRecord = await getFlowByRevision(organizationId, revisionId);
+
+  if (!flowRecord) {
+    return null;
+  }
+
+  const [nodes, edges] = await Promise.all([
+    listFlowNodes(organizationId, flowRecord.id),
+    listFlowEdges(organizationId, flowRecord.id),
+  ]);
+
+  return {
+    nodes: nodes.map((node) => ({
+      id: node.id,
+      nodeType: node.nodeType,
+      title: node.title,
+      logicalId: node.logicalId,
+    })),
+    edges: edges.map((edge) => ({
+      id: edge.id,
+      sourceNodeId: edge.sourceNodeId,
+      targetNodeId: edge.targetNodeId,
+      label: edge.label,
+      edgeType: edge.edgeType,
+    })),
+  };
 }
 
 /** Node'ların mevcut id'leri (verilen akışta). */

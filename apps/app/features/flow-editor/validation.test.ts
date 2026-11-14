@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  describeValidationCode,
   GRAPH_ERRORS,
   GRAPH_WARNINGS,
   type GraphEdge,
@@ -132,5 +133,28 @@ describe("flow grafiği doğrulaması", () => {
     expect(
       result.warnings.some((warning) => warning.startsWith(GRAPH_WARNINGS.DECISION_WITHOUT_LABEL)),
     ).toBe(false);
+  });
+});
+
+describe("describeValidationCode", () => {
+  /** Test çevirisi. */
+  const t = ((key: string) => key) as Parameters<typeof describeValidationCode>[1];
+
+  it("bilinen hatayı okunur mesaja çevirir", () => {
+    const message = describeValidationCode(GRAPH_ERRORS.NO_START, t);
+
+    expect(message).toBe("flow.validation.noStart");
+  });
+
+  it("kayıt etiketini mesaja ekler", () => {
+    const message = describeValidationCode(`${GRAPH_ERRORS.EMPTY_TITLE}:Sertifika kontrolü`, t);
+
+    expect(message).toBe("flow.validation.emptyTitle (Sertifika kontrolü)");
+  });
+
+  it("etiket içeren kaydı korur", () => {
+    const message = describeValidationCode(`${GRAPH_ERRORS.EMPTY_TITLE}:Sertifika: kontrolü`, t);
+
+    expect(message).toBe("flow.validation.emptyTitle (Sertifika: kontrolü)");
   });
 });

@@ -22,12 +22,13 @@ import {
 import Form from "next/form";
 import Link from "next/link";
 
-import { requireAuthContext } from "@/features/auth/session";
+import { canAccess, requireAuthContext } from "@/features/auth/session";
 import { MasterProcessTable } from "@/features/master-processes/components/master-process-table";
 import {
   getProcessListData,
   requireMasterProcessesAccess,
 } from "@/features/master-processes/server";
+import { ProcessLibrarySeedButton } from "@/features/process-library-seed/components/process-library-seed-button";
 
 const PAGE_SIZE = 20;
 
@@ -54,6 +55,8 @@ export default async function MasterProcessesPage({ searchParams }: PageProps) {
   const page = Math.max(1, Number.parseInt(params.page ?? "1", 10) || 1);
 
   const t = await getTranslations();
+
+  const canCreate = await canAccess(context, "masterProcesses", "create");
 
   const data = await getProcessListData({
     organizationId: context.organizationId,
@@ -108,7 +111,9 @@ export default async function MasterProcessesPage({ searchParams }: PageProps) {
           <p className="mt-1 text-sm text-muted-foreground">{t("processes.description")}</p>
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          {canCreate && <ProcessLibrarySeedButton />}
+
           <Button asChild variant="outline">
             <Link href="/master-processes/archived">{t("processes.archived.title")}</Link>
           </Button>

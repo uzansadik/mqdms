@@ -26,6 +26,7 @@ import { toast } from "sonner";
 
 import { saveFlowGraphAction } from "../actions";
 import type { FlowEdgeType, FlowNodeType } from "../schema";
+import { FlowExportActions } from "./flow-export-actions";
 import { FlowInspector, type SelectedEdge, type SelectedNode } from "./flow-inspector";
 import { FlowNodeCard } from "./flow-node-card";
 import { FlowNodePalette } from "./flow-node-palette";
@@ -57,6 +58,9 @@ export type FlowEditorInitialData = {
   revision: string;
   version: number;
   editable: boolean;
+
+  /** Salt okunur yazdırma görünümünün adresi. */
+  printHref: string;
 
   name: string;
   description: string;
@@ -524,6 +528,27 @@ export function FlowEditor({ initialData }: { initialData: FlowEditorInitialData
               <FlowNodePalette onDragStart={onDragStart} />
 
               <div className="flex gap-2">
+                <FlowExportActions
+                  edges={edges.map((edge) => ({
+                    id: edge.id,
+                    sourceNodeId: edge.source,
+                    targetNodeId: edge.target,
+                    label: typeof edge.label === "string" ? edge.label : null,
+                    edgeType: edge.data?.edgeType ?? "DEFAULT",
+                  }))}
+                  fileName={`flow-${initialData.revision}`}
+                  nodes={nodes.map((node) => ({
+                    id: node.id,
+                    title: node.data.title,
+                    nodeType: node.data.nodeType,
+                    positionX: node.position.x,
+                    positionY: node.position.y,
+                    width: node.width ?? 0,
+                    height: node.height ?? 0,
+                  }))}
+                  printHref={initialData.printHref}
+                />
+
                 <Button
                   disabled={!editable || history.length === 0}
                   onClick={undo}

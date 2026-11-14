@@ -4,6 +4,9 @@ import { db } from "@mqdms/db";
 import { process, processVariant, processVariantRevision } from "@mqdms/db/schema";
 import { and, eq } from "drizzle-orm";
 
+import { getRevisionGraph } from "@/features/flow-editor/repository";
+import { validateGraph } from "@/features/flow-editor/validation";
+
 import { canTransition } from "./lifecycle";
 import {
   findProcessVariantByCode,
@@ -36,7 +39,10 @@ export class ProcessVariantRuleError extends Error {
       | "CONFLICT"
       | "INVALID_INPUT"
       | "FORBIDDEN"
-      | "INVALID_STATE" = "INVALID_INPUT",
+      | "INVALID_STATE"
+      | "GRAPH_INVALID" = "INVALID_INPUT",
+    /** Hata kodları; kullanıcıya çevrilmek üzere saklanır. */
+    readonly details: string[] = [],
   ) {
     super(message);
     this.name = "ProcessVariantRuleError";
@@ -536,6 +542,46 @@ export async function releaseProcessVariantRevision(
   }
 
   assertTransition(revision.status, "RELEASED");
+
+  /*
+   * Yayınlamadan önce grafik tutarlılığı doğrulanır: akış varsa START ve END
+   * noktaları tanımlı olmalı, edge'ler aynı akışın node'larına bağlanmalıdır.
+   *
+   * Akış opsiyonel bir teknik içeriktir; akışı olmayan revision yayınlanabilir.
+   * Uyarılar (erişilemeyen node gibi) yayınlamayı engellemez.
+   */
+  const graph = await getRevisionGraph(context.organizationId, revisionId);
+
+  if (graph) {
+    const validation = validateGraph(graph.nodes, graph.edges);
+
+    if (validation.errors.length > 0) {
+      const labels = new Map(graph.nodes.map((node) => [node.id, node.title]));
+
+      for (const edge of graph.edges) {
+        labels.set(edge.id, edge.label ?? "");
+      }
+
+      /*
+       * Hata kodları kayıt etiketiyle zenginleştirilir: kullanıcı hangi
+       * node'un düzeltilmesi gerektiğini görür.
+       */
+      const details = validation.errors.map((code) => {
+        const separator = code.indexOf(":");
+
+        if (separator === -1) {
+          return code;
+        }
+
+        const base = code.slice(0, separator);
+        const label = labels.get(code.slice(separator + 1));
+
+        return label ? `${base}:${label}` : code;
+      });
+
+      throw new ProcessVariantRuleError("Akış doğrulaması başarısız.", "GRAPH_INVALID", details);
+    }
+  }
 
   await db.transaction(async (tx) => {
     const previous = await getReleasedRevision(context.organizationId, revision.processVariantId);

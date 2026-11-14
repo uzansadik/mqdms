@@ -62,6 +62,7 @@ export default async function FlowEditorPage({ params }: PageProps) {
           revision: data.revision.revision,
           version: data.revision.version,
           editable: data.editable,
+          printHref: `/master-processes/${processId}/variants/${variantId}/revisions/${revisionId}/flow/print`,
           name: data.flow?.name ?? "",
           description: data.flow?.description ?? "",
           nodes: data.nodes.map((node) => ({
