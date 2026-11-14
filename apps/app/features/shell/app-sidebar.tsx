@@ -26,6 +26,7 @@ import {
   Network,
   Package,
   Ruler,
+  Upload,
   UserRound,
 } from "lucide-react";
 import Link from "next/link";
@@ -115,6 +116,12 @@ export function AppSidebar({ organization, user, visibleModules }: AppSidebarPro
       href: "/units",
       icon: Ruler,
       module: "units",
+    },
+    {
+      title: t("app.nav.imports"),
+      href: "/imports",
+      icon: Upload,
+      module: "imports",
     },
   ].filter((item) => visibleModules.includes(item.module));
 

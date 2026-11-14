@@ -15,12 +15,13 @@
   "dependencies": {
     "@base-ui/react": "^1.7.0",
     "@hookform/resolvers": "^5.9.1",
-    "@mqdms/auth": "workspace:*",
     "@mqdms/audit": "workspace:*",
+    "@mqdms/auth": "workspace:*",
     "@mqdms/config": "workspace:*",
     "@mqdms/db": "workspace:*",
     "@mqdms/env": "workspace:*",
     "@mqdms/i18n": "workspace:*",
+    "@mqdms/storage": "workspace:*",
     "@mqdms/ui": "workspace:*",
     "@shadcn/react": "^0.3.0",
     "cmdk": "^1.1.1",
@@ -32,6 +33,7 @@
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "react-hook-form": "^7.86.0",
+    "read-excel-file": "^9.3.15",
     "server-only": "^0.0.1",
     "sonner": "^2.0.8",
     "zod": "^4.0.0"

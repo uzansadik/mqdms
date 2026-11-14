@@ -1,15 +1,10 @@
 import { randomUUID } from "node:crypto";
 
 import type { CreateUploadInput } from "./types";
-
-const extensions: Record<string, string> = {
-  "image/jpeg": "jpg",
-  "image/png": "png",
-  "image/webp": "webp",
-};
+import { getExtension } from "./upload-rules";
 
 export function createObjectKey(input: CreateUploadInput) {
-  const extension = extensions[input.contentType];
+  const extension = getExtension(input.contentType);
 
   if (!extension) {
     throw new Error("Unsupported file type.");

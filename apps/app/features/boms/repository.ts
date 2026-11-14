@@ -452,3 +452,24 @@ export async function listBomRevisionOptions(organizationId: string): Promise<
     .where(eq(bomRevision.organizationId, organizationId))
     .orderBy(asc(item.name), asc(bomRevision.revision));
 }
+
+/** BOM satırı satır numarasıyla bulunur. */
+export async function findBomLineByNumber(
+  organizationId: string,
+  bomRevisionId: string,
+  lineNumber: number,
+): Promise<{ id: string } | null> {
+  const rows = await db
+    .select({ id: bomLine.id })
+    .from(bomLine)
+    .where(
+      and(
+        eq(bomLine.organizationId, organizationId),
+        eq(bomLine.bomRevisionId, bomRevisionId),
+        eq(bomLine.lineNumber, lineNumber),
+      ),
+    )
+    .limit(1);
+
+  return rows[0] ?? null;
+}

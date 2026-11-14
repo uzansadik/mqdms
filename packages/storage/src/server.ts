@@ -1,6 +1,7 @@
 export {
   deleteObject,
   deleteObjectByPublicUrl,
+  getObjectBytes,
   getObjectKeyFromPublicUrl,
   getPublicObjectUrl,
   verifyUploadedObject,
@@ -11,3 +12,4 @@ export type {
   UploadPurpose,
 } from "./types";
 export { createPresignedUpload } from "./upload";
+export { getExtension, isUploadAllowed, type UploadRule, uploadRules } from "./upload-rules";
