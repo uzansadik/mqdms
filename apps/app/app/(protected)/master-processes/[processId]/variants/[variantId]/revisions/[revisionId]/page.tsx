@@ -2,15 +2,22 @@ import { getTranslations } from "@mqdms/i18n/server";
 import { Badge } from "@mqdms/ui/components/badge";
 import { Button } from "@mqdms/ui/components/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@mqdms/ui/components/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@mqdms/ui/components/tabs";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { canAccess, requireAuthContext } from "@/features/auth/session";
+import { ApplicabilityPanel } from "@/features/process-io/components/applicability-panel";
+import { IoPanel } from "@/features/process-io/components/io-panel";
+import { FunctionPanel } from "@/features/process-requirements/components/function-panel";
+import { RequirementPanel } from "@/features/process-requirements/components/requirement-panel";
 import { ProcessVariantRevisionActions } from "@/features/process-variants/components/process-variant-revision-actions";
 import {
+  getProcessVariantRevisionContentData,
   getProcessVariantRevisionDetailData,
   requireProcessVariantsAccess,
 } from "@/features/process-variants/server";
+import { WorkElementPanel } from "@/features/process-work-elements/components/work-element-panel";
 
 type PageProps = {
   params: Promise<{ processId: string; variantId: string; revisionId: string }>;
@@ -35,12 +42,15 @@ export default async function ProcessVariantRevisionPage({ params }: PageProps) 
     notFound();
   }
 
-  const [canSubmit, canApprove, canRelease, canReject] = await Promise.all([
+  const [canSubmit, canApprove, canRelease, canReject, content] = await Promise.all([
     canAccess(context, "processVariants", "submit"),
     canAccess(context, "processVariants", "approve"),
     canAccess(context, "processVariants", "release"),
     canAccess(context, "processVariants", "reject"),
+    getProcessVariantRevisionContentData(context.organizationId, revisionId),
   ]);
+
+  const isEditable = data.revision.status === "DRAFT";
 
   const t = await getTranslations();
 
@@ -94,61 +104,147 @@ export default async function ProcessVariantRevisionPage({ params }: PageProps) 
         </div>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>{t("processVariants.detail.revision.title")}</CardTitle>
-        </CardHeader>
+      <Tabs defaultValue="overview">
+        <TabsList>
+          <TabsTrigger value="overview">
+            {t("processVariants.detail.revision.tabs.overview")}
+          </TabsTrigger>
 
-        <CardContent>
-          <dl className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <dt className="text-sm text-muted-foreground">
-                {t("processVariants.revisions.form.revision.label")}
-              </dt>
+          <TabsTrigger value="workElements">
+            {t("processVariants.detail.revision.tabs.workElements")}
+          </TabsTrigger>
 
-              <dd className="text-sm">{data.revision.revision}</dd>
-            </div>
+          <TabsTrigger value="functions">
+            {t("processVariants.detail.revision.tabs.functions")}
+          </TabsTrigger>
 
-            <div>
-              <dt className="text-sm text-muted-foreground">
-                {t("processVariants.revisions.columns.status")}
-              </dt>
+          <TabsTrigger value="requirements">
+            {t("processVariants.detail.revision.tabs.requirements")}
+          </TabsTrigger>
 
-              <dd className="text-sm">
-                {t(`processVariants.revisions.status.${data.revision.status}`)}
-              </dd>
-            </div>
+          <TabsTrigger value="io">{t("processVariants.detail.revision.tabs.io")}</TabsTrigger>
 
-            <div>
-              <dt className="text-sm text-muted-foreground">
-                {t("processVariants.revisions.form.changeReason.label")}
-              </dt>
+          <TabsTrigger value="applicability">
+            {t("processVariants.detail.revision.tabs.applicability")}
+          </TabsTrigger>
+        </TabsList>
 
-              <dd className="text-sm">{data.revision.changeReason ?? "-"}</dd>
-            </div>
+        <TabsContent className="mt-4 space-y-4" value="overview">
+          <Card>
+            <CardHeader>
+              <CardTitle>{t("processVariants.detail.revision.title")}</CardTitle>
+            </CardHeader>
 
-            <div>
-              <dt className="text-sm text-muted-foreground">
-                {t("processVariants.revisions.columns.releasedAt")}
-              </dt>
+            <CardContent>
+              <dl className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <dt className="text-sm text-muted-foreground">
+                    {t("processVariants.revisions.form.revision.label")}
+                  </dt>
 
-              <dd className="text-sm">
-                {data.revision.releasedAt
-                  ? data.revision.releasedAt.toISOString().slice(0, 19).replace("T", " ")
-                  : "-"}
-              </dd>
-            </div>
+                  <dd className="text-sm">{data.revision.revision}</dd>
+                </div>
 
-            <div className="sm:col-span-2">
-              <dt className="text-sm text-muted-foreground">
-                {t("processVariants.revisions.form.description.label")}
-              </dt>
+                <div>
+                  <dt className="text-sm text-muted-foreground">
+                    {t("processVariants.revisions.columns.status")}
+                  </dt>
 
-              <dd className="text-sm whitespace-pre-line">{data.revision.description ?? "-"}</dd>
-            </div>
-          </dl>
-        </CardContent>
-      </Card>
+                  <dd className="text-sm">
+                    {t(`processVariants.revisions.status.${data.revision.status}`)}
+                  </dd>
+                </div>
+
+                <div>
+                  <dt className="text-sm text-muted-foreground">
+                    {t("processVariants.revisions.form.changeReason.label")}
+                  </dt>
+
+                  <dd className="text-sm">{data.revision.changeReason ?? "-"}</dd>
+                </div>
+
+                <div>
+                  <dt className="text-sm text-muted-foreground">
+                    {t("processVariants.revisions.columns.releasedAt")}
+                  </dt>
+
+                  <dd className="text-sm">
+                    {data.revision.releasedAt
+                      ? data.revision.releasedAt.toISOString().slice(0, 19).replace("T", " ")
+                      : "-"}
+                  </dd>
+                </div>
+
+                <div className="sm:col-span-2">
+                  <dt className="text-sm text-muted-foreground">
+                    {t("processVariants.revisions.form.description.label")}
+                  </dt>
+
+                  <dd className="text-sm whitespace-pre-line">
+                    {data.revision.description ?? "-"}
+                  </dd>
+                </div>
+              </dl>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent className="mt-4 space-y-4" value="workElements">
+          <WorkElementPanel
+            editable={isEditable}
+            itemGroups={content.itemGroups}
+            items={content.items}
+            revisionId={data.revision.id}
+            workElements={content.workElements}
+          />
+        </TabsContent>
+
+        <TabsContent className="mt-4 space-y-4" value="functions">
+          <FunctionPanel
+            editable={isEditable}
+            functions={content.functions}
+            links={content.links}
+            requirements={content.requirements.map((entry) => ({
+              id: entry.id,
+              code: entry.code,
+              name: entry.name,
+            }))}
+            revisionId={data.revision.id}
+            workElements={content.workElements.map((entry) => ({
+              id: entry.id,
+              code: entry.code,
+              name: entry.name,
+            }))}
+          />
+        </TabsContent>
+
+        <TabsContent className="mt-4 space-y-4" value="requirements">
+          <RequirementPanel
+            editable={isEditable}
+            requirements={content.requirements}
+            revisionId={data.revision.id}
+          />
+        </TabsContent>
+
+        <TabsContent className="mt-4 space-y-4" value="io">
+          <IoPanel
+            definitions={content.ioDefinitions}
+            editable={isEditable}
+            itemGroups={content.itemGroups}
+            items={content.items}
+            revisionId={data.revision.id}
+          />
+        </TabsContent>
+
+        <TabsContent className="mt-4 space-y-4" value="applicability">
+          <ApplicabilityPanel
+            applicabilities={content.applicabilities}
+            editable={isEditable}
+            itemGroups={content.itemGroups}
+            revisionId={data.revision.id}
+          />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

@@ -80,6 +80,36 @@ function toNull(value: string | undefined): string | null {
 }
 
 /**
+ * Revision'ın düzenlenebilir olduğunu doğrular.
+ *
+ * Yayınlanmış (`RELEASED`) revision'ın teknik içeriği değiştirilemez: eski bir
+ * ekrandan gelen mutation reddedilir.
+ */
+export async function assertRevisionEditable(
+  context: AuthContext,
+  revisionId: string,
+): Promise<{ id: string; processVariantId: string; version: number }> {
+  const revision = await getProcessVariantRevision(context.organizationId, revisionId);
+
+  if (!revision) {
+    throw new ProcessVariantRuleError("Revision bulunamadı.", "NOT_FOUND");
+  }
+
+  if (revision.status !== "DRAFT") {
+    throw new ProcessVariantRuleError(
+      "Yayınlanmış revision'ın teknik içeriği değiştirilemez.",
+      "INVALID_STATE",
+    );
+  }
+
+  return {
+    id: revision.id,
+    processVariantId: revision.processVariantId,
+    version: revision.version,
+  };
+}
+
+/**
  * Process Variant oluşturur.
  *
  * Varyant kodu organizasyon kapsamında case-insensitive unique'tir.
