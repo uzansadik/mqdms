@@ -46,13 +46,35 @@ export const importFields = {
 export type ImportField = (typeof importFields)[ImportType][number];
 
 /**
+ * Her import türünde zorunlu olan hedef alanlar.
+ *
+ * Doğrulayıcı bu alanları zorunlu sayar; eşleştirme ekranı alanları işaretleyerek
+ * kullanıcıyı yönlendirir.
+ */
+export const requiredImportFields = {
+  ITEM: ["code", "name", "unit"],
+  ITEM_GROUP_MAPPING: ["itemCode", "groupCode"],
+  CUSTOMER_ITEM: ["itemCode", "customerCode", "customerPartNumber"],
+  BOM: ["parentItemCode", "childItemCode", "quantity"],
+} as const satisfies Record<ImportType, readonly string[]>;
+
+export type RequiredImportField = (typeof requiredImportFields)[ImportType][number];
+
+/**
  * Kolon eşleştirmesi.
  *
  * Anahtar hedef alan, değer dosyadaki kolon başlığıdır. Eşleştirilmemiş bir
  * alan boş bırakılabilir; hangi alanların zorunlu olduğu doğrulamada
  * belirlenir.
+ *
+ * Boş değerler **elenir**: "eşleştirilmedi" seçimi tüm doğrulamayı
+ * kilitlememelidir.
  */
-export const columnMappingSchema = z.record(z.string().trim().min(1), z.string().trim().min(1));
+export const columnMappingSchema = z
+  .record(z.string().trim().min(1), z.string().trim())
+  .transform((mapping) =>
+    Object.fromEntries(Object.entries(mapping).filter(([, value]) => value !== "")),
+  );
 
 export type ColumnMapping = z.infer<typeof columnMappingSchema>;
 

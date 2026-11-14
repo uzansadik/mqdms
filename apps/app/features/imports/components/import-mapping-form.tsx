@@ -2,6 +2,7 @@
 
 import { useI18n } from "@mqdms/i18n";
 import type { ConflictResolution, ImportField, ImportRowDecision } from "@mqdms/imports/schema";
+import { suggestMapping } from "@mqdms/imports/mapping";
 import type { ImportPreview } from "@mqdms/imports/types";
 import { Badge } from "@mqdms/ui/components/badge";
 import { Button } from "@mqdms/ui/components/button";
@@ -23,7 +24,7 @@ import {
   TableRow,
 } from "@mqdms/ui/components/table";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
 
 import {
@@ -42,6 +43,12 @@ type ImportMappingFormProps = {
 
   /** Dosyadaki kolon başlıkları. */
   headers: string[];
+
+  /** Dosyanın ilk satırları; eşleştirme sırasında içerik görünür. */
+  sampleRows: Record<string, string>[];
+
+  /** Zorunlu hedef alanlar. */
+  requiredFields: readonly string[];
 
   /** Kaydedilmiş eşleştirme. */
   initialMapping: Record<string, string>;
@@ -69,6 +76,8 @@ export function ImportMappingForm({
   importJobId,
   fields,
   headers,
+  sampleRows,
+  requiredFields,
   initialMapping,
   initialResolution,
   initialPreview,
@@ -78,12 +87,26 @@ export function ImportMappingForm({
   const { t } = useI18n();
   const [isPending, startTransition] = useTransition();
 
-  const [mapping, setMapping] = useState<Record<string, string>>(initialMapping);
+  /*
+   * Eşleştirme boşsa başlıklar otomatik eşlenir: kullanıcı elle eşleştirmeden
+   * önce doğru eşleşmeleri görür.
+   */
+  const [mapping, setMapping] = useState<Record<string, string>>(
+    Object.keys(initialMapping).length > 0 ? initialMapping : suggestMapping(fields, headers),
+  );
   const [preview, setPreview] = useState<ImportPreview | null>(initialPreview);
   const [decisions, setDecisions] = useState<Record<string, ImportRowDecision>>(
     initialResolution.rows,
   );
   const [skipInvalidRows, setSkipInvalidRows] = useState(initialResolution.skipInvalidRows);
+
+  /* Önizlemede yalnızca hatalı satırlar gösterilebilir. */
+  const [onlyErrors, setOnlyErrors] = useState(false);
+
+  /* Önizleme sayfalama: 50.000 satırın tamamı render edilemez. */
+  const [page, setPage] = useState(0);
+
+  const PAGE_SIZE = 50;
 
   /* İş kuyruğa alındı mı? Worker'da çalışan import'un durumu izlenir. */
   const [isQueued, setIsQueued] = useState(false);
@@ -101,13 +124,40 @@ export function ImportMappingForm({
   const needsResolution =
     preview !== null && (preview.conflicts.length > 0 || preview.invalidRows.length > 0);
 
+  /*
+   * Önizleme satırları 50.000'e kadar olabilir; hepsini render etmek tarayıcıyı
+   * kilitler. Filtre ve sayfalama birlikte kullanılır.
+   */
+  const filteredRows = useMemo(
+    () =>
+      preview === null
+        ? []
+        : onlyErrors
+          ? preview.rows.filter((row) => row.status === "ERROR")
+          : preview.rows,
+    [onlyErrors, preview],
+  );
+
+  const pageCount = Math.max(1, Math.ceil(filteredRows.length / PAGE_SIZE));
+  const currentPage = Math.min(page, pageCount - 1);
+
+  const visibleRows = useMemo(
+    () => filteredRows.slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE),
+    [currentPage, filteredRows],
+  );
+
   const undecidedCount = preview
     ? preview.conflicts.filter((row) => !decisions[String(row.rowNumber)]).length
     : 0;
 
   function validate() {
     startTransition(async () => {
-      const result = await validateImportJobAction({ importJobId, columnMapping: mapping });
+      const result = await validateImportJobAction({
+        importJobId,
+        columnMapping: Object.fromEntries(
+          Object.entries(mapping).filter(([, value]) => value !== ""),
+        ),
+      });
 
       if (!result.success) {
         toast.error(result.error);
@@ -201,6 +251,47 @@ export function ImportMappingForm({
 
   return (
     <div className="space-y-4">
+      {sampleRows.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>{t("imports.mapping.sample.title")}</CardTitle>
+
+            <CardDescription>{t("imports.mapping.sample.description")}</CardDescription>
+          </CardHeader>
+
+          <CardContent>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>{t("imports.mapping.sample.row")}</TableHead>
+
+                    {headers.map((header) => (
+                      <TableHead key={header}>{header}</TableHead>
+                    ))}
+                  </TableRow>
+                </TableHeader>
+
+                <TableBody>
+                  {sampleRows.map((row, index) => (
+                    // biome-ignore lint/suspicious/noArrayIndexKey: örnek satırın sırası kimliğidir
+                    <TableRow key={`sample-${index}`}>
+                      <TableCell className="text-muted-foreground">{index + 1}</TableCell>
+
+                      {headers.map((header) => (
+                        <TableCell key={header} className="max-w-56 truncate text-sm">
+                          {row[header] || "-"}
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <Card>
         <CardHeader>
           <CardTitle>{t("imports.mapping.title")}</CardTitle>
@@ -213,7 +304,15 @@ export function ImportMappingForm({
             <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
               {fields.map((field) => (
                 <Field key={field}>
-                  <FieldLabel htmlFor={`field-${field}`}>{t(`imports.fields.${field}`)}</FieldLabel>
+                  <FieldLabel htmlFor={`field-${field}`}>
+                    {t(`imports.fields.${field}`)}
+
+                    {requiredFields.includes(field) && (
+                      <span className="text-destructive" title={t("imports.mapping.required")}>
+                        *
+                      </span>
+                    )}
+                  </FieldLabel>
 
                   <NativeSelect
                     id={`field-${field}`}
@@ -296,6 +395,33 @@ export function ImportMappingForm({
               <p className="mb-4 text-sm text-destructive">{t("imports.preview.blocked")}</p>
             )}
 
+            {/*
+             * Hatalı satırlar filtresi: binlerce satır arasından hatalı
+             * olana ulaşmak mümkün olmalı.
+             */}
+            <div className="mb-4 flex flex-wrap items-center gap-3">
+              <Button
+                onClick={() => {
+                  setOnlyErrors((current) => !current);
+                  setPage(0);
+                }}
+                size="sm"
+                type="button"
+                variant={onlyErrors ? "default" : "outline"}
+              >
+                {onlyErrors
+                  ? t("imports.preview.filter.errorsActive")
+                  : t("imports.preview.filter.errors")}
+              </Button>
+
+              <span className="text-sm text-muted-foreground">
+                {t("imports.preview.count", {
+                  shown: visibleRows.length,
+                  total: filteredRows.length,
+                })}
+              </span>
+            </div>
+
             <Table>
               <TableHeader>
                 <TableRow>
@@ -310,7 +436,7 @@ export function ImportMappingForm({
               </TableHeader>
 
               <TableBody>
-                {preview.rows.map((row) => (
+                {visibleRows.map((row) => (
                   <TableRow key={row.rowNumber}>
                     <TableCell>{row.rowNumber}</TableCell>
 
@@ -339,6 +465,37 @@ export function ImportMappingForm({
                 ))}
               </TableBody>
             </Table>
+
+            {pageCount > 1 && (
+              <div className="mt-4 flex items-center justify-between gap-3">
+                <Button
+                  disabled={currentPage === 0}
+                  onClick={() => setPage(currentPage - 1)}
+                  size="sm"
+                  type="button"
+                  variant="outline"
+                >
+                  {t("imports.preview.previous")}
+                </Button>
+
+                <span className="text-sm text-muted-foreground">
+                  {t("imports.preview.page", {
+                    current: currentPage + 1,
+                    total: pageCount,
+                  })}
+                </span>
+
+                <Button
+                  disabled={currentPage >= pageCount - 1}
+                  onClick={() => setPage(currentPage + 1)}
+                  size="sm"
+                  type="button"
+                  variant="outline"
+                >
+                  {t("imports.preview.next")}
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}

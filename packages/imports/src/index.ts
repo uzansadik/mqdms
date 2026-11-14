@@ -13,6 +13,7 @@ export {
   selectConflictRows,
   selectInvalidRows,
 } from "./conflicts";
+export { normalizeHeader, suggestMapping } from "./mapping";
 export { detectDelimiter, type ImportSheet, parseCsv, parseCsvRows, parseXlsx } from "./parser";
 export {
   createImportJob as createImportJobRecord,
@@ -30,10 +31,12 @@ export {
   conflictResolutionSchema,
   type ImportField,
   type ImportRowDecision,
+  type RequiredImportField,
   type ImportType,
   importExecuteSchema,
   importFields,
   importResolveSchema,
+  requiredImportFields,
   importRowDecisionSchema,
   importRowErrorSchema,
   importRowStatusSchema,
