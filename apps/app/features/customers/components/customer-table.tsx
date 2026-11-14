@@ -57,9 +57,19 @@ export async function CustomerTable({ items }: CustomerTableProps) {
             </TableCell>
 
             <TableCell>
-              <Link className="hover:underline" href={`/customers/${item.id}`}>
-                {item.name}
-              </Link>
+              <div className="flex items-center gap-2">
+                {item.logoUrl && (
+                  <div className="flex size-7 shrink-0 items-center justify-center overflow-hidden rounded border bg-muted">
+                    {/* Logo içeriği depolamadan gelir. */}
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img alt="" className="size-full object-contain" src={item.logoUrl} />
+                  </div>
+                )}
+
+                <Link className="hover:underline" href={`/customers/${item.id}`}>
+                  {item.name}
+                </Link>
+              </div>
             </TableCell>
 
             <TableCell>{item.countryCode ?? "-"}</TableCell>

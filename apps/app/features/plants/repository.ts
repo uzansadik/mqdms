@@ -82,8 +82,14 @@ function plantFilters(query: PlantListQuery): SQL[] {
 }
 
 /** Tesis listesi. */
-export async function listPlants(query: PlantListQuery): Promise<PlantListItem[]> {
-  const rows = await db
+/**
+ * Tesis listesi sorgusu.
+ *
+ * Sorgu kurucusu ayrıdır: sayaç alt sorgusunun üretilen SQL'i test edilir
+ * (bkz. `plants.repository.test.ts`).
+ */
+export function buildPlantListQuery(query: PlantListQuery) {
+  return db
     .select({
       id: plant.id,
       code: plant.code,
@@ -94,10 +100,24 @@ export async function listPlants(query: PlantListQuery): Promise<PlantListItem[]
       createdAt: plant.createdAt,
       archivedAt: plant.archivedAt,
 
-      /* Arşivlenmemiş proje sayısı. */
+      /*
+       * Tesisin aktif proje sayısı.
+       *
+       * Sayaç `countActiveProjectsByPlant` ile aynı tanımı kullanır: yalnızca
+       * ACTIVE ve arşivlenmemiş projeler.
+       *
+       * Alt sorgu ham SQL olarak yazılır: Drizzle'in tek tablo optimizasyonu
+       * kolon referanslarını niteliksizleştirir (`plant.id` → `"id"`) ve
+       * korelasyon bozulduğu için sayaç daima 0 döner. Tablo ve kolon adları
+       * burada nitelikli yazılır.
+       */
       projectCount: sql<number>`(
-        select count(*)::int from ${projectPlant}
-        where ${projectPlant.plantId} = ${plant.id}
+        select count(*)::int
+        from "project_plant"
+        inner join "project" on "project"."id" = "project_plant"."project_id"
+        where "project_plant"."plant_id" = ${sql.identifier("plant")}.${sql.identifier("id")}
+          and "project"."status" = 'ACTIVE'
+          and "project"."archived_at" is null
       )`,
     })
     .from(plant)
@@ -105,6 +125,10 @@ export async function listPlants(query: PlantListQuery): Promise<PlantListItem[]
     .orderBy(asc(plant.name))
     .limit(query.pageSize)
     .offset((query.page - 1) * query.pageSize);
+}
+
+export async function listPlants(query: PlantListQuery): Promise<PlantListItem[]> {
+  const rows = await buildPlantListQuery(query);
 
   return rows;
 }

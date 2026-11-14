@@ -14,6 +14,8 @@ import {
   createCustomerContact,
   createCustomerSite,
   restoreCustomer,
+  restoreCustomerContact,
+  restoreCustomerSite,
   updateCustomer,
   updateCustomerContact,
   updateCustomerSite,
@@ -205,6 +207,32 @@ export async function archiveCustomerContactAction(
 
   try {
     await archiveCustomerContact(context, contactId);
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: toActionError(error) };
+  }
+}
+
+/** Sitenin arşivden çıkarılması. */
+export async function restoreCustomerSiteAction(siteId: string): Promise<CustomerActionResult> {
+  const context = await requireAuthContext();
+
+  try {
+    await restoreCustomerSite(context, siteId);
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: toActionError(error) };
+  }
+}
+
+/** Temsilcinin arşivden çıkarılması. */
+export async function restoreCustomerContactAction(
+  contactId: string,
+): Promise<CustomerActionResult> {
+  const context = await requireAuthContext();
+
+  try {
+    await restoreCustomerContact(context, contactId);
     return { success: true };
   } catch (error) {
     return { success: false, error: toActionError(error) };

@@ -17,7 +17,9 @@ import { notFound } from "next/navigation";
 
 import { requireAuthContext } from "@/features/auth/session";
 import { CustomerContactForm } from "@/features/customers/components/customer-contact-form";
+import { CustomerContactRowActions } from "@/features/customers/components/customer-contact-row-actions";
 import { CustomerSiteForm } from "@/features/customers/components/customer-site-form";
+import { CustomerSiteRowActions } from "@/features/customers/components/customer-site-row-actions";
 import { getCustomerDetailData, requireCustomersAccess } from "@/features/customers/server";
 import { StatusBadge } from "@/features/shared/status-badge";
 
@@ -166,6 +168,10 @@ export default async function CustomerDetailPage({ params }: PageProps) {
                       <TableHead>{t("customers.sites.form.countryCode.label")}</TableHead>
 
                       <TableHead>{t("customers.list.columns.status")}</TableHead>
+
+                      <TableHead className="text-right">
+                        {t("customers.list.columns.actions")}
+                      </TableHead>
                     </TableRow>
                   </TableHeader>
 
@@ -185,6 +191,10 @@ export default async function CustomerDetailPage({ params }: PageProps) {
                             label={t(`customers.status.${site.status}`)}
                             status={site.status}
                           />
+                        </TableCell>
+
+                        <TableCell className="text-right">
+                          <CustomerSiteRowActions customerId={data.customer.id} site={site} />
                         </TableCell>
                       </TableRow>
                     ))}
@@ -225,6 +235,10 @@ export default async function CustomerDetailPage({ params }: PageProps) {
                       <TableHead>{t("customers.contacts.form.phone.label")}</TableHead>
 
                       <TableHead>{t("customers.contacts.form.contactType.label")}</TableHead>
+
+                      <TableHead className="text-right">
+                        {t("customers.list.columns.actions")}
+                      </TableHead>
                     </TableRow>
                   </TableHeader>
 
@@ -242,6 +256,17 @@ export default async function CustomerDetailPage({ params }: PageProps) {
                         <TableCell>{contact.phone ?? "-"}</TableCell>
 
                         <TableCell>{t(`customers.contactType.${contact.contactType}`)}</TableCell>
+
+                        <TableCell className="text-right">
+                          <CustomerContactRowActions
+                            contact={contact}
+                            customerId={data.customer.id}
+                            sites={data.sites.map((site) => ({
+                              id: site.id,
+                              name: site.name,
+                            }))}
+                          />
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
