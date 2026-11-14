@@ -88,6 +88,40 @@ export const importExecuteSchema = z.object({
 export type ImportExecuteInput = z.infer<typeof importExecuteSchema>;
 
 /**
+ * Satır bazında çakışma kararı.
+ *
+ * `APPLY`: dosyadaki değerler mevcut kayda yazılır.
+ * `SKIP`: mevcut kayıt olduğu gibi bırakılır.
+ */
+export const importRowDecisionSchema = z.enum(["APPLY", "SKIP"]);
+
+export type ImportRowDecision = z.infer<typeof importRowDecisionSchema>;
+
+/**
+ * Çakışma çözümü.
+ *
+ * Anahtar dosyadaki satır numarasıdır. Hatalı satırlar için karar iş
+ * seviyesindedir: kullanıcı bu satırların atlanmasına izin verir.
+ */
+export const conflictResolutionSchema = z.object({
+  /** Satır numarası → karar. */
+  rows: z.record(z.string(), importRowDecisionSchema),
+
+  /** Hatalı satırlar atlanarak import devam etsin mi? */
+  skipInvalidRows: z.boolean(),
+});
+
+export type ConflictResolution = z.infer<typeof conflictResolutionSchema>;
+
+/** Çakışma çözümü isteği. */
+export const importResolveSchema = z.object({
+  importJobId: z.string().uuid("Geçersiz import işi."),
+  resolution: conflictResolutionSchema,
+});
+
+export type ImportResolveInput = z.infer<typeof importResolveSchema>;
+
+/**
  * Bir satırdaki hata.
  */
 export const importRowErrorSchema = z.object({

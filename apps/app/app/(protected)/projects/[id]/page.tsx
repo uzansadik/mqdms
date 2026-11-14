@@ -19,9 +19,11 @@ import { requireAuthContext } from "@/features/auth/session";
 import { analyzeProductStructure } from "@/features/product-structure/analysis";
 import { ProductStructurePanel } from "@/features/product-structure/components/product-structure-panel";
 import { BulkProjectItemForm } from "@/features/project-items/components/bulk-project-item-form";
+import { ProjectBomList } from "@/features/project-items/components/project-bom-list";
 import { ProjectItemForm } from "@/features/project-items/components/project-item-form";
 import {
   getCustomerItemOptions,
+  getProjectBomData,
   getProjectItemFormOptions,
   getProjectItemListData,
 } from "@/features/project-items/server";
@@ -61,9 +63,10 @@ export default async function ProjectDetailPage({ params, searchParams }: PagePr
 
   const options = await getProjectFormOptions(context.organizationId);
 
-  const [projectItems, projectItemOptions] = await Promise.all([
+  const [projectItems, projectItemOptions, projectBoms] = await Promise.all([
     getProjectItemListData(context.organizationId, id),
     getProjectItemFormOptions(context.organizationId),
+    getProjectBomData(context.organizationId, id),
   ]);
 
   /*
@@ -133,6 +136,8 @@ export default async function ProjectDetailPage({ params, searchParams }: PagePr
           <TabsTrigger value="plants">{t("projects.detail.tabs.plants")}</TabsTrigger>
 
           <TabsTrigger value="items">{t("projects.detail.tabs.items")}</TabsTrigger>
+
+          <TabsTrigger value="boms">{t("projects.detail.tabs.boms")}</TabsTrigger>
 
           <TabsTrigger value="structure">{t("projects.detail.tabs.structure")}</TabsTrigger>
         </TabsList>
@@ -437,6 +442,10 @@ export default async function ProjectDetailPage({ params, searchParams }: PagePr
             items={projectItemOptions.items}
             projectId={data.project.id}
           />
+        </TabsContent>
+
+        <TabsContent className="mt-4 space-y-4" value="boms">
+          <ProjectBomList revisions={projectBoms.revisions} trees={projectBoms.trees} />
         </TabsContent>
 
         <TabsContent className="mt-4 space-y-4" value="structure">

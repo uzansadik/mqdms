@@ -60,8 +60,9 @@ export default async function ImportJobPage({ params }: { params: Promise<{ id: 
         fields={importFields[data.job.importType]}
         headers={data.headers}
         importJobId={data.job.id}
-        importType={data.job.importType}
         initialMapping={data.job.columnMapping}
+        initialPreview={data.preview}
+        initialResolution={data.job.conflictResolution}
       />
     </div>
   );

@@ -5,6 +5,20 @@ import { organization, user } from "../initial/auth";
 import { importStatus, importType } from "./enums";
 
 /**
+ * Çakışma çözümünün biçimi.
+ *
+ * Kullanıcı, dosyada mevcut bir kaydı hedefleyen satırlar için karar verir:
+ * mevcut kaydın üzerine yazılacak mı yoksa atlanacak mı.
+ */
+export type ImportConflictResolution = {
+  /** Satır numarası → karar (`APPLY` ya da `SKIP`). */
+  rows: Record<string, "APPLY" | "SKIP">;
+
+  /** Hatalı satırlar atlanarak import devam etsin mi? */
+  skipInvalidRows: boolean;
+};
+
+/**
  * Import işi.
  *
  * Bir import **önizleme ve onay olmadan mevcut veriyi değiştirmez**. Dosya
@@ -41,6 +55,12 @@ export const importJob = pgTable(
 
     /** Dosya kolonlarının mQDMS alanlarına eşleştirmesi. */
     columnMapping: jsonb("column_mapping").$type<Record<string, string>>().notNull().default({}),
+
+    /** Kullanıcının satır bazında çakışma kararları. */
+    conflictResolution: jsonb("conflict_resolution")
+      .$type<ImportConflictResolution>()
+      .notNull()
+      .default({ rows: {}, skipInvalidRows: false }),
 
     totalRows: integer("total_rows").notNull().default(0),
     createdCount: integer("created_count").notNull().default(0),

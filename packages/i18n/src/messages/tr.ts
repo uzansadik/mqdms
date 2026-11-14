@@ -879,6 +879,13 @@ export const tr = {
 
   "projects.detail.tabs.items": "Ürünler",
 
+  "projects.detail.tabs.boms": "BOM'lar",
+
+  "projects.boms.empty.title": "Bu projeye bağlanmış BOM yok",
+  "projects.boms.empty.description":
+    "Proje ürünlerinden birine BOM revision'ı seçtiğinizde bileşenler burada görünür.",
+  "projects.boms.open": "BOM'u aç",
+
   "projectItems.title": "Proje ürünleri",
   "projectItems.empty.title": "Bu projede henüz ürün yok",
   "projectItems.empty.description":
@@ -966,7 +973,7 @@ export const tr = {
   "imports.status.PARSING": "Okunuyor",
   "imports.status.VALIDATING": "Doğrulanıyor",
   "imports.status.READY": "Hazır",
-  "imports.status.CONFLICT": "Hatalı satır var",
+  "imports.status.CONFLICT": "Çakışma çözümü bekliyor",
   "imports.status.RUNNING": "Çalışıyor",
   "imports.status.COMPLETED": "Tamamlandı",
   "imports.status.FAILED": "Başarısız",
@@ -1005,6 +1012,21 @@ export const tr = {
   "imports.preview.status.UPDATE": "Güncellenecek",
   "imports.preview.status.ERROR": "Geçersiz",
   "imports.preview.status.SKIP": "Atlandı",
+
+  "imports.conflicts.title": "Çakışma çözümü",
+  "imports.conflicts.description":
+    "Dosyada mevcut bir kaydı hedefleyen satırlar için karar verin: mevcut kayıt korunur ya da dosyadaki değerlerle güncellenir.",
+  "imports.conflicts.skipInvalid": "Hatalı satırları atlayarak içe aktarıma devam et.",
+  "imports.conflicts.invalidRow": "Satır {row} ({label})",
+  "imports.conflicts.applyAll": "Tümünü güncelle",
+  "imports.conflicts.skipAll": "Tümünü koru",
+  "imports.conflicts.undecided": "Karar verilmedi",
+  "imports.conflicts.decision.APPLY": "Güncelle",
+  "imports.conflicts.decision.SKIP": "Mevcut kaydı koru",
+  "imports.conflicts.columns.values": "Dosyadaki değerler",
+  "imports.conflicts.columns.decision": "Karar",
+  "imports.conflicts.submit": "Çakışmaları çöz",
+  "imports.conflicts.resolved": "Çakışmalar çözüldü.",
 
   "imports.fields.code": "Şirket içi kod",
   "imports.fields.name": "Ad",

@@ -229,3 +229,62 @@ export async function findActiveProjectItems(
       ),
     );
 }
+
+/** Proje ürününe bağlanmış BOM revision kaydı. */
+export type ProjectBomRevisionRecord = {
+  /** Revision id'si. */
+  bomRevisionId: string;
+
+  /** BOM id'si; BOM detay sayfasına bağlanırken kullanılır. */
+  bomId: string;
+
+  bomCode: string;
+  bomName: string;
+
+  /** Revision değeri (`A`, `B`, ...). */
+  revision: string;
+
+  /** Revision durumu. */
+  status: "DRAFT" | "IN_REVIEW" | "RELEASED" | "SUPERSEDED";
+
+  /** Revision'ın ait olduğu item. */
+  itemId: string;
+  itemCode: string;
+  itemName: string;
+};
+
+/**
+ * Projeye bağlanmış BOM revision'ları.
+ *
+ * Projenin "BOMs" sekmesi bu kayıtları listeler: proje ürünlerinden hangi
+ * revision'ın bu projede kullanıldığı görünür.
+ */
+export async function listProjectBomRevisions(
+  organizationId: string,
+  projectId: string,
+): Promise<ProjectBomRevisionRecord[]> {
+  return db
+    .select({
+      bomRevisionId: bomRevision.id,
+      bomId: bom.id,
+      bomCode: bom.code,
+      bomName: bom.name,
+      revision: bomRevision.revision,
+      status: bomRevision.status,
+      itemId: item.id,
+      itemCode: item.code,
+      itemName: item.name,
+    })
+    .from(projectItem)
+    .innerJoin(bomRevision, eq(bomRevision.id, projectItem.bomRevisionId))
+    .innerJoin(bom, eq(bom.id, bomRevision.bomId))
+    .innerJoin(item, eq(item.id, projectItem.itemId))
+    .where(
+      and(
+        eq(projectItem.organizationId, organizationId),
+        eq(projectItem.projectId, projectId),
+        isNull(projectItem.archivedAt),
+      ),
+    )
+    .orderBy(asc(bom.code), asc(bomRevision.revision));
+}

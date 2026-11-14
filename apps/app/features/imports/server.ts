@@ -1,7 +1,7 @@
 import { requirePermission } from "@/features/auth/session";
 
 import { getImportJob, listImportJobErrors, listImportJobs } from "./repository";
-import { readSheet } from "./service";
+import { getImportPreview, readSheet } from "./service";
 
 /**
  * Import sayfalarının koruma ve veri katmanı.
@@ -44,5 +44,11 @@ export async function getImportJobDetail(organizationId: string, importJobId: st
     // Dosya okunamazsa başlıklar boş kalır; kullanıcı hata mesajını görür.
   }
 
-  return { job, errors, headers, sampleRows };
+  /*
+   * Eşleştirme yapılmış işlerde önizleme doğrudan gösterilir: kullanıcı
+   * sayfayı yenilediğinde çakışma kararları ve onay durumu korunur.
+   */
+  const preview = await getImportPreview(organizationId, importJobId);
+
+  return { job, errors, headers, sampleRows, preview };
 }

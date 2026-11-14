@@ -4,12 +4,18 @@ import type { z } from "zod";
 
 import { requireAuthContext } from "@/features/auth/session";
 
-import { importExecuteSchema, importUploadSchema, importValidateSchema } from "./schema";
+import {
+  importExecuteSchema,
+  importResolveSchema,
+  importUploadSchema,
+  importValidateSchema,
+} from "./schema";
 import {
   createImportJob,
   executeImportJob,
   type ImportPreview,
   ImportRuleError,
+  resolveImportJob,
   validateImportJob,
 } from "./service";
 
@@ -84,6 +90,34 @@ export async function validateImportJobAction(input: unknown): Promise<ImportVal
       context,
       parsed.data.importJobId,
       parsed.data.columnMapping,
+    );
+
+    return { success: true, preview };
+  } catch (error) {
+    return { success: false, error: toActionError(error) };
+  }
+}
+
+/**
+ * Çakışmaları çözer.
+ *
+ * Kullanıcının satır bazında verdiği kararlar import işine kaydedilir;
+ * çalıştırma adımı bu kararları uygular.
+ */
+export async function resolveImportJobAction(input: unknown): Promise<ImportValidateResult> {
+  const parsed = importResolveSchema.safeParse(input);
+
+  if (!parsed.success) {
+    return { success: false, error: firstIssueMessage(parsed.error) };
+  }
+
+  const context = await requireAuthContext();
+
+  try {
+    const preview = await resolveImportJob(
+      context,
+      parsed.data.importJobId,
+      parsed.data.resolution,
     );
 
     return { success: true, preview };

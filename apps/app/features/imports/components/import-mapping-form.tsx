@@ -24,16 +24,18 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 
-import { executeImportJobAction, validateImportJobAction } from "../actions";
-import type { ImportField, ImportType } from "../schema";
+import {
+  executeImportJobAction,
+  resolveImportJobAction,
+  validateImportJobAction,
+} from "../actions";
+import type { ConflictResolution, ImportField, ImportRowDecision } from "../schema";
 import type { ImportPreview } from "../service";
+import { ImportConflictResolution } from "./import-conflict-resolution";
 
 type ImportMappingFormProps = {
   /** Import işi. */
   importJobId: string;
-
-  /** Import türü. */
-  importType: ImportType;
 
   /** Hedef alanlar. */
   fields: readonly ImportField[];
@@ -43,27 +45,58 @@ type ImportMappingFormProps = {
 
   /** Kaydedilmiş eşleştirme. */
   initialMapping: Record<string, string>;
+
+  /** Kayıtlı çakışma çözümü. */
+  initialResolution: ConflictResolution;
+
+  /** Doğrulama önizlemesi; eşleştirme yapılmışsa hazırdır. */
+  initialPreview: ImportPreview | null;
 };
 
 /**
- * Kolon eşleştirme ve önizleme.
+ * Kolon eşleştirme, önizleme ve çakışma çözümü.
  *
  * Doğrulama veri yazmaz; yalnızca ne yapılacağını gösterir. Yazma işlemi
  * kullanıcı onayından sonra ve **tek transaction** içinde gerçekleşir.
+ *
+ * Mevcut kaydı hedefleyen satırlar için kullanıcı karar vermek zorundadır;
+ * karar verilmeden import çalıştırılamaz.
  */
 export function ImportMappingForm({
   importJobId,
-  importType,
   fields,
   headers,
   initialMapping,
+  initialResolution,
+  initialPreview,
 }: ImportMappingFormProps) {
   const router = useRouter();
   const { t } = useI18n();
   const [isPending, startTransition] = useTransition();
 
   const [mapping, setMapping] = useState<Record<string, string>>(initialMapping);
-  const [preview, setPreview] = useState<ImportPreview | null>(null);
+  const [preview, setPreview] = useState<ImportPreview | null>(initialPreview);
+  const [decisions, setDecisions] = useState<Record<string, ImportRowDecision>>(
+    initialResolution.rows,
+  );
+  const [skipInvalidRows, setSkipInvalidRows] = useState(initialResolution.skipInvalidRows);
+
+  /*
+   * Kararlar kaydedildi mi? Çakışma olan bir import için kaydedilmemiş karar
+   * varsa import çalıştırılamaz.
+   */
+  const [isResolved, setIsResolved] = useState(
+    initialPreview !== null &&
+      initialPreview.conflicts.length === 0 &&
+      initialPreview.invalidRows.length === 0,
+  );
+
+  const needsResolution =
+    preview !== null && (preview.conflicts.length > 0 || preview.invalidRows.length > 0);
+
+  const undecidedCount = preview
+    ? preview.conflicts.filter((row) => !decisions[String(row.rowNumber)]).length
+    : 0;
 
   function validate() {
     startTransition(async () => {
@@ -75,6 +108,11 @@ export function ImportMappingForm({
       }
 
       setPreview(result.preview);
+      setDecisions({});
+      setSkipInvalidRows(false);
+      setIsResolved(
+        result.preview.conflicts.length === 0 && result.preview.invalidRows.length === 0,
+      );
 
       if (result.preview.errorCount > 0) {
         toast.error(t("imports.mapping.hasErrors"));
@@ -82,6 +120,30 @@ export function ImportMappingForm({
       }
 
       toast.success(t("imports.mapping.validated"));
+    });
+  }
+
+  function changeDecision(rowNumber: number, decision: ImportRowDecision) {
+    setDecisions((current) => ({ ...current, [String(rowNumber)]: decision }));
+    setIsResolved(false);
+  }
+
+  function resolve() {
+    startTransition(async () => {
+      const result = await resolveImportJobAction({
+        importJobId,
+        resolution: { rows: decisions, skipInvalidRows },
+      });
+
+      if (!result.success) {
+        toast.error(result.error);
+        return;
+      }
+
+      setPreview(result.preview);
+      setIsResolved(true);
+
+      toast.success(t("imports.conflicts.resolved"));
     });
   }
 
@@ -142,8 +204,23 @@ export function ImportMappingForm({
                 {t("imports.mapping.validate")}
               </Button>
 
+              {needsResolution && (
+                <Button
+                  disabled={
+                    isPending ||
+                    undecidedCount > 0 ||
+                    (!skipInvalidRows && preview.invalidRows.length > 0)
+                  }
+                  onClick={resolve}
+                  type="button"
+                  variant="outline"
+                >
+                  {t("imports.conflicts.submit")}
+                </Button>
+              )}
+
               <Button
-                disabled={isPending || !preview || preview.errorCount > 0}
+                disabled={isPending || !preview || (needsResolution && !isResolved)}
                 onClick={execute}
                 type="button"
                 variant="outline"
@@ -220,6 +297,20 @@ export function ImportMappingForm({
             </Table>
           </CardContent>
         </Card>
+      )}
+
+      {preview && needsResolution && (
+        <ImportConflictResolution
+          conflicts={preview.conflicts}
+          decisions={decisions}
+          invalidRows={preview.invalidRows}
+          onDecisionChange={changeDecision}
+          onSkipInvalidRowsChange={(value) => {
+            setSkipInvalidRows(value);
+            setIsResolved(false);
+          }}
+          skipInvalidRows={skipInvalidRows}
+        />
       )}
     </div>
   );

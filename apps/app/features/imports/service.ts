@@ -14,6 +14,13 @@ import {
 import { getObjectBytes } from "@mqdms/storage/server";
 import { and, eq } from "drizzle-orm";
 
+import {
+  findUndecidedConflicts,
+  needsInvalidRowDecision,
+  selectApplicableRows,
+  selectConflictRows,
+  selectInvalidRows,
+} from "./conflicts";
 import { type ImportSheet, parseCsv, parseXlsx } from "./parser";
 import {
   createImportJob as createImportJobRecord,
@@ -23,7 +30,7 @@ import {
   replaceImportJobErrors,
   updateImportJob,
 } from "./repository";
-import type { ColumnMapping, ImportType } from "./schema";
+import type { ColumnMapping, ConflictResolution, ImportType } from "./schema";
 import { type ImportRowResult, validateImportRows } from "./validator";
 
 /**
@@ -77,7 +84,57 @@ export type ImportPreview = {
 
   /** Toplam satır sayısı. */
   totalRows: number;
+
+  /**
+   * Mevcut bir kaydın üzerine yazılacak satırlar.
+   *
+   * Bu satırlar için kullanıcı karar vermek zorundadır: mevcut kayıt
+   * korunur ya da dosyadaki değerlerle güncellenir.
+   */
+  conflicts: ImportRowResult[];
+
+  /** Doğrulama hatası olan satırlar. */
+  invalidRows: ImportRowResult[];
+
+  /** İş üzerinde kayıtlı çakışma çözümü. */
+  resolution: ConflictResolution;
 };
+
+/** Çakışma çözümü olmayan boş karar seti. */
+function emptyResolution(): ConflictResolution {
+  return { rows: {}, skipInvalidRows: false };
+}
+
+/**
+ * Satırları doğrulayıp önizleme üretir.
+ *
+ * Saf okuma: hiçbir kayıt yazılmaz. Hem doğrulama, hem çakışma çözümü hem
+ * de çalıştırma adımı aynı önizlemeyi kullanır.
+ */
+async function buildPreview(
+  organizationId: string,
+  job: ImportJobRecord,
+  sheet: ImportSheet,
+  mapping: ColumnMapping,
+  resolution: ConflictResolution,
+): Promise<ImportPreview> {
+  const rows = await validateImportRows(organizationId, job.importType, sheet, mapping);
+
+  const createCount = rows.filter((row) => row.status === "CREATE").length;
+  const conflicts = selectConflictRows(rows);
+  const invalidRows = selectInvalidRows(rows);
+
+  return {
+    rows,
+    createCount,
+    updateCount: conflicts.length,
+    errorCount: invalidRows.length,
+    totalRows: rows.length,
+    conflicts,
+    invalidRows,
+    resolution,
+  };
+}
 
 /** Dosyayı depolamadan okur ve ayrıştırır. */
 export async function readSheet(
@@ -136,6 +193,10 @@ export async function createImportJob(
  *
  * Bu adımda veri **yazılmaz**; yalnızca ne yapılacağı belirlenir ve
  * hatalar kaydedilir.
+ *
+ * Doğrulama yeniden çalıştırıldığında önceki çakışma kararları geçersiz
+ * olur: kolon eşleştirmesi değiştiğinde satır kümesi de değişebilir. Bu
+ * yüzden kararlar sıfırlanır.
  */
 export async function validateImportJob(
   context: AuthContext,
@@ -156,26 +217,29 @@ export async function validateImportJob(
 
   const { sheet, bytes } = await readSheet(job);
 
-  const rows = await validateImportRows(context.organizationId, job.importType, sheet, mapping);
-
-  const createCount = rows.filter((row) => row.status === "CREATE").length;
-  const updateCount = rows.filter((row) => row.status === "UPDATE").length;
-  const errorRows = rows.filter((row) => row.status === "ERROR");
+  const preview = await buildPreview(
+    context.organizationId,
+    job,
+    sheet,
+    mapping,
+    emptyResolution(),
+  );
 
   await updateImportJob(context.organizationId, importJobId, {
-    status: errorRows.length > 0 ? "CONFLICT" : "READY",
+    status: preview.conflicts.length > 0 || preview.invalidRows.length > 0 ? "CONFLICT" : "READY",
     columnMapping: mapping,
-    totalRows: rows.length,
-    createdCount: createCount,
-    updatedCount: updateCount,
-    skippedCount: rows.filter((row) => row.status === "SKIP").length,
-    errorCount: errorRows.length,
+    conflictResolution: emptyResolution(),
+    totalRows: preview.totalRows,
+    createdCount: preview.createCount,
+    updatedCount: preview.updateCount,
+    skippedCount: preview.rows.filter((row) => row.status === "SKIP").length,
+    errorCount: preview.errorCount,
     fileHash: hashFile(bytes),
   });
 
   await replaceImportJobErrors(
     importJobId,
-    errorRows.flatMap((row) =>
+    preview.invalidRows.flatMap((row) =>
       row.errors.map((error) => ({
         rowNumber: row.rowNumber,
         column: error.column,
@@ -186,13 +250,68 @@ export async function validateImportJob(
     ),
   );
 
-  return {
-    rows,
-    createCount,
-    updateCount,
-    errorCount: errorRows.length,
-    totalRows: rows.length,
-  };
+  return preview;
+}
+
+/**
+ * Çakışmaları çözer.
+ *
+ * Kullanıcı, mevcut kaydı hedefleyen her satır için karar verir: mevcut
+ * kayıt korunur (`SKIP`) ya da dosyadaki değerlerle güncellenir (`APPLY`).
+ * Hatalı satırlar için karar iş seviyesindedir: ya atlanır ya da import
+ * durdurulur.
+ *
+ * Kararlar import işine kaydedilir; çalıştırma adımı bu kararları kullanır.
+ */
+export async function resolveImportJob(
+  context: AuthContext,
+  importJobId: string,
+  resolution: ConflictResolution,
+): Promise<ImportPreview> {
+  await requireImportPermission(context, "execute");
+
+  const job = await getImportJob(context.organizationId, importJobId);
+
+  if (!job) {
+    throw new ImportRuleError("Import işi bulunamadı.", "NOT_FOUND");
+  }
+
+  if (job.status === "RUNNING" || job.status === "COMPLETED") {
+    throw new ImportRuleError("Bu import artık çözülemez.", "INVALID_STATE");
+  }
+
+  const mapping = job.columnMapping;
+
+  if (Object.keys(mapping).length === 0) {
+    throw new ImportRuleError("Kolonlar eşleştirilmeden çakışma çözülemez.", "INVALID_INPUT");
+  }
+
+  const { sheet } = await readSheet(job);
+
+  const preview = await buildPreview(context.organizationId, job, sheet, mapping, resolution);
+
+  const unresolved = findUndecidedConflicts(preview.conflicts, resolution);
+
+  if (unresolved.length > 0) {
+    throw new ImportRuleError(
+      `${unresolved.length} satır için çakışma kararı verilmedi.`,
+      "INVALID_INPUT",
+    );
+  }
+
+  if (needsInvalidRowDecision(preview.invalidRows, resolution)) {
+    throw new ImportRuleError(
+      "Hatalı satırlar için karar verilmedi: ya atlanmaları ya da import durdurulmalı.",
+      "INVALID_INPUT",
+    );
+  }
+
+  await updateImportJob(context.organizationId, importJobId, {
+    status: "READY",
+    conflictResolution: resolution,
+  });
+
+  return preview;
 }
 
 /**
@@ -200,6 +319,10 @@ export async function validateImportJob(
  *
  * Bütün satırlar **tek transaction** içinde yazılır: bir satır başarısız
  * olursa hiçbiri yazılmaz.
+ *
+ * Yazılacak satırlar kullanıcının çakışma kararlarına göre belirlenir:
+ * yeni kayıtlar her zaman yazılır, mevcut kaydı hedefleyen satırlar yalnızca
+ * `APPLY` kararı verilmişse güncellenir.
  */
 export async function executeImportJob(
   context: AuthContext,
@@ -225,9 +348,33 @@ export async function executeImportJob(
 
   const { sheet } = await readSheet(job);
 
-  const rows = await validateImportRows(context.organizationId, job.importType, sheet, mapping);
+  const resolution = job.conflictResolution ?? emptyResolution();
 
-  const applicable = rows.filter((row) => row.status === "CREATE" || row.status === "UPDATE");
+  const preview = await buildPreview(context.organizationId, job, sheet, mapping, resolution);
+
+  /*
+   * Çakışmalar çözülmeden import çalıştırılamaz: mevcut kayıtların üzerine
+   * yazılıp yazılmayacağı kullanıcının kararına bağlıdır.
+   */
+  const undecided = findUndecidedConflicts(preview.conflicts, resolution);
+
+  if (undecided.length > 0) {
+    throw new ImportRuleError(
+      `${undecided.length} satır için çakışma kararı verilmedi.`,
+      "INVALID_INPUT",
+    );
+  }
+
+  if (needsInvalidRowDecision(preview.invalidRows, resolution)) {
+    throw new ImportRuleError(
+      "Hatalı satırlar için karar verilmedi: ya atlanmaları ya da import durdurulmalı.",
+      "INVALID_INPUT",
+    );
+  }
+
+  const applicable = selectApplicableRows(preview.rows, resolution);
+
+  const skipped = preview.rows.length - applicable.length;
 
   if (applicable.length === 0) {
     throw new ImportRuleError(
@@ -264,7 +411,8 @@ export async function executeImportJob(
             fileName: job.fileName,
             created,
             updated,
-            totalRows: rows.length,
+            skipped,
+            totalRows: preview.totalRows,
           },
         },
         tx,
@@ -277,10 +425,11 @@ export async function executeImportJob(
       status: "COMPLETED",
       createdCount: result.created,
       updatedCount: result.updated,
+      skippedCount: skipped,
       completedAt: new Date(),
     });
 
-    return { created: result.created, updated: result.updated, skipped: 0 };
+    return { created: result.created, updated: result.updated, skipped };
   } catch (error) {
     await updateImportJob(context.organizationId, importJobId, { status: "FAILED" });
 
@@ -561,4 +710,31 @@ async function writeBomRow(
 /** İçe aktarım işinin hataları. */
 export async function getImportJobErrors(importJobId: string) {
   return listImportJobErrors(importJobId);
+}
+
+/**
+ * Kayıtlı eşleştirmeye göre önizleme üretir.
+ *
+ * Veri yazmaz; kayıtlı çakışma çözümüyle birlikte döner. Eşleştirme
+ * yapılmamış işler için `null` döner.
+ */
+export async function getImportPreview(
+  organizationId: string,
+  importJobId: string,
+): Promise<ImportPreview | null> {
+  const job = await getImportJob(organizationId, importJobId);
+
+  if (!job || Object.keys(job.columnMapping).length === 0) {
+    return null;
+  }
+
+  const { sheet } = await readSheet(job);
+
+  return buildPreview(
+    organizationId,
+    job,
+    sheet,
+    job.columnMapping,
+    job.conflictResolution ?? emptyResolution(),
+  );
 }

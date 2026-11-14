@@ -1,5 +1,5 @@
 import { db } from "@mqdms/db";
-import { importJob, importJobError } from "@mqdms/db/schema";
+import { type ImportConflictResolution, importJob, importJobError } from "@mqdms/db/schema";
 import { and, desc, eq } from "drizzle-orm";
 
 /**
@@ -28,6 +28,7 @@ export type ImportJobRecord = {
     | "FAILED"
     | "CANCELLED";
   columnMapping: Record<string, string>;
+  conflictResolution: ImportConflictResolution;
   totalRows: number;
   createdCount: number;
   updatedCount: number;
@@ -60,6 +61,7 @@ export async function listImportJobs(organizationId: string): Promise<ImportJobR
       fileKey: importJob.fileKey,
       status: importJob.status,
       columnMapping: importJob.columnMapping,
+      conflictResolution: importJob.conflictResolution,
       totalRows: importJob.totalRows,
       createdCount: importJob.createdCount,
       updatedCount: importJob.updatedCount,
@@ -89,6 +91,7 @@ export async function getImportJob(
       fileKey: importJob.fileKey,
       status: importJob.status,
       columnMapping: importJob.columnMapping,
+      conflictResolution: importJob.conflictResolution,
       totalRows: importJob.totalRows,
       createdCount: importJob.createdCount,
       updatedCount: importJob.updatedCount,
@@ -153,6 +156,7 @@ export async function updateImportJob(
       ImportJobRecord,
       | "status"
       | "columnMapping"
+      | "conflictResolution"
       | "totalRows"
       | "createdCount"
       | "updatedCount"

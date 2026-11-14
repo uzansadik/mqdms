@@ -1,9 +1,10 @@
 import { requirePermission } from "@/features/auth/session";
+import { explodeBom } from "@/features/boms/explosion";
 import { listBomRevisionOptions } from "@/features/boms/repository";
 import { listCustomerItemsByItem } from "@/features/customer-items/repository";
 import { listItemOptions, listItemRevisionOptions } from "@/features/items/repository";
 
-import { listProjectItems } from "./repository";
+import { listProjectBomRevisions, listProjectItems } from "./repository";
 
 /**
  * Proje ürünü sayfalarının koruma ve veri katmanı.
@@ -42,4 +43,20 @@ export async function getProjectItemFormOptions(organizationId: string) {
  */
 export async function getCustomerItemOptions(organizationId: string, itemId: string) {
   return listCustomerItemsByItem(organizationId, itemId);
+}
+
+/**
+ * Projenin BOM sekmesi verisi.
+ *
+ * Proje ürünlerine bağlanmış her revision için çözümlenen bileşen ağacı
+ * döner: kullanıcı alt bileşenleri proje bağlamında görebilir.
+ */
+export async function getProjectBomData(organizationId: string, projectId: string) {
+  const revisions = await listProjectBomRevisions(organizationId, projectId);
+
+  const trees = await Promise.all(
+    revisions.map((revision) => explodeBom(organizationId, revision.bomRevisionId)),
+  );
+
+  return { revisions, trees };
 }

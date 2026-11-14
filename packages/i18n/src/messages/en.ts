@@ -878,6 +878,13 @@ export const en = {
 
   "projects.detail.tabs.items": "Items",
 
+  "projects.detail.tabs.boms": "BOMs",
+
+  "projects.boms.empty.title": "No BOM linked to this project",
+  "projects.boms.empty.description":
+    "Components appear here once a BOM revision is selected on one of the project items.",
+  "projects.boms.open": "Open BOM",
+
   "projectItems.title": "Project items",
   "projectItems.empty.title": "No items in this project yet",
   "projectItems.empty.description":
@@ -965,7 +972,7 @@ export const en = {
   "imports.status.PARSING": "Reading",
   "imports.status.VALIDATING": "Validating",
   "imports.status.READY": "Ready",
-  "imports.status.CONFLICT": "Has errors",
+  "imports.status.CONFLICT": "Waiting for conflict resolution",
   "imports.status.RUNNING": "Running",
   "imports.status.COMPLETED": "Completed",
   "imports.status.FAILED": "Failed",
@@ -1004,6 +1011,21 @@ export const en = {
   "imports.preview.status.UPDATE": "To update",
   "imports.preview.status.ERROR": "Invalid",
   "imports.preview.status.SKIP": "Skipped",
+
+  "imports.conflicts.title": "Conflict resolution",
+  "imports.conflicts.description":
+    "Decide what happens to the rows that target an existing record: keep the record as it is or update it with the values from the file.",
+  "imports.conflicts.skipInvalid": "Skip the invalid rows and continue the import.",
+  "imports.conflicts.invalidRow": "Row {row} ({label})",
+  "imports.conflicts.applyAll": "Update all",
+  "imports.conflicts.skipAll": "Keep all",
+  "imports.conflicts.undecided": "Not decided",
+  "imports.conflicts.decision.APPLY": "Update",
+  "imports.conflicts.decision.SKIP": "Keep existing",
+  "imports.conflicts.columns.values": "Values in the file",
+  "imports.conflicts.columns.decision": "Decision",
+  "imports.conflicts.submit": "Resolve conflicts",
+  "imports.conflicts.resolved": "Conflicts resolved.",
 
   "imports.fields.code": "Internal code",
   "imports.fields.name": "Name",
