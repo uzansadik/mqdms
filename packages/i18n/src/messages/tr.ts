@@ -501,6 +501,8 @@ export const tr = {
   "items.list.columns.actions": "İşlemler",
   "items.list.search.label": "Ara",
   "items.list.search.placeholder": "Şirket içi kod veya ürün adı",
+  "items.combobox.placeholder": "Kod veya adla ara",
+  "items.combobox.empty": "Eşleşen ürün yok.",
   "items.list.search.submit": "Ara",
   "items.list.filter.label": "Durum",
   "items.list.filter.all": "Tümü",
@@ -663,6 +665,7 @@ export const tr = {
   "items.detail.tabs.revisions": "Revision'lar",
   "items.detail.tabs.boms": "BOM'lar",
   "items.detail.tabs.usedIn": "Kullanım",
+  "items.detail.tabs.projects": "Projeler",
 
   "items.detail.boms.title": "Bu ürünün BOM'ları",
   "items.detail.boms.empty.title": "Bu ürün için henüz BOM yok",
@@ -670,6 +673,9 @@ export const tr = {
     "Bu ürünün hangi bileşenlerden oluştuğunu tanımlamak için BOM oluşturun.",
 
   "items.detail.usedIn.boms.title": "Kullanıldığı BOM'lar",
+  "items.detail.usedIn.usage.label": "Kullanım",
+  "items.detail.usedIn.usage.DIRECT": "Doğrudan",
+  "items.detail.usedIn.usage.INDIRECT": "Dolaylı",
   "items.detail.usedIn.projects.title": "Kullanıldığı projeler",
   "items.detail.usedIn.empty.title": "Henüz hiçbir yerde kullanılmıyor",
   "items.detail.usedIn.empty.description":
@@ -781,6 +787,7 @@ export const tr = {
   "boms.explosion.flattened": "Toplam malzeme ihtiyacı",
   "boms.explosion.empty": "Bu revision'da henüz bileşen satırı yok.",
   "boms.explosion.unresolved": "Çözümlenmemiş",
+  "boms.explosion.toggle": "Dali genişlet veya daralt",
   "boms.explosion.columns.item": "Bileşen",
   "boms.explosion.columns.revision": "Revision",
   "boms.explosion.columns.quantity": "Miktar",

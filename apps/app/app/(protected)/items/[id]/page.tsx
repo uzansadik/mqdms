@@ -102,6 +102,8 @@ export default async function ItemDetailPage({ params }: PageProps) {
           <TabsTrigger value="boms">{t("items.detail.tabs.boms")}</TabsTrigger>
 
           <TabsTrigger value="usedIn">{t("items.detail.tabs.usedIn")}</TabsTrigger>
+
+          <TabsTrigger value="projects">{t("items.detail.tabs.projects")}</TabsTrigger>
         </TabsList>
 
         <TabsContent className="mt-4 space-y-4" value="overview">
@@ -304,6 +306,8 @@ export default async function ItemDetailPage({ params }: PageProps) {
                       <TableHead>{t("boms.list.columns.name")}</TableHead>
 
                       <TableHead>{t("boms.list.columns.currentRevision")}</TableHead>
+
+                      <TableHead>{t("items.detail.usedIn.usage.label")}</TableHead>
                     </TableRow>
                   </TableHeader>
 
@@ -319,6 +323,12 @@ export default async function ItemDetailPage({ params }: PageProps) {
                         <TableCell>{usage.bomName}</TableCell>
 
                         <TableCell>{usage.revision}</TableCell>
+
+                        <TableCell>
+                          <Badge variant={usage.usageType === "DIRECT" ? "secondary" : "outline"}>
+                            {t(`items.detail.usedIn.usage.${usage.usageType}`)}
+                          </Badge>
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -326,7 +336,9 @@ export default async function ItemDetailPage({ params }: PageProps) {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
 
+        <TabsContent className="mt-4 space-y-4" value="projects">
           <Card>
             <CardHeader>
               <CardTitle>{t("items.detail.usedIn.projects.title")}</CardTitle>

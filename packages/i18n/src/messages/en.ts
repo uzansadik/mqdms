@@ -503,6 +503,8 @@ export const en = {
   "items.list.columns.actions": "Actions",
   "items.list.search.label": "Search",
   "items.list.search.placeholder": "Internal code or item name",
+  "items.combobox.placeholder": "Search by code or name",
+  "items.combobox.empty": "No matching items.",
   "items.list.search.submit": "Search",
   "items.list.filter.label": "Status",
   "items.list.filter.all": "All",
@@ -664,6 +666,7 @@ export const en = {
   "items.detail.tabs.revisions": "Revisions",
   "items.detail.tabs.boms": "BOMs",
   "items.detail.tabs.usedIn": "Used in",
+  "items.detail.tabs.projects": "Projects",
 
   "items.detail.boms.title": "BOMs of this product",
   "items.detail.boms.empty.title": "No BOM for this product yet",
@@ -671,6 +674,9 @@ export const en = {
     "Create a BOM to define which components this product is made of.",
 
   "items.detail.usedIn.boms.title": "Used in BOMs",
+  "items.detail.usedIn.usage.label": "Usage",
+  "items.detail.usedIn.usage.DIRECT": "Direct",
+  "items.detail.usedIn.usage.INDIRECT": "Indirect",
   "items.detail.usedIn.projects.title": "Used in projects",
   "items.detail.usedIn.empty.title": "Not used anywhere yet",
   "items.detail.usedIn.empty.description":
@@ -780,6 +786,7 @@ export const en = {
   "boms.explosion.flattened": "Total material requirement",
   "boms.explosion.empty": "This revision has no component lines yet.",
   "boms.explosion.unresolved": "Unresolved",
+  "boms.explosion.toggle": "Expand or collapse the branch",
   "boms.explosion.columns.item": "Component",
   "boms.explosion.columns.revision": "Revision",
   "boms.explosion.columns.quantity": "Quantity",

@@ -55,6 +55,18 @@ export default async function ImportJobPage({ params }: { params: Promise<{ id: 
         </Card>
       )}
 
+      {data.previewError && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm">{t("imports.errors.title")}</CardTitle>
+          </CardHeader>
+
+          <CardContent>
+            <p className="text-sm text-destructive">{data.previewError}</p>
+          </CardContent>
+        </Card>
+      )}
+
       <ImportMappingForm
         fields={importFields[data.job.importType]}
         headers={data.headers}
