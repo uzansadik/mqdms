@@ -139,6 +139,16 @@ export function ImportUpload({ importTypes }: ImportUploadProps) {
                   </NativeSelectOption>
                 ))}
               </NativeSelect>
+
+              {/*
+               * Şablon indirilir: kullanıcı hangi kolonu dolduracağını ve
+               * hangilerinin zorunlu olduğunu dosyadan görür.
+               */}
+              <Button asChild className="w-fit" size="sm" type="button" variant="outline">
+                <a href={`/api/imports/template?type=${importType}`}>
+                  {t("imports.template.download")}
+                </a>
+              </Button>
             </Field>
 
             <Field>

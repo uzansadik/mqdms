@@ -1,5 +1,5 @@
 import { getTranslations } from "@mqdms/i18n/server";
-import { importFields } from "@mqdms/imports/schema";
+import { importFields, requiredImportFields } from "@mqdms/imports/schema";
 import { Badge } from "@mqdms/ui/components/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@mqdms/ui/components/card";
 import { notFound } from "next/navigation";
@@ -75,6 +75,8 @@ export default async function ImportJobPage({ params }: { params: Promise<{ id: 
         initialPreview={data.preview}
         initialResolution={data.job.conflictResolution}
         jobStatus={data.job.status}
+        requiredFields={requiredImportFields[data.job.importType]}
+        sampleRows={data.sampleRows}
       />
     </div>
   );
