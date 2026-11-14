@@ -998,6 +998,7 @@ export const tr = {
   "imports.mapping.execute": "İçe aktar",
   "imports.mapping.validated": "Satırlar geçerli.",
   "imports.mapping.executed": "İçe aktarım tamamlandı.",
+  "imports.mapping.queued": "İçe aktarım kuyruğa alındı. Sonuç sayfa yenilendiğinde görünür.",
   "imports.mapping.hasErrors": "Bazı satırlar geçersiz. Düzeltip yeniden doğrulayın.",
 
   "imports.preview.title": "Önizleme",

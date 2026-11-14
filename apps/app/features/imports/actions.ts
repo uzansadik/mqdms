@@ -1,23 +1,22 @@
 "use server";
 
-import type { z } from "zod";
-
-import { requireAuthContext } from "@/features/auth/session";
-
+import { hasPermission } from "@mqdms/auth/permissions/server";
 import {
+  createImportJob,
+  getImportJob,
+  type ImportPreview,
+  ImportRuleError,
   importExecuteSchema,
   importResolveSchema,
   importUploadSchema,
   importValidateSchema,
-} from "./schema";
-import {
-  createImportJob,
-  executeImportJob,
-  type ImportPreview,
-  ImportRuleError,
   resolveImportJob,
   validateImportJob,
-} from "./service";
+} from "@mqdms/imports";
+import { addJob } from "@mqdms/queue";
+import type { z } from "zod";
+
+import { requireAuthContext } from "@/features/auth/session";
 
 /** Aksiyon sonucu. */
 export type ImportActionResult = { success: true } | { success: false; error: string };
@@ -57,8 +56,14 @@ export async function createImportJobAction(input: unknown): Promise<ImportActio
 
   const context = await requireAuthContext();
 
+  if (!(await hasPermission(context, "imports", "create"))) {
+    return { success: false, error: "Bu işlem için yetkiniz yok." };
+  }
+
   try {
-    await createImportJob(context, {
+    await createImportJob({
+      organizationId: context.organizationId,
+      actorId: context.userId,
       importType: parsed.data.importType,
       sourceSystem: parsed.data.sourceSystem,
       fileName: parsed.data.fileName,
@@ -85,12 +90,16 @@ export async function validateImportJobAction(input: unknown): Promise<ImportVal
 
   const context = await requireAuthContext();
 
+  if (!(await hasPermission(context, "imports", "read"))) {
+    return { success: false, error: "Bu işlem için yetkiniz yok." };
+  }
+
   try {
-    const preview = await validateImportJob(
-      context,
-      parsed.data.importJobId,
-      parsed.data.columnMapping,
-    );
+    const preview = await validateImportJob({
+      organizationId: context.organizationId,
+      importJobId: parsed.data.importJobId,
+      mapping: parsed.data.columnMapping,
+    });
 
     return { success: true, preview };
   } catch (error) {
@@ -113,12 +122,16 @@ export async function resolveImportJobAction(input: unknown): Promise<ImportVali
 
   const context = await requireAuthContext();
 
+  if (!(await hasPermission(context, "imports", "execute"))) {
+    return { success: false, error: "Bu işlem için yetkiniz yok." };
+  }
+
   try {
-    const preview = await resolveImportJob(
-      context,
-      parsed.data.importJobId,
-      parsed.data.resolution,
-    );
+    const preview = await resolveImportJob({
+      organizationId: context.organizationId,
+      importJobId: parsed.data.importJobId,
+      resolution: parsed.data.resolution,
+    });
 
     return { success: true, preview };
   } catch (error) {
@@ -127,9 +140,10 @@ export async function resolveImportJobAction(input: unknown): Promise<ImportVali
 }
 
 /**
- * Doğrulanmış satırları yazar.
+ * Onaylanan import'u kuyruğa alır.
  *
- * Bütün satırlar tek transaction'da yazılır.
+ * Yazma adımı **worker'da** çalışır: büyük dosyalar istek zaman aşımına
+ * uğramaz. Kuyruğa alma yetkisi burada denetlenir.
  */
 export async function executeImportJobAction(input: unknown): Promise<ImportActionResult> {
   const parsed = importExecuteSchema.safeParse(input);
@@ -140,8 +154,26 @@ export async function executeImportJobAction(input: unknown): Promise<ImportActi
 
   const context = await requireAuthContext();
 
+  if (!(await hasPermission(context, "imports", "execute"))) {
+    return { success: false, error: "Bu işlem için yetkiniz yok." };
+  }
+
   try {
-    await executeImportJob(context, parsed.data.importJobId);
+    const job = await getImportJob(context.organizationId, parsed.data.importJobId);
+
+    if (!job) {
+      return { success: false, error: "Import işi bulunamadı." };
+    }
+
+    if (job.status !== "READY") {
+      return { success: false, error: "Import çalıştırılmaya hazır değil." };
+    }
+
+    await addJob("import.execute", {
+      importJobId: parsed.data.importJobId,
+      organizationId: context.organizationId,
+      actorId: context.userId,
+    });
 
     return { success: true };
   } catch (error) {

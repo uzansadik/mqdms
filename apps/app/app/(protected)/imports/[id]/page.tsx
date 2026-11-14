@@ -1,11 +1,10 @@
 import { getTranslations } from "@mqdms/i18n/server";
+import { importFields } from "@mqdms/imports/schema";
 import { Badge } from "@mqdms/ui/components/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@mqdms/ui/components/card";
 import { notFound } from "next/navigation";
-
 import { requireAuthContext } from "@/features/auth/session";
 import { ImportMappingForm } from "@/features/imports/components/import-mapping-form";
-import { importFields } from "@/features/imports/schema";
 import { getImportJobDetail, requireImportsAccess } from "@/features/imports/server";
 
 /**
@@ -63,6 +62,7 @@ export default async function ImportJobPage({ params }: { params: Promise<{ id: 
         initialMapping={data.job.columnMapping}
         initialPreview={data.preview}
         initialResolution={data.job.conflictResolution}
+        jobStatus={data.job.status}
       />
     </div>
   );

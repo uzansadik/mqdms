@@ -21,6 +21,8 @@
     "@mqdms/db": "workspace:*",
     "@mqdms/env": "workspace:*",
     "@mqdms/i18n": "workspace:*",
+    "@mqdms/imports": "workspace:*",
+    "@mqdms/queue": "workspace:*",
     "@mqdms/storage": "workspace:*",
     "@mqdms/ui": "workspace:*",
     "@shadcn/react": "^0.3.0",

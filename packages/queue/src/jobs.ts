@@ -34,6 +34,18 @@ export type JobPayloads = {
     organizationName: string;
     inviterName: string;
   };
+
+  /**
+   * Onaylanmış içe aktarımı çalıştırır.
+   *
+   * Yazma adımı worker'da yapılır: büyük dosyalar istek zaman aşımına
+   * uğramaz. Yetki kontrolü iş kuyruğa alınırken yapılır.
+   */
+  "import.execute": {
+    importJobId: string;
+    organizationId: string;
+    actorId: string | null;
+  };
 };
 
 export type JobName = keyof JobPayloads;
@@ -46,4 +58,5 @@ export const jobQueues = {
   "email.verification": "email",
   "email.password-reset": "email",
   "email.organization-invitation": "email",
+  "import.execute": "default",
 } satisfies Record<JobName, QueueName>;

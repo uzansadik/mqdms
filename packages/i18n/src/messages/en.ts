@@ -997,6 +997,7 @@ export const en = {
   "imports.mapping.execute": "Import",
   "imports.mapping.validated": "The rows are valid.",
   "imports.mapping.executed": "Import completed.",
+  "imports.mapping.queued": "The import is queued. The result appears when the page refreshes.",
   "imports.mapping.hasErrors": "Some rows are invalid. Fix them and validate again.",
 
   "imports.preview.title": "Preview",

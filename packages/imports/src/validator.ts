@@ -1,22 +1,16 @@
 import {
   findBomLineByNumber,
   findBomRevisionByValue,
+  findCustomerByCode,
+  findCustomerItemByPartNumber,
+  findItemByCode,
+  findItemGroupByCode,
+  findUnitByCode,
   listBomsByItem,
-} from "@/features/boms/repository";
-import { findCustomerItemByPartNumber } from "@/features/customer-items/repository";
-import { findCustomerByCode } from "@/features/customers/repository";
-import { findItemGroupByCode } from "@/features/item-groups/repository";
-import { findItemByCode } from "@/features/items/repository";
-import { findUnitByCode } from "@/features/units/repository";
-
+} from "./lookups";
 import type { ImportSheet } from "./parser";
-import type {
-  ColumnMapping,
-  ImportField,
-  ImportRowError,
-  ImportRowStatus,
-  ImportType,
-} from "./schema";
+import type { ColumnMapping, ImportField, ImportRowError, ImportType } from "./schema";
+import type { ImportRowResult } from "./types";
 
 /**
  * Import satırı doğrulaması.
@@ -29,27 +23,7 @@ import type {
  * olarak raporlanır.
  */
 
-/** Doğrulanan tek satırın sonucu. */
-export type ImportRowResult = {
-  /** Dosyadaki satır numarası. */
-  rowNumber: number;
-
-  status: ImportRowStatus;
-
-  /** Hedef varlığın türü (`item`, `customerItem`, `bomLine`, …). */
-  targetType: string;
-
-  /** Mevcut kaydın id'si; yeni kayıt oluşturulacaksa null. */
-  targetId: string | null;
-
-  /** Kullanıcıya gösterilen kısa etiket. */
-  label: string;
-
-  errors: ImportRowError[];
-
-  /** Yazılacak değerler; doğrulama sırasında çözülmüş id'lerle. */
-  values: Record<string, unknown>;
-};
+export type { ImportRowResult };
 
 /** Eşleştirilmiş alanın ham değerini okur. */
 function readValue(

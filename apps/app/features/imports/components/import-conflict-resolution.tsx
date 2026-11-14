@@ -1,6 +1,8 @@
 "use client";
 
 import { type MessageKey, useI18n } from "@mqdms/i18n";
+import type { ImportRowDecision } from "@mqdms/imports/schema";
+import type { ImportRowResult } from "@mqdms/imports/types";
 import { Badge } from "@mqdms/ui/components/badge";
 import { Button } from "@mqdms/ui/components/button";
 import {
@@ -21,9 +23,6 @@ import {
   TableHeader,
   TableRow,
 } from "@mqdms/ui/components/table";
-
-import type { ImportRowDecision } from "../schema";
-import type { ImportRowResult } from "../validator";
 
 type ImportConflictResolutionProps = {
   /** Mevcut kaydın üzerine yazılacak satırlar. */

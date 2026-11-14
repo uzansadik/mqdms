@@ -1,6 +1,7 @@
 "use client";
 
 import { useI18n } from "@mqdms/i18n";
+import { type ImportType, importFields } from "@mqdms/imports/schema";
 import { Button } from "@mqdms/ui/components/button";
 import {
   Card,
@@ -15,9 +16,7 @@ import { NativeSelect, NativeSelectOption } from "@mqdms/ui/components/native-se
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
-
 import { createImportJobAction } from "../actions";
-import { type ImportType, importFields } from "../schema";
 
 type ImportUploadProps = {
   /** Import türleri ve hedef alanları. */

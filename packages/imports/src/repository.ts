@@ -115,7 +115,7 @@ export async function createImportJob(input: {
   fileName: string;
   fileHash: string;
   fileKey: string;
-  createdById: string;
+  createdById: string | null;
 }): Promise<ImportJobRecord> {
   const rows = await db
     .insert(importJob)

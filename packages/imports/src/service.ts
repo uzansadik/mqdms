@@ -1,7 +1,6 @@
 import { createHash } from "node:crypto";
 
 import { writeAuditLog } from "@mqdms/audit";
-import { type AuthContext, hasPermission } from "@mqdms/auth/permissions/server";
 import { db } from "@mqdms/db";
 import {
   bomLine,
@@ -31,15 +30,21 @@ import {
   updateImportJob,
 } from "./repository";
 import type { ColumnMapping, ConflictResolution, ImportType } from "./schema";
-import { type ImportRowResult, validateImportRows } from "./validator";
+import type { ImportPreview, ImportRowResult } from "./types";
+import { validateImportRows } from "./validator";
 
 /**
  * İçe aktarım servisi.
  *
  * Akış: dosya yüklenir → kolonlar eşleştirilir → satırlar doğrulanır →
- * kullanıcı onaylar → veriler **tek transaction** içinde yazılır.
+ * kullanıcı çakışmaları çözer ve onaylar → veriler **tek transaction** içinde
+ * yazılır.
  *
  * Onay olmadan hiçbir mevcut veri değişmez.
+ *
+ * Servis yetki kontrolü **yapmaz**: yetki, çağıran server action'ın
+ * sorumluluğundadır. Yazma adımı worker'da çalıştığı için yetki, iş
+ * kuyruğa alınırken denetlenir.
  */
 
 /** İçe aktarım hatası. */
@@ -57,48 +62,6 @@ export class ImportRuleError extends Error {
     this.name = "ImportRuleError";
   }
 }
-
-/** Yetki kontrolü. */
-async function requireImportPermission(
-  context: AuthContext,
-  action: "create" | "execute" | "read",
-): Promise<void> {
-  if (!(await hasPermission(context, "imports", action))) {
-    throw new ImportRuleError("Bu işlem için yetkiniz yok.", "FORBIDDEN");
-  }
-}
-
-/** Doğrulama önizlemesi. */
-export type ImportPreview = {
-  /** Doğrulanan satırlar. */
-  rows: ImportRowResult[];
-
-  /** Oluşturulacak kayıt sayısı. */
-  createCount: number;
-
-  /** Güncellenecek kayıt sayısı. */
-  updateCount: number;
-
-  /** Hatalı satır sayısı. */
-  errorCount: number;
-
-  /** Toplam satır sayısı. */
-  totalRows: number;
-
-  /**
-   * Mevcut bir kaydın üzerine yazılacak satırlar.
-   *
-   * Bu satırlar için kullanıcı karar vermek zorundadır: mevcut kayıt
-   * korunur ya da dosyadaki değerlerle güncellenir.
-   */
-  conflicts: ImportRowResult[];
-
-  /** Doğrulama hatası olan satırlar. */
-  invalidRows: ImportRowResult[];
-
-  /** İş üzerinde kayıtlı çakışma çözümü. */
-  resolution: ConflictResolution;
-};
 
 /** Çakışma çözümü olmayan boş karar seti. */
 function emptyResolution(): ConflictResolution {
@@ -164,25 +127,22 @@ export function hashFile(bytes: Uint8Array): string {
  * Dosya depolamaya daha önce yüklenmiştir; burada yalnızca referansı
  * kaydedilir.
  */
-export async function createImportJob(
-  context: AuthContext,
-  input: {
-    importType: ImportType;
-    sourceSystem?: string;
-    fileName: string;
-    fileKey: string;
-  },
-): Promise<string> {
-  await requireImportPermission(context, "create");
-
+export async function createImportJob(input: {
+  organizationId: string;
+  actorId: string | null;
+  importType: ImportType;
+  sourceSystem?: string;
+  fileName: string;
+  fileKey: string;
+}): Promise<string> {
   const job = await createImportJobRecord({
-    organizationId: context.organizationId,
+    organizationId: input.organizationId,
     importType: input.importType,
     sourceSystem: input.sourceSystem ?? null,
     fileName: input.fileName,
     fileHash: "",
     fileKey: input.fileKey,
-    createdById: context.userId,
+    createdById: input.actorId,
   });
 
   return job.id;
@@ -198,14 +158,14 @@ export async function createImportJob(
  * olur: kolon eşleştirmesi değiştiğinde satır kümesi de değişebilir. Bu
  * yüzden kararlar sıfırlanır.
  */
-export async function validateImportJob(
-  context: AuthContext,
-  importJobId: string,
-  mapping: ColumnMapping,
-): Promise<ImportPreview> {
-  await requireImportPermission(context, "read");
+export async function validateImportJob(input: {
+  organizationId: string;
+  importJobId: string;
+  mapping: ColumnMapping;
+}): Promise<ImportPreview> {
+  const { organizationId, importJobId, mapping } = input;
 
-  const job = await getImportJob(context.organizationId, importJobId);
+  const job = await getImportJob(organizationId, importJobId);
 
   if (!job) {
     throw new ImportRuleError("Import işi bulunamadı.", "NOT_FOUND");
@@ -217,15 +177,9 @@ export async function validateImportJob(
 
   const { sheet, bytes } = await readSheet(job);
 
-  const preview = await buildPreview(
-    context.organizationId,
-    job,
-    sheet,
-    mapping,
-    emptyResolution(),
-  );
+  const preview = await buildPreview(organizationId, job, sheet, mapping, emptyResolution());
 
-  await updateImportJob(context.organizationId, importJobId, {
+  await updateImportJob(organizationId, importJobId, {
     status: preview.conflicts.length > 0 || preview.invalidRows.length > 0 ? "CONFLICT" : "READY",
     columnMapping: mapping,
     conflictResolution: emptyResolution(),
@@ -263,14 +217,14 @@ export async function validateImportJob(
  *
  * Kararlar import işine kaydedilir; çalıştırma adımı bu kararları kullanır.
  */
-export async function resolveImportJob(
-  context: AuthContext,
-  importJobId: string,
-  resolution: ConflictResolution,
-): Promise<ImportPreview> {
-  await requireImportPermission(context, "execute");
+export async function resolveImportJob(input: {
+  organizationId: string;
+  importJobId: string;
+  resolution: ConflictResolution;
+}): Promise<ImportPreview> {
+  const { organizationId, importJobId, resolution } = input;
 
-  const job = await getImportJob(context.organizationId, importJobId);
+  const job = await getImportJob(organizationId, importJobId);
 
   if (!job) {
     throw new ImportRuleError("Import işi bulunamadı.", "NOT_FOUND");
@@ -288,7 +242,7 @@ export async function resolveImportJob(
 
   const { sheet } = await readSheet(job);
 
-  const preview = await buildPreview(context.organizationId, job, sheet, mapping, resolution);
+  const preview = await buildPreview(organizationId, job, sheet, mapping, resolution);
 
   const unresolved = findUndecidedConflicts(preview.conflicts, resolution);
 
@@ -306,7 +260,7 @@ export async function resolveImportJob(
     );
   }
 
-  await updateImportJob(context.organizationId, importJobId, {
+  await updateImportJob(organizationId, importJobId, {
     status: "READY",
     conflictResolution: resolution,
   });
@@ -324,13 +278,14 @@ export async function resolveImportJob(
  * yeni kayıtlar her zaman yazılır, mevcut kaydı hedefleyen satırlar yalnızca
  * `APPLY` kararı verilmişse güncellenir.
  */
-export async function executeImportJob(
-  context: AuthContext,
-  importJobId: string,
-): Promise<{ created: number; updated: number; skipped: number }> {
-  await requireImportPermission(context, "execute");
+export async function executeImportJob(input: {
+  organizationId: string;
+  actorId: string | null;
+  importJobId: string;
+}): Promise<{ created: number; updated: number; skipped: number }> {
+  const { organizationId, actorId, importJobId } = input;
 
-  const job = await getImportJob(context.organizationId, importJobId);
+  const job = await getImportJob(organizationId, importJobId);
 
   if (!job) {
     throw new ImportRuleError("Import işi bulunamadı.", "NOT_FOUND");
@@ -350,7 +305,7 @@ export async function executeImportJob(
 
   const resolution = job.conflictResolution ?? emptyResolution();
 
-  const preview = await buildPreview(context.organizationId, job, sheet, mapping, resolution);
+  const preview = await buildPreview(organizationId, job, sheet, mapping, resolution);
 
   /*
    * Çakışmalar çözülmeden import çalıştırılamaz: mevcut kayıtların üzerine
@@ -383,7 +338,7 @@ export async function executeImportJob(
     );
   }
 
-  await updateImportJob(context.organizationId, importJobId, { status: "RUNNING" });
+  await updateImportJob(organizationId, importJobId, { status: "RUNNING" });
 
   try {
     const result = await db.transaction(async (tx) => {
@@ -391,7 +346,7 @@ export async function executeImportJob(
       let updated = 0;
 
       for (const row of applicable) {
-        const written = await writeRow(tx, context, job, row);
+        const written = await writeRow(tx, organizationId, actorId, job, row);
 
         if (written) {
           created += 1;
@@ -402,8 +357,8 @@ export async function executeImportJob(
 
       await writeAuditLog(
         {
-          organizationId: context.organizationId,
-          actorId: context.userId,
+          organizationId,
+          actorId,
           action: "import.completed",
           target: { type: "importJob", id: importJobId },
           metadata: {
@@ -421,7 +376,7 @@ export async function executeImportJob(
       return { created, updated };
     });
 
-    await updateImportJob(context.organizationId, importJobId, {
+    await updateImportJob(organizationId, importJobId, {
       status: "COMPLETED",
       createdCount: result.created,
       updatedCount: result.updated,
@@ -431,7 +386,7 @@ export async function executeImportJob(
 
     return { created: result.created, updated: result.updated, skipped };
   } catch (error) {
-    await updateImportJob(context.organizationId, importJobId, { status: "FAILED" });
+    await updateImportJob(organizationId, importJobId, { status: "FAILED" });
 
     throw error;
   }
@@ -440,29 +395,31 @@ export async function executeImportJob(
 /** Tek satırı yazar; kayıt oluşturulduysa true döner. */
 async function writeRow(
   tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
-  context: AuthContext,
+  organizationId: string,
+  actorId: string | null,
   job: ImportJobRecord,
   row: ImportRowResult,
 ): Promise<boolean> {
   switch (job.importType) {
     case "ITEM":
-      return writeItemRow(tx, context, row);
+      return writeItemRow(tx, organizationId, actorId, row);
 
     case "ITEM_GROUP_MAPPING":
-      return writeItemGroupMappingRow(tx, context, row);
+      return writeItemGroupMappingRow(tx, organizationId, row);
 
     case "CUSTOMER_ITEM":
-      return writeCustomerItemRow(tx, context, row);
+      return writeCustomerItemRow(tx, organizationId, row);
 
     case "BOM":
-      return writeBomRow(tx, context, row);
+      return writeBomRow(tx, organizationId, row);
   }
 }
 
 /** Item satırını yazar. */
 async function writeItemRow(
   tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
-  context: AuthContext,
+  organizationId: string,
+  actorId: string | null,
   row: ImportRowResult,
 ): Promise<boolean> {
   const values = row.values as {
@@ -482,14 +439,14 @@ async function writeItemRow(
     ? await tx
         .insert(item)
         .values({
-          organizationId: context.organizationId,
+          organizationId: organizationId,
           code: values.code,
           name: values.name,
           itemGroupId: values.itemGroupId,
           itemType: (values.itemType as never) ?? "OTHER",
           supplyType: (values.supplyType as never) ?? null,
           unitOfMeasureId: values.unitOfMeasureId as string,
-          createdById: context.userId,
+          createdById: actorId,
         })
         .returning({ id: item.id })
     : await tx
@@ -501,9 +458,7 @@ async function writeItemRow(
           supplyType: (values.supplyType as never) ?? undefined,
           unitOfMeasureId: (values.unitOfMeasureId as string) ?? undefined,
         })
-        .where(
-          and(eq(item.organizationId, context.organizationId), eq(item.id, row.targetId as string)),
-        )
+        .where(and(eq(item.organizationId, organizationId), eq(item.id, row.targetId as string)))
         .returning({ id: item.id });
 
   const itemId = record[0]?.id ?? row.targetId;
@@ -518,7 +473,7 @@ async function writeItemRow(
       .from(itemRevision)
       .where(
         and(
-          eq(itemRevision.organizationId, context.organizationId),
+          eq(itemRevision.organizationId, organizationId),
           eq(itemRevision.itemId, itemId),
           eq(itemRevision.revision, values.revision),
         ),
@@ -527,11 +482,11 @@ async function writeItemRow(
 
     if (!existingRevision[0]) {
       await tx.insert(itemRevision).values({
-        organizationId: context.organizationId,
+        organizationId: organizationId,
         itemId,
         revision: values.revision,
         status: "DRAFT",
-        createdById: context.userId,
+        createdById: actorId,
       });
     }
   }
@@ -542,7 +497,7 @@ async function writeItemRow(
       .from(itemExternalReference)
       .where(
         and(
-          eq(itemExternalReference.organizationId, context.organizationId),
+          eq(itemExternalReference.organizationId, organizationId),
           eq(itemExternalReference.itemId, itemId),
           eq(itemExternalReference.sourceSystem, "MANUAL"),
           eq(itemExternalReference.externalCode, values.erpReference),
@@ -552,10 +507,10 @@ async function writeItemRow(
 
     if (!existingReference[0]) {
       await tx.insert(itemExternalReference).values({
-        organizationId: context.organizationId,
+        organizationId: organizationId,
         itemId,
         sourceSystem: "MANUAL",
-        sourceInstanceKey: context.organizationId,
+        sourceInstanceKey: organizationId,
         externalCode: values.erpReference,
       });
     }
@@ -567,7 +522,7 @@ async function writeItemRow(
 /** Ürün grubu eşleştirme satırını yazar. */
 async function writeItemGroupMappingRow(
   tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
-  context: AuthContext,
+  organizationId: string,
   row: ImportRowResult,
 ): Promise<boolean> {
   const values = row.values as { itemId: string | null; itemGroupId: string | null };
@@ -579,7 +534,7 @@ async function writeItemGroupMappingRow(
   await tx
     .update(item)
     .set({ itemGroupId: values.itemGroupId })
-    .where(and(eq(item.organizationId, context.organizationId), eq(item.id, values.itemId)));
+    .where(and(eq(item.organizationId, organizationId), eq(item.id, values.itemId)));
 
   return false;
 }
@@ -587,7 +542,7 @@ async function writeItemGroupMappingRow(
 /** Müşteri ürün referansı satırını yazar. */
 async function writeCustomerItemRow(
   tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
-  context: AuthContext,
+  organizationId: string,
   row: ImportRowResult,
 ): Promise<boolean> {
   const values = row.values as {
@@ -609,7 +564,7 @@ async function writeCustomerItemRow(
     ? await tx
         .insert(customerItem)
         .values({
-          organizationId: context.organizationId,
+          organizationId: organizationId,
           customerId: values.customerId,
           itemId: values.itemId,
           customerPartNumber: values.customerPartNumber,
@@ -625,7 +580,7 @@ async function writeCustomerItemRow(
         })
         .where(
           and(
-            eq(customerItem.organizationId, context.organizationId),
+            eq(customerItem.organizationId, organizationId),
             eq(customerItem.id, row.targetId as string),
           ),
         )
@@ -643,7 +598,7 @@ async function writeCustomerItemRow(
       .from(customerItemRevision)
       .where(
         and(
-          eq(customerItemRevision.organizationId, context.organizationId),
+          eq(customerItemRevision.organizationId, organizationId),
           eq(customerItemRevision.customerItemId, customerItemId),
           eq(customerItemRevision.customerRevision, values.customerRevision),
         ),
@@ -652,7 +607,7 @@ async function writeCustomerItemRow(
 
     if (!existingRevision[0]) {
       await tx.insert(customerItemRevision).values({
-        organizationId: context.organizationId,
+        organizationId: organizationId,
         customerItemId,
         customerRevision: values.customerRevision,
         status: "DRAFT",
@@ -666,7 +621,7 @@ async function writeCustomerItemRow(
 /** BOM satırını yazar. */
 async function writeBomRow(
   tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
-  context: AuthContext,
+  organizationId: string,
   row: ImportRowResult,
 ): Promise<boolean> {
   const values = row.values as {
@@ -686,7 +641,7 @@ async function writeBomRow(
 
   if (isCreate) {
     await tx.insert(bomLine).values({
-      organizationId: context.organizationId,
+      organizationId: organizationId,
       bomRevisionId: values.bomRevisionId,
       childItemId: values.childItemId,
       lineNumber: values.lineNumber,
@@ -697,10 +652,7 @@ async function writeBomRow(
       .update(bomLine)
       .set({ quantity: values.quantity ?? 1 })
       .where(
-        and(
-          eq(bomLine.organizationId, context.organizationId),
-          eq(bomLine.id, row.targetId as string),
-        ),
+        and(eq(bomLine.organizationId, organizationId), eq(bomLine.id, row.targetId as string)),
       );
   }
 

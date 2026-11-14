@@ -1,6 +1,8 @@
 "use client";
 
 import { useI18n } from "@mqdms/i18n";
+import type { ConflictResolution, ImportField, ImportRowDecision } from "@mqdms/imports/schema";
+import type { ImportPreview } from "@mqdms/imports/types";
 import { Badge } from "@mqdms/ui/components/badge";
 import { Button } from "@mqdms/ui/components/button";
 import {
@@ -21,7 +23,7 @@ import {
   TableRow,
 } from "@mqdms/ui/components/table";
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { toast } from "sonner";
 
 import {
@@ -29,8 +31,6 @@ import {
   resolveImportJobAction,
   validateImportJobAction,
 } from "../actions";
-import type { ConflictResolution, ImportField, ImportRowDecision } from "../schema";
-import type { ImportPreview } from "../service";
 import { ImportConflictResolution } from "./import-conflict-resolution";
 
 type ImportMappingFormProps = {
@@ -51,6 +51,9 @@ type ImportMappingFormProps = {
 
   /** Doğrulama önizlemesi; eşleştirme yapılmışsa hazırdır. */
   initialPreview: ImportPreview | null;
+
+  /** İşin durumu; kuyruktaki import'un ilerlemesini izlemek için kullanılır. */
+  jobStatus: string;
 };
 
 /**
@@ -69,6 +72,7 @@ export function ImportMappingForm({
   initialMapping,
   initialResolution,
   initialPreview,
+  jobStatus,
 }: ImportMappingFormProps) {
   const router = useRouter();
   const { t } = useI18n();
@@ -80,6 +84,9 @@ export function ImportMappingForm({
     initialResolution.rows,
   );
   const [skipInvalidRows, setSkipInvalidRows] = useState(initialResolution.skipInvalidRows);
+
+  /* İş kuyruğa alındı mı? Worker'da çalışan import'un durumu izlenir. */
+  const [isQueued, setIsQueued] = useState(false);
 
   /*
    * Kararlar kaydedildi mi? Çakışma olan bir import için kaydedilmemiş karar
@@ -156,11 +163,41 @@ export function ImportMappingForm({
         return;
       }
 
-      toast.success(t("imports.mapping.executed"));
+      /*
+       * Yazma adımı worker'da çalışır; iş kuyruğa alındı. Sayfa periyodik
+       * olarak yenilenir ve import'un durumu izlenir.
+       */
+      setIsQueued(true);
+
+      toast.success(t("imports.mapping.queued"));
 
       router.refresh();
     });
   }
+
+  /*
+   * Kuyruktaki import'un durumu izlenir. İş tamamlandığında ya da
+   * başarısız olduğunda yoklama durur.
+   */
+  useEffect(() => {
+    if (jobStatus === "COMPLETED" || jobStatus === "FAILED") {
+      setIsQueued(false);
+    }
+  }, [jobStatus]);
+
+  useEffect(() => {
+    if (!isQueued) {
+      return;
+    }
+
+    const timer = setInterval(() => {
+      router.refresh();
+    }, 2000);
+
+    return () => {
+      clearInterval(timer);
+    };
+  }, [isQueued, router]);
 
   return (
     <div className="space-y-4">
@@ -220,7 +257,14 @@ export function ImportMappingForm({
               )}
 
               <Button
-                disabled={isPending || !preview || (needsResolution && !isResolved)}
+                disabled={
+                  isPending ||
+                  !preview ||
+                  (needsResolution && !isResolved) ||
+                  isQueued ||
+                  jobStatus === "RUNNING" ||
+                  jobStatus === "COMPLETED"
+                }
                 onClick={execute}
                 type="button"
                 variant="outline"
