@@ -463,6 +463,28 @@ export async function getSourceUpdateChanges(
     );
   }
 
+  /*
+   * Karşılaştırılacak kaynak revision, lineage kaynağının aynı varyantında
+   * ve yayınlanmış olmalıdır: başka bir varyantın taslağı karşılaştırma
+   * tabanı olamaz.
+   */
+  const source = await getProcessVariantRevision(organizationId, sourceRevisionId);
+
+  if (!source) {
+    throw new SourceUpdateRuleError("Kaynak revision bulunamadı.", "NOT_FOUND");
+  }
+
+  if (source.status !== "RELEASED") {
+    throw new SourceUpdateRuleError("Kaynak revision yayınlanmış olmalıdır.", "INVALID_STATE");
+  }
+
+  if (source.processVariantId !== lineageSource.processVariantId) {
+    throw new SourceUpdateRuleError(
+      "Kaynak revision, lineage kaynağıyla aynı varyanta ait olmalıdır.",
+      "INVALID_INPUT",
+    );
+  }
+
   const [before, after] = await Promise.all([
     getRevisionSnapshot(organizationId, lineageSource.id),
     getRevisionSnapshot(organizationId, sourceRevisionId),
