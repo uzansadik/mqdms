@@ -2,6 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useI18n } from "@mqdms/i18n";
+import { toast } from "sonner";
 import { Button } from "@mqdms/ui/components/button";
 import {
   Card,
@@ -84,11 +85,15 @@ export function PlantForm({ plant }: PlantFormProps) {
        */
       form.reset(values);
 
+      toast.success(t("plants.actions.updated"));
+
       router.refresh();
       return;
     }
 
     form.reset();
+
+    toast.success(t("plants.actions.created"));
 
     router.push("/plants");
     router.refresh();

@@ -146,13 +146,21 @@ export async function getAuthContext(
     return null;
   }
 
-  const requested = organizationId ?? session.session.activeOrganizationId ?? undefined;
-
-  const membership = requested
-    ? memberships.find((row) => row.organizationId === requested)
-    : memberships.length === 1
-      ? memberships[0]
-      : undefined;
+  /*
+   * Organizasyon çözümü:
+   *
+   * - Açıkça verilen `organizationId` **katıdır**: üye olunmayan bir
+   *   organizasyon reddedilir.
+   * - Oturumdaki aktif organizasyon geçerli bir üyeliğe karşılık geliyorsa
+   *   kullanılır.
+   * - Aktif organizasyon yoksa **ya da** artık üye olunmayan bir organizasyonu
+   *   gösteriyorsa (kullanıcı ayrıldı) ve kullanıcının tek üyeliği varsa o
+   *   üyelik kullanılır.
+   */
+  const membership = organizationId
+    ? memberships.find((row) => row.organizationId === organizationId)
+    : (memberships.find((row) => row.organizationId === session.session.activeOrganizationId) ??
+      (memberships.length === 1 ? memberships[0] : undefined));
 
   if (!membership) {
     return null;
