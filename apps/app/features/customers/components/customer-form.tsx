@@ -2,6 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useI18n } from "@mqdms/i18n";
+import { toast } from "sonner";
 import { Button } from "@mqdms/ui/components/button";
 import {
   Card,
@@ -83,11 +84,15 @@ export function CustomerForm({ customer }: CustomerFormProps) {
        */
       form.reset(values);
 
+      toast.success(t("customers.actions.updated"));
+
       router.refresh();
       return;
     }
 
     form.reset();
+
+    toast.success(t("customers.actions.created"));
 
     router.push("/customers");
     router.refresh();

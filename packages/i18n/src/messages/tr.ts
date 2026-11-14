@@ -178,6 +178,20 @@ export const tr = {
   "app.nav.engineeringLibrary": "Mühendislik kütüphanesi",
   "app.nav.masterProcesses": "Ana Prosesler",
 
+  "app.userMenu.profile": "Profil",
+  "app.userMenu.settings": "Ayarlar",
+  "app.userMenu.signOut": "Çıkış yap",
+  "app.userMenu.signingOut": "Çıkılıyor...",
+  "app.settings.title": "Ayarlar",
+  "app.settings.description": "Dil ve tema tercihleri.",
+  "app.settings.language.title": "Dil",
+  "app.settings.language.description": "Uygulama dilini değiştirin.",
+  "app.settings.theme.title": "Tema",
+  "app.settings.theme.description": "Arayüzün açık veya koyu görünümünü seçin.",
+  "app.settings.theme.light": "Açık",
+  "app.settings.theme.dark": "Koyu",
+  "app.settings.theme.system": "Sistem",
+
   "app.dashboard.welcome": "Tekrar hoş geldin, {name}",
   "app.dashboard.description": "{organization} için genel bakış.",
 
@@ -257,6 +271,8 @@ export const tr = {
   "customers.status.INACTIVE": "Pasif",
 
   "customers.actions.edit": "Düzenle",
+  "customers.actions.created": "Müşteri kaydedildi.",
+  "customers.actions.updated": "Müşteri güncellendi.",
   "customers.actions.archive": "Arşivle",
   "customers.actions.restore": "Arşivden çıkar",
   "customers.actions.archived": "Müşteri arşivlendi.",
@@ -371,6 +387,8 @@ export const tr = {
   "plants.status.INACTIVE": "Pasif",
 
   "plants.actions.edit": "Düzenle",
+  "plants.actions.created": "Tesis kaydedildi.",
+  "plants.actions.updated": "Tesis güncellendi.",
   "plants.actions.archive": "Arşivle",
   "plants.actions.restore": "Arşivden çıkar",
   "plants.actions.archived": "Tesis arşivlendi.",
@@ -438,6 +456,8 @@ export const tr = {
   "projects.status.CANCELLED": "İptal edildi",
 
   "projects.actions.edit": "Düzenle",
+  "projects.actions.created": "Proje kaydedildi.",
+  "projects.actions.updated": "Proje güncellendi.",
   "projects.actions.archive": "Arşivle",
   "projects.actions.restore": "Arşivden çıkar",
   "projects.actions.archived": "Proje arşivlendi.",
@@ -550,6 +570,8 @@ export const tr = {
   "items.supplyType.UNKNOWN": "Bilinmiyor",
 
   "items.actions.edit": "Düzenle",
+  "items.actions.created": "Ürün kaydedildi.",
+  "items.actions.updated": "Ürün güncellendi.",
   "items.actions.archive": "Arşivle",
   "items.actions.restore": "Arşivden çıkar",
   "items.actions.archived": "Ürün arşivlendi.",
@@ -604,6 +626,8 @@ export const tr = {
   "itemGroups.form.submit.update": "Değişiklikleri kaydet",
 
   "itemGroups.actions.edit": "Düzenle",
+  "itemGroups.actions.created": "Ürün grubu kaydedildi.",
+  "itemGroups.actions.updated": "Ürün grubu güncellendi.",
   "itemGroups.actions.archive": "Arşivle",
   "itemGroups.actions.restore": "Arşivden çıkar",
   "itemGroups.actions.archived": "Ürün grubu arşivlendi.",
@@ -809,6 +833,8 @@ export const tr = {
   "boms.revisions.status.SUPERSEDED": "Geçersiz kılındı",
 
   "boms.actions.edit": "Düzenle",
+  "boms.actions.created": "BOM kaydedildi.",
+  "boms.actions.updated": "BOM güncellendi.",
 
   "boms.archived.title": "Arşivlenen BOM'lar",
   "boms.archived.description": "Arşivlenen BOM'lar ilişkili kayıtlarıyla birlikte korunur.",

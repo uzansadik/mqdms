@@ -22,14 +22,6 @@ export default async function ProtectedLayout({ children }: ProtectedLayoutProps
    */
   const visibleModules = ["dashboard"];
 
-  if (await canAccess(context, "fmea", "read")) {
-    visibleModules.push("fmea");
-  }
-
-  if (await canAccess(context, "synoptic", "read")) {
-    visibleModules.push("synoptic");
-  }
-
   if (await canAccess(context, "customers", "read")) {
     visibleModules.push("customers");
   }

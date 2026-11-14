@@ -2,6 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useI18n } from "@mqdms/i18n";
+import { toast } from "sonner";
 import { Button } from "@mqdms/ui/components/button";
 import {
   Card,
@@ -77,9 +78,13 @@ export function ItemGroupForm({ group, groups }: ItemGroupFormProps) {
     if (group) {
       form.reset(values);
 
+      toast.success(t("itemGroups.actions.updated"));
+
       router.refresh();
       return;
     }
+
+    toast.success(t("itemGroups.actions.created"));
 
     router.push("/item-groups");
     router.refresh();

@@ -177,6 +177,20 @@ export const en = {
   "app.nav.engineeringLibrary": "Engineering library",
   "app.nav.masterProcesses": "Master Processes",
 
+  "app.userMenu.profile": "Profile",
+  "app.userMenu.settings": "Settings",
+  "app.userMenu.signOut": "Sign out",
+  "app.userMenu.signingOut": "Signing out...",
+  "app.settings.title": "Settings",
+  "app.settings.description": "Language and theme preferences.",
+  "app.settings.language.title": "Language",
+  "app.settings.language.description": "Change the application language.",
+  "app.settings.theme.title": "Theme",
+  "app.settings.theme.description": "Choose the light or dark appearance.",
+  "app.settings.theme.light": "Light",
+  "app.settings.theme.dark": "Dark",
+  "app.settings.theme.system": "System",
+
   "app.dashboard.welcome": "Welcome back, {name}",
   "app.dashboard.description": "Here is an overview of {organization}.",
 
@@ -257,6 +271,8 @@ export const en = {
   "customers.status.INACTIVE": "Inactive",
 
   "customers.actions.edit": "Edit",
+  "customers.actions.created": "Customer saved.",
+  "customers.actions.updated": "Customer updated.",
   "customers.actions.archive": "Archive",
   "customers.actions.restore": "Restore",
   "customers.actions.archived": "Customer archived.",
@@ -372,6 +388,8 @@ export const en = {
   "plants.status.INACTIVE": "Inactive",
 
   "plants.actions.edit": "Edit",
+  "plants.actions.created": "Plant saved.",
+  "plants.actions.updated": "Plant updated.",
   "plants.actions.archive": "Archive",
   "plants.actions.restore": "Restore",
   "plants.actions.archived": "Plant archived.",
@@ -440,6 +458,8 @@ export const en = {
   "projects.status.CANCELLED": "Cancelled",
 
   "projects.actions.edit": "Edit",
+  "projects.actions.created": "Project saved.",
+  "projects.actions.updated": "Project updated.",
   "projects.actions.archive": "Archive",
   "projects.actions.restore": "Restore",
   "projects.actions.archived": "Project archived.",
@@ -552,6 +572,8 @@ export const en = {
   "items.supplyType.UNKNOWN": "Unknown",
 
   "items.actions.edit": "Edit",
+  "items.actions.created": "Item saved.",
+  "items.actions.updated": "Item updated.",
   "items.actions.archive": "Archive",
   "items.actions.restore": "Restore",
   "items.actions.archived": "Item archived.",
@@ -605,6 +627,8 @@ export const en = {
   "itemGroups.form.submit.update": "Save changes",
 
   "itemGroups.actions.edit": "Edit",
+  "itemGroups.actions.created": "Item group saved.",
+  "itemGroups.actions.updated": "Item group updated.",
   "itemGroups.actions.archive": "Archive",
   "itemGroups.actions.restore": "Restore",
   "itemGroups.actions.archived": "Item group archived.",
@@ -808,6 +832,8 @@ export const en = {
   "boms.revisions.status.SUPERSEDED": "Superseded",
 
   "boms.actions.edit": "Edit",
+  "boms.actions.created": "BOM saved.",
+  "boms.actions.updated": "BOM updated.",
 
   "boms.archived.title": "Archived BOMs",
   "boms.archived.description": "Archived BOMs are kept with all their related records.",

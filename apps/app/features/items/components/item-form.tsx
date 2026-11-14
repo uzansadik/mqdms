@@ -2,6 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useI18n } from "@mqdms/i18n";
+import { toast } from "sonner";
 import { Button } from "@mqdms/ui/components/button";
 import {
   Card,
@@ -97,9 +98,14 @@ export function ItemForm({ item, groups, units }: ItemFormProps) {
        */
       form.reset(values);
 
+      toast.success(t("items.actions.updated"));
+
+      router.push("/items");
       router.refresh();
       return;
     }
+
+    toast.success(t("items.actions.created"));
 
     router.push("/items");
     router.refresh();

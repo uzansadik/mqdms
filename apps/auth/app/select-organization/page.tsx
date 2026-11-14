@@ -1,3 +1,4 @@
+import { env } from "@mqdms/env/client";
 import { getTranslations } from "@mqdms/i18n/server";
 import {
   Card,
@@ -19,6 +20,8 @@ export const dynamic = "force-dynamic";
  *
  * Kullanıcının birden fazla organizasyona üyeliği varsa aktif organizasyon
  * seçilmelidir. Aktif organizasyon her işlemde yeniden doğrulanır.
+ *
+ * Seçim sonrası kullanıcı iş uygulamasına yönlendirilir.
  */
 export default async function SelectOrganizationPage() {
   const t = await getTranslations();
@@ -32,7 +35,7 @@ export default async function SelectOrganizationPage() {
   const organizations = await getOrganizations();
 
   if (organizations.length <= 1) {
-    redirect("/dashboard");
+    redirect(env.NEXT_PUBLIC_BUSINESS_APP_URL);
   }
 
   return (

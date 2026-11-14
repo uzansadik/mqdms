@@ -1,6 +1,5 @@
 "use client";
 
-import { env } from "@mqdms/env/client";
 import { useI18n } from "@mqdms/i18n";
 import {
   Sidebar,
@@ -19,19 +18,17 @@ import {
   Boxes,
   Building2,
   Factory,
-  FileSpreadsheet,
   FolderKanban,
   FolderTree,
   LayoutDashboard,
-  Network,
   Package,
   Ruler,
   Upload,
-  UserRound,
   Workflow,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { UserMenu } from "@/features/shell/user-menu";
 
 type AppSidebarProps = {
   organization: {
@@ -51,24 +48,17 @@ export function AppSidebar({ organization, user, visibleModules }: AppSidebarPro
   const pathname = usePathname();
   const { t } = useI18n();
 
+  /*
+   * FMEA ve sinoptik menüleri kaldırıldı: modüller henüz yer tutucu durumunda
+   * ve kütüphaneye girmezler. Rotalar ve izinler korunur; yalnızca menü
+   * girişleri kaldırılmıştır.
+   */
   const navigation = [
     {
       title: t("app.nav.dashboard"),
       href: "/",
       icon: LayoutDashboard,
       module: "dashboard",
-    },
-    {
-      title: t("app.nav.fmea"),
-      href: "/fmea",
-      icon: FileSpreadsheet,
-      module: "fmea",
-    },
-    {
-      title: t("app.nav.synoptic"),
-      href: "/synoptic",
-      icon: Network,
-      module: "synoptic",
     },
   ].filter((item) => visibleModules.includes(item.module));
 
@@ -267,22 +257,7 @@ export function AppSidebar({ organization, user, visibleModules }: AppSidebarPro
       </SidebarContent>
 
       <SidebarFooter>
-        <div className="flex items-center gap-2 px-2 py-1.5 text-sm">
-          <UserRound className="size-4 shrink-0 text-muted-foreground" />
-
-          <div className="min-w-0">
-            <p className="truncate font-medium">{user.name}</p>
-
-            <p className="truncate text-xs text-muted-foreground">{user.email}</p>
-          </div>
-        </div>
-
-        <a
-          className="text-xs text-muted-foreground underline-offset-4 hover:underline"
-          href={env.NEXT_PUBLIC_AUTH_URL}
-        >
-          {t("app.nav.account")}
-        </a>
+        <UserMenu user={user} />
       </SidebarFooter>
 
       <SidebarRail />
