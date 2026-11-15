@@ -190,15 +190,15 @@ export function BomTreeGrid({
 
   const columnWidths = useMemo(
     () => ({
-      tree: "minmax(190px, 1.2fr)",
-      code: "minmax(140px, 0.9fr)",
-      name: "minmax(170px, 1.3fr)",
-      type: "minmax(110px, 0.7fr)",
-      supply: "minmax(110px, 0.7fr)",
-      sellable: "minmax(90px, 0.6fr)",
-      quantity: "minmax(100px, 0.6fr)",
-      unit: "minmax(120px, 0.8fr)",
-      actions: "minmax(140px, 0.9fr)",
+      tree: "minmax(150px, 1fr)",
+      code: "minmax(130px, 0.8fr)",
+      name: "minmax(160px, 1.2fr)",
+      type: "minmax(100px, 0.6fr)",
+      supply: "minmax(100px, 0.6fr)",
+      sellable: "minmax(90px, 0.5fr)",
+      quantity: "minmax(90px, 0.5fr)",
+      unit: "minmax(100px, 0.6fr)",
+      actions: "minmax(140px, 0.8fr)",
     }),
     [],
   );
