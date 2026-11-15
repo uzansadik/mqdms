@@ -123,6 +123,41 @@ function parseEnum<T extends string>(
 }
 
 /**
+ * Boolean alanı doğrular.
+ *
+ * Excel'de "Evet/Hayır", "true/false", "1/0" ve "E/H" biçimleri kullanılır;
+ * karşılaştırma büyük/küçük harf duyarsızdır.
+ */
+function parseBoolean(
+  value: string,
+  field: ImportField,
+  mapping: ColumnMapping,
+  errors: ImportRowError[],
+): boolean | null {
+  if (value === "") {
+    return null;
+  }
+
+  const normalized = value.trim().toLowerCase();
+
+  if (["true", "1", "evet", "e", "var", "yes", "y"].includes(normalized)) {
+    return true;
+  }
+
+  if (["false", "0", "hayır", "hayir", "h", "yok", "no", "n"].includes(normalized)) {
+    return false;
+  }
+
+  errors.push({
+    column: sourceColumn(mapping, field),
+    code: "INVALID_ENUM",
+    message: `"${value}" geçerli bir değer değil. İzin verilenler: Evet/Hayır, true/false, 1/0.`,
+  });
+
+  return null;
+}
+
+/**
  * Satırları doğrular.
  *
  * @param organizationId import'un kapsandığı organizasyon.
@@ -209,6 +244,45 @@ async function validateItemRow(
     ["MANUFACTURED", "PURCHASED", "OUTSOURCED", "MIXED", "UNKNOWN"],
   );
 
+  /*
+   * Sınıflandırma alanları zorunludur: ürün kartının satılabilirliği ve
+   * yapısal niteliği BOM ağacında nerede durabileceğini belirler. Bilinmeyen
+   * bir kart, BOM kökü olamaz.
+   */
+  const isSellable = parseBoolean(
+    readValue(row, mapping, "isSellable"),
+    "isSellable",
+    mapping,
+    errors,
+  );
+
+  if (
+    isSellable === null &&
+    !errors.some((error) => error.column === sourceColumn(mapping, "isSellable"))
+  ) {
+    errors.push({
+      column: sourceColumn(mapping, "isSellable"),
+      code: "MISSING_REQUIRED",
+      message: "Satılabilirlik zorunludur (Evet/Hayır).",
+    });
+  }
+
+  const structureType = parseEnum(
+    readValue(row, mapping, "structureType"),
+    "structureType",
+    mapping,
+    errors,
+    ["ASSEMBLY", "GROUP", "PART"],
+  );
+
+  if (structureType === null && readValue(row, mapping, "structureType") === "") {
+    errors.push({
+      column: sourceColumn(mapping, "structureType"),
+      code: "MISSING_REQUIRED",
+      message: "Yapı türü zorunludur (ASSEMBLY, GROUP, PART).",
+    });
+  }
+
   let itemGroupId: string | null = null;
 
   if (itemGroupCode !== "") {
@@ -262,6 +336,8 @@ async function validateItemRow(
       itemGroupId,
       itemType,
       supplyType,
+      isSellable,
+      structureType,
       unitOfMeasureId,
       revision: revision === "" ? null : revision,
       erpReference: erpReference === "" ? null : erpReference,

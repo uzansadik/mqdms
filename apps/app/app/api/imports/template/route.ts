@@ -14,6 +14,8 @@ const FIELD_EXAMPLES: Record<string, string> = {
   itemGroup: "GENEL",
   itemType: "FINISHED_GOOD",
   supplyType: "MANUFACTURED",
+  isSellable: "Evet",
+  structureType: "ASSEMBLY",
   unit: "AD",
   revision: "REV.01",
   erpReference: "ERP-0001",

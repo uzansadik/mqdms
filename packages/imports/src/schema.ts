@@ -20,7 +20,18 @@ export type ImportType = z.infer<typeof importTypeSchema>;
  * eşleştirme sırasında çeviri gerekmez.
  */
 export const importFields = {
-  ITEM: ["code", "name", "itemGroup", "itemType", "supplyType", "unit", "revision", "erpReference"],
+  ITEM: [
+    "code",
+    "name",
+    "itemGroup",
+    "itemType",
+    "supplyType",
+    "isSellable",
+    "structureType",
+    "unit",
+    "revision",
+    "erpReference",
+  ],
   ITEM_GROUP_MAPPING: ["itemCode", "groupCode"],
   CUSTOMER_ITEM: [
     "itemCode",
@@ -52,7 +63,7 @@ export type ImportField = (typeof importFields)[ImportType][number];
  * kullanıcıyı yönlendirir.
  */
 export const requiredImportFields = {
-  ITEM: ["code", "name", "unit"],
+  ITEM: ["code", "name", "unit", "isSellable", "structureType"],
   ITEM_GROUP_MAPPING: ["itemCode", "groupCode"],
   CUSTOMER_ITEM: ["itemCode", "customerCode", "customerPartNumber"],
   BOM: ["parentItemCode", "childItemCode", "quantity"],

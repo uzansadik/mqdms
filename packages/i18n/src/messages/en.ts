@@ -1181,6 +1181,8 @@ export const en = {
   "imports.fields.itemGroup": "Item group code",
   "imports.fields.itemType": "Item type",
   "imports.fields.supplyType": "Supply type",
+  "imports.fields.isSellable": "Sellable (Yes/No)",
+  "imports.fields.structureType": "Structure (ASSEMBLY, GROUP, PART)",
   "imports.fields.unit": "Unit code",
   "imports.fields.revision": "Revision",
   "imports.fields.erpReference": "ERP reference",

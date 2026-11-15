@@ -71,6 +71,13 @@
       "when": 1794737826202,
       "tag": "0009_noisy_la_nuit",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1794743811128,
+      "tag": "0010_reset_legacy_items",
+      "breakpoints": true
     }
   ]
 }

@@ -470,6 +470,8 @@ async function writeItemRow(
     itemGroupId: string | null;
     itemType: string | null;
     supplyType: string | null;
+    isSellable: boolean | null;
+    structureType: string | null;
     unitOfMeasureId: string | null;
     revision: string | null;
     erpReference: string | null;
@@ -487,6 +489,8 @@ async function writeItemRow(
           itemGroupId: values.itemGroupId,
           itemType: (values.itemType as never) ?? "OTHER",
           supplyType: (values.supplyType as never) ?? null,
+          isSellable: values.isSellable ?? false,
+          structureType: (values.structureType as never) ?? "PART",
           unitOfMeasureId: values.unitOfMeasureId as string,
           createdById: actorId,
         })
@@ -498,6 +502,8 @@ async function writeItemRow(
           itemGroupId: values.itemGroupId,
           itemType: (values.itemType as never) ?? undefined,
           supplyType: (values.supplyType as never) ?? undefined,
+          isSellable: values.isSellable ?? undefined,
+          structureType: (values.structureType as never) ?? undefined,
           unitOfMeasureId: (values.unitOfMeasureId as string) ?? undefined,
         })
         .where(and(eq(item.organizationId, organizationId), eq(item.id, row.targetId as string)))
