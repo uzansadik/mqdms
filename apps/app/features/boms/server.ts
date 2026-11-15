@@ -1,14 +1,15 @@
 import { requirePermission } from "@/features/auth/session";
-import { listItemOptions, listItemRevisionOptions } from "@/features/items/repository";
+import { getItem } from "@/features/items/repository";
 import { listUnitOptions } from "@/features/units/repository";
 
-import { explodeBom, flattenBom } from "./explosion";
+import { flattenBom } from "./explosion";
 import {
   type BomListQuery,
   countBoms,
   getBom,
-  listBomRevisionOptions,
+  listBomLines,
   listBomRevisions,
+  listBomRootCandidates,
   listBoms,
 } from "./repository";
 
@@ -37,48 +38,52 @@ export async function getBomListData(query: BomListQuery) {
 /**
  * Detay sayfasının verisi.
  *
- * Revision listesi, hiyerarşik ağaç ve düzleştirilmiş toplamlar birlikte
- * döner: ağaç yapıyı, düzleştirilmiş görünüm ise malzeme ihtiyacını gösterir.
+ * Revision listesi, seçili revision'ın satırları ve düzleştirilmiş toplamlar
+ * birlikte döner: ağaç yapıyı, düzleştirilmiş görünüm ise malzeme ihtiyacını
+ * gösterir.
+ *
+ * @param revisionId Seçilecek revision; verilmezse açık taslak, yoksa son
+ * yayınlanmış revision kullanılır.
  */
-export async function getBomDetailData(organizationId: string, bomId: string) {
+export async function getBomDetailData(
+  organizationId: string,
+  bomId: string,
+  revisionId?: string | null,
+) {
   const record = await getBom(organizationId, bomId);
 
   if (!record) {
     return null;
   }
 
-  const revisions = await listBomRevisions(organizationId, bomId);
+  const [revisions, rootItem] = await Promise.all([
+    listBomRevisions(organizationId, bomId),
+    getItem(organizationId, record.itemId),
+  ]);
 
-  const currentRevision = revisions[0] ?? null;
+  const selected =
+    (revisionId ? revisions.find((revision) => revision.id === revisionId) : null) ??
+    revisions.find((revision) => revision.status === "DRAFT" || revision.status === "IN_REVIEW") ??
+    revisions.find((revision) => revision.status === "RELEASED") ??
+    revisions[0] ??
+    null;
 
-  const [tree, flattened] = currentRevision
+  const [lines, flattened] = selected
     ? await Promise.all([
-        explodeBom(organizationId, currentRevision.id),
-        flattenBom(organizationId, currentRevision.id),
+        listBomLines(organizationId, selected.id),
+        flattenBom(organizationId, selected.id),
       ])
     : [[], []];
 
-  return { bom: record, revisions, currentRevision, tree, flattened };
+  return { bom: record, rootItem, revisions, currentRevision: selected, lines, flattened };
 }
 
 /** Formun ihtiyaç duyduğu seçim listeleri. */
 export async function getBomFormOptions(organizationId: string) {
-  return { items: await listItemOptions(organizationId) };
-}
-
-/**
- * Satır ve revision formlarının ihtiyaç duyduğu seçim listeleri.
- *
- * Alt BOM revision'ı seçimi, bileşenin ürününe göre istemcide süzülür;
- * bu yüzden tüm revision'lar birlikte gönderilir.
- */
-export async function getBomEditorOptions(organizationId: string) {
-  const [items, itemRevisions, bomRevisions, units] = await Promise.all([
-    listItemOptions(organizationId),
-    listItemRevisionOptions(organizationId),
-    listBomRevisionOptions(organizationId),
+  const [units, items] = await Promise.all([
     listUnitOptions(organizationId),
+    listBomRootCandidates(organizationId),
   ]);
 
-  return { items, itemRevisions, bomRevisions, units };
+  return { units, items };
 }

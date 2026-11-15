@@ -2,7 +2,8 @@ import { db } from "@mqdms/db";
 import { item, itemGroup } from "@mqdms/db/schema";
 import { and, eq, inArray } from "drizzle-orm";
 
-import { type BomExplosionNode, explodeBom } from "@/features/boms/explosion";
+import { explodeBom } from "@/features/boms/explosion";
+import type { BomTreeNode } from "@/features/boms/tree";
 
 /**
  * Ürün ağacı analizi.
@@ -48,7 +49,12 @@ export type ProductStructureAnalysis = {
   /** Kendi alt BOM'u bulunan item sayısı. */
   itemsWithOwnBomCount: number;
 
-  /** Çözümlenmemiş BOM referansı sayısı. */
+  /**
+   * Çözümlenemeyen referans sayısı.
+   *
+   * Alt BOM kavramı kaldırıldığı için çözümlenmemiş alt BOM referansı yoktur;
+   * sayaç, pasif ya da arşivlenmiş ürün satırlarını gösterir.
+   */
   unresolvedReferenceCount: number;
 
   /** Birden fazla kez kullanılan item'lar ve kullanım sayıları. */
@@ -131,8 +137,10 @@ export async function analyzeProductStructure(
    * farklı revision veya farklı birimle kullanılıyorsa doğrulanmadan tek
    * satırda birleştirilmez.
    */
-  const quantityKey = (node: BomExplosionNode) =>
-    `${node.childItemId}|${node.childItemRevision ?? ""}|${node.unitOfMeasureCode ?? ""}`;
+  const quantityKey = (node: BomTreeNode) =>
+    `${node.line.childItemId}|${node.line.childItemRevision ?? ""}|${
+      node.line.unitOfMeasureCode ?? ""
+    }`;
 
   const quantities = new Map<
     string,
@@ -146,13 +154,15 @@ export async function analyzeProductStructure(
     }
   >();
 
-  const walk = (nodes: BomExplosionNode[], multiplier: number) => {
+  const walk = (nodes: BomTreeNode[], multiplier: number) => {
     for (const node of nodes) {
-      itemIds.add(node.childItemId);
-      occurrences.set(node.childItemId, (occurrences.get(node.childItemId) ?? 0) + 1);
+      const { line } = node;
+
+      itemIds.add(line.childItemId);
+      occurrences.set(line.childItemId, (occurrences.get(line.childItemId) ?? 0) + 1);
 
       const key = quantityKey(node);
-      const quantity = node.quantity * multiplier;
+      const quantity = line.quantity * multiplier;
 
       const existingQuantity = quantities.get(key);
 
@@ -160,21 +170,21 @@ export async function analyzeProductStructure(
         existingQuantity.quantity += quantity;
       } else {
         quantities.set(key, {
-          itemId: node.childItemId,
-          itemCode: node.childItemCode,
-          itemName: node.childItemName,
+          itemId: line.childItemId,
+          itemCode: line.childItemCode,
+          itemName: line.childItemName,
           quantity,
-          unitOfMeasureCode: node.unitOfMeasureCode,
-          itemRevision: node.childItemRevision,
+          unitOfMeasureCode: line.unitOfMeasureCode,
+          itemRevision: line.childItemRevision,
         });
       }
 
-      if (node.unresolved) {
+      if (line.childItemStatus !== "ACTIVE" || line.childItemArchivedAt) {
         unresolvedReferenceCount += 1;
       }
 
       if (node.children.length > 0) {
-        itemsWithChildren.add(node.childItemId);
+        itemsWithChildren.add(line.childItemId);
         walk(node.children, quantity);
       }
     }

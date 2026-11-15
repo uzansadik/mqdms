@@ -117,9 +117,7 @@ export async function BomComparison({
 
           <TableBody>
             {changes.map((change) => (
-              <TableRow
-                key={`${change.type}-${change.referenceDesignation ?? change.childItemId}-${change.lineNumber ?? change.previousLineNumber}`}
-              >
+              <TableRow key={`${change.type}-${change.childItemId}-${change.path ?? "-"}`}>
                 <TableCell>
                   <Badge variant="outline">{t(`boms.changeType.${change.type}`)}</Badge>
                 </TableCell>
@@ -127,9 +125,8 @@ export async function BomComparison({
                 <TableCell>
                   {change.childItemCode ?? "-"}
                   <span className="block text-xs text-muted-foreground">
-                    {change.referenceDesignation ? `${change.referenceDesignation} · ` : ""}
-                    {t("boms.comparison.columns.line")}{" "}
-                    {change.lineNumber ?? change.previousLineNumber ?? "-"}
+                    {change.path ? `${change.path} · ` : ""}
+                    {t("boms.comparison.columns.line")} {change.path ?? "-"}
                   </span>
                 </TableCell>
 

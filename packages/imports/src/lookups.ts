@@ -9,7 +9,7 @@ import {
   itemGroup,
   itemUnit,
 } from "@mqdms/db/schema";
-import { and, eq, isNull, sql } from "drizzle-orm";
+import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 
 /**
  * Import doğrulamasının ihtiyaç duyduğu minimum referans sorguları.
@@ -154,6 +154,35 @@ export async function findBomRevisionByValue(
         eq(bomRevision.bomId, bomId),
         eq(bomRevision.revision, revision),
       ),
+    )
+    .limit(1);
+
+  return rows[0] ?? null;
+}
+
+/**
+ * BOM'un yazılabilir revision'ı.
+ *
+ * Revision numarası sistem tarafından atanır; import açık taslağa yazar.
+ * Açık taslak yoksa yayınlanmış revision kullanılır.
+ */
+export async function findWritableBomRevision(
+  organizationId: string,
+  bomId: string,
+): Promise<{ id: string } | null> {
+  const rows = await db
+    .select({ id: bomRevision.id })
+    .from(bomRevision)
+    .where(
+      and(
+        eq(bomRevision.organizationId, organizationId),
+        eq(bomRevision.bomId, bomId),
+        inArray(bomRevision.status, ["DRAFT", "RELEASED"]),
+      ),
+    )
+    .orderBy(
+      sql`case ${bomRevision.status} when 'DRAFT' then 0 else 1 end`,
+      sql`${bomRevision.revisionNumber} desc`,
     )
     .limit(1);
 

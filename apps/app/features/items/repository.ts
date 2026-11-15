@@ -42,6 +42,8 @@ export type ItemListItem = {
     | "CONSUMABLE"
     | "OTHER";
   supplyType: "MANUFACTURED" | "PURCHASED" | "OUTSOURCED" | "MIXED" | "UNKNOWN" | null;
+  isSellable: boolean;
+  structureType: "ASSEMBLY" | "GROUP" | "PART";
   unitOfMeasureCode: string | null;
   status: "ACTIVE" | "INACTIVE";
   customerReferenceCount: number;
@@ -64,6 +66,8 @@ export type ItemRecord = {
     | "CONSUMABLE"
     | "OTHER";
   supplyType: "MANUFACTURED" | "PURCHASED" | "OUTSOURCED" | "MIXED" | "UNKNOWN" | null;
+  isSellable: boolean;
+  structureType: "ASSEMBLY" | "GROUP" | "PART";
   unitOfMeasureId: string;
   status: "ACTIVE" | "INACTIVE";
   createdAt: Date;
@@ -113,6 +117,8 @@ export async function listItems(query: ItemListQuery): Promise<ItemListItem[]> {
       itemGroupName: itemGroup.name,
       itemType: item.itemType,
       supplyType: item.supplyType,
+      isSellable: item.isSellable,
+      structureType: item.structureType,
       unitOfMeasureCode: itemUnit.code,
       status: item.status,
       archivedAt: item.archivedAt,
@@ -165,6 +171,8 @@ export async function getItem(organizationId: string, itemId: string): Promise<I
       itemGroupId: item.itemGroupId,
       itemType: item.itemType,
       supplyType: item.supplyType,
+      isSellable: item.isSellable,
+      structureType: item.structureType,
       unitOfMeasureId: item.unitOfMeasureId,
       status: item.status,
       createdAt: item.createdAt,
@@ -198,6 +206,8 @@ export async function findItemByCode(
       itemGroupId: item.itemGroupId,
       itemType: item.itemType,
       supplyType: item.supplyType,
+      isSellable: item.isSellable,
+      structureType: item.structureType,
       unitOfMeasureId: item.unitOfMeasureId,
       status: item.status,
       createdAt: item.createdAt,
@@ -258,6 +268,42 @@ export async function findActiveItemsByIds(
         inArray(item.id, itemIds),
       ),
     );
+}
+
+/**
+ * Verilen id'lerle eşleşen ürünlerin tam kaydı.
+ *
+ * BOM taslağı doğrulanırken satırdaki bütün ürünler tek sorguyla okunur;
+ * her satır için ayrı sorgu atmak ağaç büyüdükçe yavaşlar.
+ */
+export async function listItemsByIds(
+  organizationId: string,
+  itemIds: string[],
+): Promise<ItemRecord[]> {
+  if (itemIds.length === 0) {
+    return [];
+  }
+
+  return db
+    .select({
+      id: item.id,
+      organizationId: item.organizationId,
+      code: item.code,
+      name: item.name,
+      description: item.description,
+      itemGroupId: item.itemGroupId,
+      itemType: item.itemType,
+      supplyType: item.supplyType,
+      isSellable: item.isSellable,
+      structureType: item.structureType,
+      unitOfMeasureId: item.unitOfMeasureId,
+      status: item.status,
+      createdAt: item.createdAt,
+      updatedAt: item.updatedAt,
+      archivedAt: item.archivedAt,
+    })
+    .from(item)
+    .where(and(eq(item.organizationId, organizationId), inArray(item.id, itemIds)));
 }
 
 /** Ürünün revision kayıtları (en yeni önce). */

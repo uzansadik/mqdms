@@ -31,12 +31,10 @@ export {
   conflictResolutionSchema,
   type ImportField,
   type ImportRowDecision,
-  type RequiredImportField,
   type ImportType,
   importExecuteSchema,
   importFields,
   importResolveSchema,
-  requiredImportFields,
   importRowDecisionSchema,
   importRowErrorSchema,
   importRowStatusSchema,
@@ -44,6 +42,8 @@ export {
   importUploadSchema,
   importValidateSchema,
   isKnownImportField,
+  type RequiredImportField,
+  requiredImportFields,
 } from "./schema";
 export {
   createImportJob,

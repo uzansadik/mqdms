@@ -1,0 +1,2 @@
+ALTER TABLE "bom_line" ADD CONSTRAINT "bom_line_parent_line_org_fk" FOREIGN KEY ("organization_id","bom_revision_id","parent_line_id") REFERENCES "public"."bom_line"("organization_id","bom_revision_id","id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "bom_line" ADD CONSTRAINT "bom_line_parent_not_self_check" CHECK ("bom_line"."parent_line_id" IS NULL OR "bom_line"."parent_line_id" <> "bom_line"."id");

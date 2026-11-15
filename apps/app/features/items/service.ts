@@ -106,6 +106,8 @@ export async function createItem(context: AuthContext, input: ItemFormValues): P
         itemGroupId,
         itemType: input.itemType,
         supplyType: input.supplyType === "" ? null : (input.supplyType ?? null),
+        isSellable: input.isSellable,
+        structureType: input.structureType,
         unitOfMeasureId: input.unitOfMeasureId,
         status: input.status,
         createdById: context.userId,
@@ -169,6 +171,8 @@ export async function updateItem(
         itemGroupId,
         itemType: input.itemType,
         supplyType: input.supplyType === "" ? null : (input.supplyType ?? null),
+        isSellable: input.isSellable,
+        structureType: input.structureType,
         unitOfMeasureId: input.unitOfMeasureId,
         status: input.status,
       })
@@ -256,6 +260,77 @@ export async function restoreItem(context: AuthContext, itemId: string): Promise
       tx,
     );
   });
+}
+
+/* -------------------------------------------------------------------------
+ * Stok kodu çözümlemesi
+ * ---------------------------------------------------------------------- */
+
+/** Stok koduyla bulunan ürünün özeti. */
+export type ResolvedItem = {
+  id: string;
+  code: string;
+  name: string;
+  itemType:
+    | "FINISHED_GOOD"
+    | "SEMI_FINISHED"
+    | "RAW_MATERIAL"
+    | "COMPONENT"
+    | "CONSUMABLE"
+    | "OTHER";
+  structureType: "ASSEMBLY" | "GROUP" | "PART";
+  supplyType: "MANUFACTURED" | "PURCHASED" | "OUTSOURCED" | "MIXED" | "UNKNOWN" | null;
+  isSellable: boolean;
+  unitOfMeasureId: string;
+};
+
+/**
+ * Stok koduyla ürün çözümlemesi.
+ *
+ * Grid'de satır eklerken yalnızca stok kodu yazılır; ürün bilgileri sunucu
+ * tarafında **birebir** eşleşme ile bulunur. Kod birebir saklanır; yalnızca
+ * karşılaştırma büyük/küçük harf duyarsızdır. Benzersizlik zaten veritabanında
+ * tanımlı olduğu için yakın bir kod bulunamaz.
+ */
+export async function resolveItemByStockCode(
+  context: AuthContext,
+  code: string,
+): Promise<{ success: true; item: ResolvedItem } | { success: false; error: string }> {
+  await requireItemPermission(context, "read");
+
+  const normalized = code.trim();
+
+  if (!normalized) {
+    return { success: false, error: "Stok kodu zorunludur." };
+  }
+
+  const found = await findItemByCode(context.organizationId, normalized);
+
+  if (!found) {
+    return { success: false, error: "Stok kodu bulunamadı." };
+  }
+
+  if (found.archivedAt) {
+    return { success: false, error: "Bu ürün arşivlenmiş." };
+  }
+
+  if (found.status !== "ACTIVE") {
+    return { success: false, error: "Bu ürün pasif." };
+  }
+
+  return {
+    success: true,
+    item: {
+      id: found.id,
+      code: found.code,
+      name: found.name,
+      itemType: found.itemType,
+      structureType: found.structureType,
+      supplyType: found.supplyType,
+      isSellable: found.isSellable,
+      unitOfMeasureId: found.unitOfMeasureId,
+    },
+  };
 }
 
 /* -------------------------------------------------------------------------

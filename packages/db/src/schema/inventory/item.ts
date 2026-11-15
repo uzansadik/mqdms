@@ -1,5 +1,6 @@
 import { relations, sql } from "drizzle-orm";
 import {
+  boolean,
   foreignKey,
   index,
   pgTable,
@@ -11,7 +12,7 @@ import {
 } from "drizzle-orm/pg-core";
 
 import { organization, user } from "../initial/auth";
-import { itemType, recordStatus, supplyType } from "./enums";
+import { itemStructureType, itemType, recordStatus, supplyType } from "./enums";
 import { itemGroup } from "./item-group";
 import { itemUnit } from "./unit";
 
@@ -49,6 +50,23 @@ export const item = pgTable(
 
     /** Varsayılan tedarik şekli; proje kapsamında override edilebilir. */
     supplyType: supplyType("supply_type"),
+
+    /**
+     * Ürün satılabilir mi?
+     *
+     * Müşteri numarası bulunmasıyla ilgisi yoktur: satılabilirlik ürünün
+     * ticari niteliğidir. BOM açılabilmesi için kök ürünün satılabilir
+     * olması gerekir.
+     */
+    isSellable: boolean("is_sellable").notNull().default(false),
+
+    /**
+     * Ürünün yapısal niteliği.
+     *
+     * `ASSEMBLY` ve `GROUP` alt satır taşıyabilir; `PART` yalnızca yaprak
+     * olabilir. `itemGroupId` (ürün ailesi) ile karıştırılmaz.
+     */
+    structureType: itemStructureType("structure_type").notNull().default("PART"),
 
     unitOfMeasureId: uuid("unit_of_measure_id").notNull(),
 

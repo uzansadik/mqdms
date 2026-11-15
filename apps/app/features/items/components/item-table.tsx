@@ -1,4 +1,5 @@
 import { getTranslations } from "@mqdms/i18n/server";
+import { Badge } from "@mqdms/ui/components/badge";
 import {
   Table,
   TableBody,
@@ -34,6 +35,10 @@ export async function ItemTable({ items }: ItemTableProps) {
 
           <TableHead>{t("items.list.columns.itemType")}</TableHead>
 
+          <TableHead>{t("items.list.columns.structureType")}</TableHead>
+
+          <TableHead>{t("items.list.columns.isSellable")}</TableHead>
+
           <TableHead>{t("items.list.columns.supplyType")}</TableHead>
 
           <TableHead>{t("items.list.columns.unit")}</TableHead>
@@ -62,6 +67,16 @@ export async function ItemTable({ items }: ItemTableProps) {
             <TableCell>{item.itemGroupName ?? "-"}</TableCell>
 
             <TableCell>{t(`items.itemType.${item.itemType}`)}</TableCell>
+
+            <TableCell>{t(`items.structureType.${item.structureType}`)}</TableCell>
+
+            <TableCell>
+              {item.isSellable ? (
+                <Badge variant="secondary">{t("items.sellable.yes")}</Badge>
+              ) : (
+                <span className="text-muted-foreground">{t("items.sellable.no")}</span>
+              )}
+            </TableCell>
 
             <TableCell>
               {item.supplyType ? t(`items.supplyType.${item.supplyType}`) : "-"}

@@ -2,7 +2,6 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useI18n } from "@mqdms/i18n";
-import { toast } from "sonner";
 import { Button } from "@mqdms/ui/components/button";
 import {
   Card,
@@ -17,12 +16,11 @@ import { NativeSelect, NativeSelectOption } from "@mqdms/ui/components/native-se
 import { Textarea } from "@mqdms/ui/components/textarea";
 import { useRouter } from "next/navigation";
 import { Controller, useForm } from "react-hook-form";
+import { toast } from "sonner";
 
 import { createBomAction, updateBomAction } from "../actions";
 import type { BomFormValues } from "../schema";
 import { bomFormSchema } from "../schema";
-
-const BOM_TYPES = ["MANUFACTURING", "ENGINEERING", "OTHER"] as const;
 
 type BomFormProps = {
   /** Düzenleme modunda BOM kaydı. */
@@ -32,8 +30,6 @@ type BomFormProps = {
     code: string;
     name: string;
     description: string | null;
-    bomType: "MANUFACTURING" | "ENGINEERING" | "OTHER";
-    status: "ACTIVE" | "INACTIVE";
   };
 
   /** Ürün seçim listesi (BOM sahibi). */
@@ -59,8 +55,6 @@ export function BomForm({ bom, items }: BomFormProps) {
       code: bom?.code ?? "",
       name: bom?.name ?? "",
       description: bom?.description ?? "",
-      bomType: bom?.bomType ?? "MANUFACTURING",
-      status: bom?.status ?? "ACTIVE",
     },
   });
 
@@ -109,7 +103,12 @@ export function BomForm({ bom, items }: BomFormProps) {
                 <Field data-invalid={fieldState.invalid}>
                   <FieldLabel htmlFor={field.name}>{t("boms.form.item.label")}</FieldLabel>
 
-                  <NativeSelect {...field} aria-invalid={fieldState.invalid} id={field.name}>
+                  <NativeSelect
+                    {...field}
+                    aria-invalid={fieldState.invalid}
+                    disabled={isEdit}
+                    id={field.name}
+                  >
                     <NativeSelectOption value="">
                       {t("boms.form.item.placeholder")}
                     </NativeSelectOption>
@@ -122,6 +121,8 @@ export function BomForm({ bom, items }: BomFormProps) {
                   </NativeSelect>
 
                   {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+
+                  <p className="text-muted-foreground text-xs">{t("boms.form.rootHint")}</p>
                 </Field>
               )}
             />
@@ -161,46 +162,6 @@ export function BomForm({ bom, items }: BomFormProps) {
                     />
 
                     {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
-                  </Field>
-                )}
-              />
-            </div>
-
-            <div className="grid gap-5 sm:grid-cols-2">
-              <Controller
-                control={form.control}
-                name="bomType"
-                render={({ field }) => (
-                  <Field>
-                    <FieldLabel htmlFor={field.name}>{t("boms.form.bomType.label")}</FieldLabel>
-
-                    <NativeSelect {...field} id={field.name}>
-                      {BOM_TYPES.map((type) => (
-                        <NativeSelectOption key={type} value={type}>
-                          {t(`boms.bomType.${type}`)}
-                        </NativeSelectOption>
-                      ))}
-                    </NativeSelect>
-                  </Field>
-                )}
-              />
-
-              <Controller
-                control={form.control}
-                name="status"
-                render={({ field }) => (
-                  <Field>
-                    <FieldLabel htmlFor={field.name}>{t("boms.form.status.label")}</FieldLabel>
-
-                    <NativeSelect {...field} id={field.name}>
-                      <NativeSelectOption value="ACTIVE">
-                        {t("items.status.ACTIVE")}
-                      </NativeSelectOption>
-
-                      <NativeSelectOption value="INACTIVE">
-                        {t("items.status.INACTIVE")}
-                      </NativeSelectOption>
-                    </NativeSelect>
                   </Field>
                 )}
               />

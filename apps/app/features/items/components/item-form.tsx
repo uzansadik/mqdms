@@ -2,7 +2,6 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useI18n } from "@mqdms/i18n";
-import { toast } from "sonner";
 import { Button } from "@mqdms/ui/components/button";
 import {
   Card,
@@ -14,9 +13,11 @@ import {
 import { Field, FieldError, FieldGroup, FieldLabel } from "@mqdms/ui/components/field";
 import { Input } from "@mqdms/ui/components/input";
 import { NativeSelect, NativeSelectOption } from "@mqdms/ui/components/native-select";
+import { Switch } from "@mqdms/ui/components/switch";
 import { Textarea } from "@mqdms/ui/components/textarea";
 import { useRouter } from "next/navigation";
 import { Controller, useForm } from "react-hook-form";
+import { toast } from "sonner";
 
 import { createItemAction, updateItemAction } from "../actions";
 import type { ItemFormValues } from "../schema";
@@ -33,6 +34,8 @@ const ITEM_TYPES = [
 
 const SUPPLY_TYPES = ["MANUFACTURED", "PURCHASED", "OUTSOURCED", "MIXED", "UNKNOWN"] as const;
 
+const STRUCTURE_TYPES = ["ASSEMBLY", "GROUP", "PART"] as const;
+
 type ItemFormProps = {
   /** Düzenleme modunda ürün kaydı. */
   item?: {
@@ -43,6 +46,8 @@ type ItemFormProps = {
     itemGroupId: string | null;
     itemType: ItemFormValues["itemType"];
     supplyType: ItemFormValues["supplyType"];
+    isSellable: boolean;
+    structureType: ItemFormValues["structureType"];
     unitOfMeasureId: string;
     status: "ACTIVE" | "INACTIVE";
   };
@@ -75,6 +80,8 @@ export function ItemForm({ item, groups, units }: ItemFormProps) {
       itemGroupId: item?.itemGroupId ?? "",
       itemType: item?.itemType ?? "COMPONENT",
       supplyType: item?.supplyType ?? "",
+      isSellable: item?.isSellable ?? false,
+      structureType: item?.structureType ?? "PART",
       unitOfMeasureId: item?.unitOfMeasureId ?? units[0]?.id ?? "",
       status: item?.status ?? "ACTIVE",
     },
@@ -223,6 +230,52 @@ export function ItemForm({ item, groups, units }: ItemFormProps) {
                         </NativeSelectOption>
                       ))}
                     </NativeSelect>
+                  </Field>
+                )}
+              />
+            </div>
+
+            <div className="grid gap-5 sm:grid-cols-2">
+              <Controller
+                control={form.control}
+                name="structureType"
+                render={({ field }) => (
+                  <Field>
+                    <FieldLabel htmlFor={field.name}>
+                      {t("items.form.structureType.label")}
+                    </FieldLabel>
+
+                    <NativeSelect {...field} id={field.name}>
+                      {STRUCTURE_TYPES.map((type) => (
+                        <NativeSelectOption key={type} value={type}>
+                          {t(`items.structureType.${type}`)}
+                        </NativeSelectOption>
+                      ))}
+                    </NativeSelect>
+                  </Field>
+                )}
+              />
+
+              <Controller
+                control={form.control}
+                name="isSellable"
+                render={({ field }) => (
+                  <Field>
+                    <FieldLabel htmlFor={field.name}>{t("items.form.isSellable.label")}</FieldLabel>
+
+                    <div className="flex h-9 items-center gap-2">
+                      <Switch
+                        checked={field.value}
+                        id={field.name}
+                        onCheckedChange={field.onChange}
+                      />
+
+                      <span className="text-sm text-muted-foreground">
+                        {field.value
+                          ? t("items.form.isSellable.yes")
+                          : t("items.form.isSellable.no")}
+                      </span>
+                    </div>
                   </Field>
                 )}
               />

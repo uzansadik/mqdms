@@ -12,6 +12,7 @@ import {
   ItemRevisionRuleError,
   ItemRuleError,
   releaseItemRevision,
+  resolveItemByStockCode,
   restoreItem,
   updateItem,
 } from "./service";
@@ -88,6 +89,41 @@ export async function restoreItemAction(itemId: string): Promise<ItemActionResul
     return { success: true };
   } catch (error) {
     return { success: false, error: toActionError(error) };
+  }
+}
+
+/** Stok koduyla çözümlenen ürün. */
+export type ResolvedItemResult =
+  | {
+      success: true;
+      item: {
+        id: string;
+        code: string;
+        name: string;
+        itemType: string;
+        structureType: string;
+        supplyType: string | null;
+        isSellable: boolean;
+        unitOfMeasureId: string;
+      };
+    }
+  | { success: false; error: string };
+
+/**
+ * Stok koduyla ürün çözümler.
+ *
+ * BOM grid'inde satır eklerken kullanılır: kullanıcı yalnızca stok kodunu
+ * yazar, ürün bilgileri sunucudan gelir.
+ */
+export async function resolveItemByStockCodeAction(code: string): Promise<ResolvedItemResult> {
+  const context = await requireAuthContext();
+
+  try {
+    return await resolveItemByStockCode(context, code);
+  } catch (error) {
+    console.error("Stok kodu çözümlenemedi:", error);
+
+    return { success: false, error: "Stok kodu çözümlenemedi. Lütfen tekrar deneyin." };
   }
 }
 

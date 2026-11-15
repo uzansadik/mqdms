@@ -687,6 +687,11 @@ async function writeBomRow(
       bomRevisionId: values.bomRevisionId,
       childItemId: values.childItemId,
       lineNumber: values.lineNumber,
+      /*
+       * Kardeş satırların sırası kısmi unique index ile korunur; kaynak
+       * satır numarası aynı revision içinde benzersizdir.
+       */
+      sortOrder: values.lineNumber,
       quantity: values.quantity ?? 1,
     });
   } else {

@@ -134,6 +134,24 @@ export default async function ItemDetailPage({ params }: PageProps) {
                   </dd>
                 </div>
 
+                <div>
+                  <dt className="text-sm text-muted-foreground">
+                    {t("items.form.structureType.label")}
+                  </dt>
+
+                  <dd className="text-sm">{t(`items.structureType.${data.item.structureType}`)}</dd>
+                </div>
+
+                <div>
+                  <dt className="text-sm text-muted-foreground">
+                    {t("items.form.isSellable.label")}
+                  </dt>
+
+                  <dd className="text-sm">
+                    {data.item.isSellable ? t("items.sellable.yes") : t("items.sellable.no")}
+                  </dd>
+                </div>
+
                 <div className="sm:col-span-2">
                   <dt className="text-sm text-muted-foreground">
                     {t("items.form.description.label")}

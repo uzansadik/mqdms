@@ -1,11 +1,11 @@
 import {
   findBomLineByNumber,
-  findBomRevisionByValue,
   findCustomerByCode,
   findCustomerItemByPartNumber,
   findItemByCode,
   findItemGroupByCode,
   findUnitByCode,
+  findWritableBomRevision,
   listBomsByItem,
 } from "./lookups";
 import type { ImportSheet } from "./parser";
@@ -513,13 +513,18 @@ async function validateBomRow(
     } else {
       bomId = bom.id;
 
-      const revision = await findBomRevisionByValue(organizationId, bom.id, bomRevision);
+      /*
+       * Revision numarası sistem tarafından atanır; import her zaman BOM'un
+       * yazılabilir revision'ına (açık taslak ya da yayınlanmış revision)
+       * yazar.
+       */
+      const revision = await findWritableBomRevision(organizationId, bom.id);
 
       if (!revision) {
         errors.push({
           column: sourceColumn(mapping, "bomRevision"),
           code: "UNKNOWN_REFERENCE",
-          message: `"${bomRevision}" kodlu BOM revision'ı bulunamadı.`,
+          message: `"${bomRevision}" kodlu BOM için yazılabilir bir revision bulunamadı.`,
         });
       } else {
         bomRevisionId = revision.id;
