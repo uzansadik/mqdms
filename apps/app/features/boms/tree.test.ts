@@ -218,16 +218,23 @@ describe("BOM ağacı doğrulaması", () => {
     expect(validateBomTree(tree, rootItem()).ok).toBe(true);
   });
 
-  it("alt satır taşıyan parçayı reddeder", () => {
+  it("alt satır taşıma kuralını sınıflandırmaya bağlamaz", () => {
+    /*
+     * Sınıflandırma karttan gelen bilgidir; henüz sınıflandırılmamış bir kart
+     * (yapı türü PART) altında satır taşıyabilir. Yapısal kurallar (döngü,
+     * kökün tekrarı) ağacın bütünlüğünü korur.
+     */
     const tree = buildBomTree([
-      line({ id: "parca", lineageId: "lp", childItemStructureType: "PART" }),
-      line({ id: "alt", lineageId: "la", parentLineId: "parca" }),
+      line({
+        id: "parca",
+        lineageId: "lp",
+        childItemId: "item-parca",
+        childItemStructureType: "PART",
+      }),
+      line({ id: "alt", lineageId: "la", parentLineId: "parca", childItemId: "item-alt" }),
     ]);
 
-    const result = validateBomTree(tree, rootItem());
-
-    expect(result.ok).toBe(false);
-    expect(result.errors.join(" ")).toContain("Parça niteliğindeki");
+    expect(validateBomTree(tree, rootItem()).ok).toBe(true);
   });
 
   it("kök ürünün kendi BOM'unda bileşen olarak kullanılmasını reddeder", () => {

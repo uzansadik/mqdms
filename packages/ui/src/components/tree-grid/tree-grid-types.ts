@@ -7,7 +7,7 @@ import type { ColumnDef } from "@tanstack/react-table";
  * kullanılabilir. Hiyerarşi dışındaki iş kuralları bileşene girmez.
  */
 
-/** Görünür satır. */
+/** Ağaç satırlarının düzleştirilmiş hâli. */
 export type TreeGridRow<TData> = {
   /** Satırın stabil kimliği. */
   id: string;
@@ -48,7 +48,7 @@ export type TreeGridColumn<TData> = ColumnDef<TData>;
 
 /** TreeGrid bileşeninin özellikleri. */
 export type TreeGridProps<TData> = {
-  /** Satır verileri; kök seviyedeki satırlar. */
+  /** Kök seviyedeki satırlar. */
   data: TData[];
 
   /** Sütun tanımları. */
@@ -66,13 +66,16 @@ export type TreeGridProps<TData> = {
   /** Açma/kapatma durumu değiştiğinde çağrılır. */
   onExpandedChange?: (expanded: Record<string, boolean>) => void;
 
+  /** Seçili satırın kimliği; seçim dışarıdan yönetilir. */
+  selectedId?: string | null;
+
   /** Satıra tıklandığında çağrılır. */
   onRowClick?: (row: TData) => void;
 
   /** Satır yüksekliği tahmini (piksel). */
   estimateRowHeight?: number;
 
-  /** Sütun genişlikleri (CSS değeri). */
+  /** Sütun genişlikleri (CSS grid değeri). */
   columnWidths?: Record<string, string>;
 
   /** Boş durum mesajı. */
@@ -81,6 +84,6 @@ export type TreeGridProps<TData> = {
   /** Ek sınıf adı. */
   className?: string;
 
-  /** Satır içeriğini özel çizmek için; sütun tanımları yerine kullanılır. */
-  renderCell?: (params: { row: TData; columnId: string }) => React.ReactNode;
+  /** Hücre içeriğini özel çizmek için; sütun tanımları yerine kullanılır. */
+  renderCell?: (params: { row: TData; columnId: string; depth: number }) => React.ReactNode;
 };

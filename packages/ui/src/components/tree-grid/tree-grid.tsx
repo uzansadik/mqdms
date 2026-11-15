@@ -22,8 +22,8 @@ import type { TreeGridProps } from "./tree-grid-types";
  * Genel amaçlı hiyerarşik veri tablosu.
  *
  * Bileşen hiyerarşi dışındaki iş kurallarını bilmez: satır verisi, sütun
- * tanımları ve açma/kapatma durumu dışarıdan verilir. Uzun ağaçlarda bütün
- * satırlar DOM'a basılmaz; yalnızca görünür pencere işlenir.
+ * tanımları, açma/kapatma durumu ve seçim dışarıdan verilir. Uzun ağaçlarda
+ * bütün satırlar DOM'a basılmaz; yalnızca görünür pencere işlenir.
  */
 export function TreeGrid<TData>({
   data,
@@ -32,6 +32,7 @@ export function TreeGrid<TData>({
   getChildren,
   expanded,
   onExpandedChange,
+  selectedId,
   onRowClick,
   estimateRowHeight = 44,
   columnWidths,
@@ -82,6 +83,10 @@ export function TreeGrid<TData>({
     return leafColumns.map((column) => columnWidths[column.id] ?? "1fr").join(" ");
   }, [leafColumns, columnWidths]);
 
+  /*
+   * Görünür satırlar: köklerden başlanır, açık satırların altı açılır.
+   * Düz liste sanallaştırma için kullanılır.
+   */
   const rows = useMemo(() => {
     const visible: { row: Row<TData>; depth: number }[] = [];
 
@@ -262,11 +267,6 @@ export function TreeGrid<TData>({
           focusRow(rows.length - 1);
           break;
 
-        case " ":
-          event.preventDefault();
-          toggleRow(rowId);
-          break;
-
         default:
           break;
       }
@@ -329,23 +329,20 @@ export function TreeGrid<TData>({
               const { row, depth } = entry;
               const canExpand = row.getCanExpand();
               const isFocused = focusedRowId === row.id;
+              const isSelected = selectedId === row.id;
               const cells = row.getVisibleCells();
-              const siblingCount = row.parentId
-                ? (table.getRowModel().flatRows.find((entryRow) => entryRow.id === row.parentId)
-                    ?.subRows.length ?? 1)
-                : data.length;
 
               return (
                 <div
                   aria-expanded={canExpand ? expandedState[row.id] === true : undefined}
                   aria-level={depth + 1}
                   aria-posinset={row.index + 1}
-                  aria-selected={isFocused}
-                  aria-setsize={siblingCount}
+                  aria-selected={isSelected}
                   className={cn(
                     "bg-background absolute top-0 left-0 grid w-full items-center border-b text-sm",
                     "hover:bg-muted/40",
-                    isFocused && "bg-muted/60",
+                    isFocused && "bg-muted/40",
+                    isSelected && "bg-muted/70 border-l-2 border-l-primary",
                   )}
                   key={row.id}
                   onClick={() => onRowClick?.(row.original)}
@@ -405,7 +402,11 @@ export function TreeGrid<TData>({
 
                       <div className="min-w-0 flex-1 overflow-hidden">
                         {renderCell
-                          ? renderCell({ row: row.original, columnId: cell.column.id })
+                          ? renderCell({
+                              row: row.original,
+                              columnId: cell.column.id,
+                              depth,
+                            })
                           : flexRender(cell.column.columnDef.cell, cell.getContext())}
                       </div>
                     </div>
