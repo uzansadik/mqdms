@@ -1,6 +1,6 @@
 "use client";
 
-import { type MessageKey, useI18n } from "@mqdms/i18n";
+import { useI18n } from "@mqdms/i18n";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -11,11 +11,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@mqdms/ui/components/alert-dialog";
+import { Badge } from "@mqdms/ui/components/badge";
 import { Button } from "@mqdms/ui/components/button";
 import { Input } from "@mqdms/ui/components/input";
 import { NativeSelect, NativeSelectOption } from "@mqdms/ui/components/native-select";
 import { TreeGrid, type TreeGridColumn } from "@mqdms/ui/components/tree-grid";
-import { ArrowDown, ArrowLeft, ArrowUp, CornerDownRight, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowLeft, ArrowUp, CornerDownRight, Plus, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -26,8 +27,7 @@ import { saveBomDraftAction } from "../actions";
 import {
   addRow,
   type BomGridRow,
-  buildChildrenMap,
-  canHaveChildren,
+  buildTree,
   canIndentRow,
   canOutdentRow,
   indentRow,
@@ -77,26 +77,16 @@ type BomTreeGridProps = {
   units: { id: string; code: string; name: string }[];
 };
 
-/** Kök satırın anahtarı. */
-const ROOT_KEY = "root";
-
-/**
- * Bir satır alt satır taşıyabilir mi?
- *
- * Kök ürün (BOM'un sahibi) **her zaman** alt satır taşır: BOM, tanımı
- * gereği ürünün içindeki parçaları listeler. `PART` kısıtı bileşen
- * satırları içindir; kök ürün `PART` olsa bile altına satır eklenebilir.
- */
-function rowCanHaveChildren(row: BomGridRow): boolean {
-  return row.key === ROOT_KEY || canHaveChildren(row);
-}
-
 /**
  * BOM ağacı editörü.
  *
- * Satırlar TreeGrid içinde düzenlenir: stok kodu yazılıp Enter'a basıldığında
- * ürün bilgileri sunucudan gelir. Değişiklikler istemcide tutulur, "Kaydet"
- * ile tek seferde sunucuya gönderilir.
+ * Ürün (BOM'un sahibi) grid'in **üstünde** başlık olarak durur; grid'in içi
+ * yalnızca ürünün bileşenlerini gösterir.
+ *
+ * "Ürün Ekle" seçili satırın **altına** ekler; hiçbir satır seçili değilse
+ * ürünün doğrudan altına (grid'in en üst seviyesine) ekler. Satırlar
+ * TreeGrid içinde düzenlenir: stok kodu yazılıp Enter'a basıldığında ürün
+ * bilgileri sunucudan gelir.
  */
 export function BomTreeGrid({
   revisionId,
@@ -127,7 +117,7 @@ export function BomTreeGrid({
     })),
   );
 
-  const [expanded, setExpanded] = useState<Record<string, boolean>>({ [ROOT_KEY]: true });
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
 
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
 
@@ -143,39 +133,10 @@ export function BomTreeGrid({
 
   const codeInputRefs = useRef(new Map<string, HTMLInputElement>());
 
-  const rootRow = useMemo<BomGridRow>(
-    () => ({
-      key: ROOT_KEY,
-      parentKey: null,
-      childItemId: rootItem.id,
-      code: rootItem.code,
-      name: rootItem.name,
-      itemType: rootItem.itemType,
-      structureType: rootItem.structureType,
-      supplyType: rootItem.supplyType,
-      isSellable: rootItem.isSellable,
-      quantity: 1,
-      unitOfMeasureId: rootItem.unitOfMeasureId,
-      sortOrder: 0,
-      error: null,
-    }),
-    [rootItem],
-  );
-
-  const childrenMap = useMemo(() => buildChildrenMap(rows, ROOT_KEY), [rows]);
-
-  const treeData = useMemo(() => [rootRow], [rootRow]);
-
-  const getChildren = useCallback(
-    (node: BomGridRow): BomGridRow[] => childrenMap.get(node.key) ?? [],
-    [childrenMap],
-  );
-
-  const getRowId = useCallback((node: BomGridRow) => node.key, []);
+  const tree = useMemo(() => buildTree(rows), [rows]);
 
   const columns = useMemo<TreeGridColumn<BomGridRow>[]>(
     () => [
-      { id: "tree", header: t("boms.grid.columns.tree") },
       { id: "code", header: t("boms.grid.columns.code") },
       { id: "name", header: t("boms.grid.columns.name") },
       { id: "type", header: t("boms.grid.columns.type") },
@@ -190,9 +151,8 @@ export function BomTreeGrid({
 
   const columnWidths = useMemo(
     () => ({
-      tree: "minmax(150px, 1fr)",
-      code: "minmax(130px, 0.8fr)",
-      name: "minmax(160px, 1.2fr)",
+      code: "minmax(170px, 1.1fr)",
+      name: "minmax(170px, 1.3fr)",
       type: "minmax(100px, 0.6fr)",
       supply: "minmax(100px, 0.6fr)",
       sellable: "minmax(90px, 0.5fr)",
@@ -201,11 +161,6 @@ export function BomTreeGrid({
       actions: "minmax(140px, 0.8fr)",
     }),
     [],
-  );
-
-  const selectedRow = useMemo(
-    () => rows.find((row) => row.key === selectedKey) ?? null,
-    [rows, selectedKey],
   );
 
   /** Kaydedilmemiş değişiklik varsa sayfadan çıkarken uyarılır. */
@@ -230,39 +185,28 @@ export function BomTreeGrid({
     setDirty(true);
   }, []);
 
-  /** Yeni satır ekler ve stok kodu hücresine odaklanır. */
-  const addNewRow = useCallback((parentKey: string | null) => {
+  /**
+   * Yeni satır ekler.
+   *
+   * Seçili satır varsa altına, yoksa ürünün doğrudan altına eklenir.
+   */
+  const addProduct = useCallback(() => {
     const key = `new:${crypto.randomUUID()}`;
+    const parentKey = selectedKey;
 
     setRows((current) => renumberSiblings(addRow(current, parentKey, key), parentKey));
     setSelectedKey(key);
     setDirty(true);
 
-    /*
-     * Hücre sanallaştırılmış olabilir; odaklama bir sonraki çizimde yapılır.
-     */
+    /* Yeni satırın üst dalı açık olmalı ki satır görünsün. */
+    if (parentKey) {
+      setExpanded((current) => ({ ...current, [parentKey]: true }));
+    }
+
     window.setTimeout(() => {
       codeInputRefs.current.get(key)?.focus();
     }, 0);
-  }, []);
-
-  /** Aynı seviyeye yeni satır ekler. */
-  const addSibling = useCallback(() => {
-    addNewRow(selectedRow ? selectedRow.parentKey : null);
-  }, [selectedRow, addNewRow]);
-
-  /** Seçili satırın altına yeni satır ekler. */
-  const addChild = useCallback(() => {
-    if (!selectedRow || !rowCanHaveChildren(selectedRow)) {
-      return;
-    }
-
-    /*
-     * Kök ürünün altındaki satırların üst satırı yoktur: kök altındaki
-     * satırların üst satırı `null` olur ve ağaçta kök ürünün altında durur.
-     */
-    addNewRow(selectedRow.key === ROOT_KEY ? null : selectedRow.key);
-  }, [selectedRow, addNewRow]);
+  }, [selectedKey]);
 
   /** Stok kodunu sunucuda çözümler. */
   const resolveCode = useCallback(
@@ -279,6 +223,7 @@ export function BomTreeGrid({
 
       if (!result.success) {
         updateRow(rowKey, { error: result.error, childItemId: null });
+
         return;
       }
 
@@ -314,6 +259,7 @@ export function BomTreeGrid({
 
   const removeRowTo = useCallback((key: string) => {
     setRows((current) => removeSubtree(current, key));
+    setSelectedKey(null);
     setDirty(true);
   }, []);
 
@@ -391,31 +337,23 @@ export function BomTreeGrid({
   }, [rows, revisionId, currentLockVersion, t, router]);
 
   const expandAll = useCallback(() => {
-    const next: Record<string, boolean> = { [ROOT_KEY]: true };
+    const next: Record<string, boolean> = {};
 
     for (const row of rows) {
-      if (rowCanHaveChildren(row)) {
-        next[row.key] = true;
-      }
+      next[row.key] = true;
     }
 
     setExpanded(next);
   }, [rows]);
 
   const collapseAll = useCallback(() => {
-    setExpanded({ [ROOT_KEY]: true });
+    setExpanded({});
   }, []);
 
   const renderCell = useCallback(
     ({ row, columnId }: { row: BomGridRow; columnId: string }) => {
-      const isRoot = row.key === ROOT_KEY;
-
       switch (columnId) {
         case "code":
-          if (isRoot) {
-            return <span className="font-medium">{row.code}</span>;
-          }
-
           return (
             <Input
               aria-label={t("boms.grid.columns.code")}
@@ -449,25 +387,17 @@ export function BomTreeGrid({
           );
 
         case "type":
-          return (
-            <span>{row.itemType ? t(`items.itemType.${row.itemType}` as MessageKey) : "-"}</span>
-          );
+          return <span>{row.itemType ? t(`items.itemType.${row.itemType}` as never) : "-"}</span>;
 
         case "supply":
           return (
-            <span>
-              {row.supplyType ? t(`items.supplyType.${row.supplyType}` as MessageKey) : "-"}
-            </span>
+            <span>{row.supplyType ? t(`items.supplyType.${row.supplyType}` as never) : "-"}</span>
           );
 
         case "sellable":
           return <span>{row.isSellable ? t("items.sellable.yes") : t("items.sellable.no")}</span>;
 
         case "quantity":
-          if (isRoot) {
-            return <span>1</span>;
-          }
-
           return (
             <Input
               aria-label={t("boms.grid.columns.quantity")}
@@ -489,10 +419,6 @@ export function BomTreeGrid({
           );
 
         case "unit":
-          if (isRoot) {
-            return <span>{rootItem.unitOfMeasureCode ?? "-"}</span>;
-          }
-
           return (
             <NativeSelect
               aria-label={t("boms.grid.columns.unit")}
@@ -513,10 +439,6 @@ export function BomTreeGrid({
           );
 
         case "actions":
-          if (isRoot) {
-            return null;
-          }
-
           return (
             <div className="flex items-center gap-1">
               <Button
@@ -575,18 +497,7 @@ export function BomTreeGrid({
           return null;
       }
     },
-    [
-      editable,
-      indentRowTo,
-      moveRowTo,
-      outdentRowTo,
-      resolveCode,
-      rootItem.unitOfMeasureCode,
-      rows,
-      t,
-      units,
-      updateRow,
-    ],
+    [editable, indentRowTo, moveRowTo, outdentRowTo, resolveCode, rows, t, units, updateRow],
   );
 
   const pendingDeleteRow = pendingDeleteKey
@@ -595,18 +506,34 @@ export function BomTreeGrid({
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap items-center gap-2">
-        <Button disabled={!editable} onClick={addSibling} size="sm" variant="outline">
-          {t("boms.grid.actions.addRow")}
-        </Button>
+      {/*
+       * Ürün grid'in üstünde başlık olarak durur: grid'in içeriği yalnızca
+       * ürünün bileşenleridir.
+       */}
+      <div className="flex flex-wrap items-center gap-3 rounded-md border bg-muted/30 px-3 py-2">
+        <span className="font-medium">{rootItem.code}</span>
 
-        <Button
-          disabled={!editable || !selectedRow || !rowCanHaveChildren(selectedRow)}
-          onClick={addChild}
-          size="sm"
-          variant="outline"
-        >
-          {t("boms.grid.actions.addChild")}
+        <span>{rootItem.name}</span>
+
+        <Badge variant="outline">{t(`items.itemType.${rootItem.itemType}` as never)}</Badge>
+
+        <span className="text-muted-foreground text-xs">
+          {rootItem.supplyType ? t(`items.supplyType.${rootItem.supplyType}` as never) : "-"}
+        </span>
+
+        <span className="text-muted-foreground text-xs">
+          {rootItem.isSellable ? t("items.sellable.yes") : t("items.sellable.no")}
+        </span>
+
+        <span className="text-muted-foreground ml-auto text-xs">
+          1 {rootItem.unitOfMeasureCode ?? ""}
+        </span>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2">
+        <Button disabled={!editable} onClick={addProduct} size="sm" variant="outline">
+          <Plus className="size-4" />
+          {t("boms.grid.actions.addRow")}
         </Button>
 
         <Button disabled={!editable} onClick={expandAll} size="sm" variant="ghost">
@@ -634,22 +561,19 @@ export function BomTreeGrid({
         </div>
       ) : null}
 
-      {selectedRow && !rowCanHaveChildren(selectedRow) ? (
-        <p className="text-muted-foreground text-xs">{t("boms.grid.errors.parentIsLeaf")}</p>
-      ) : null}
-
       <TreeGrid
         className="h-[560px] rounded-md border"
         columnWidths={columnWidths}
         columns={columns}
-        data={treeData}
+        data={tree.roots}
         emptyMessage={t("boms.grid.empty")}
         expanded={expanded}
-        getChildren={getChildren}
-        getRowId={getRowId}
+        getChildren={(row) => tree.childrenOf.get(row.key) ?? []}
+        getRowId={(row) => row.key}
         onExpandedChange={setExpanded}
         onRowClick={(row) => setSelectedKey(row.key)}
         renderCell={renderCell}
+        selectedId={selectedKey}
       />
 
       <AlertDialog

@@ -1,8 +1,4 @@
-import {
-  checkChildEligibility,
-  checkParentEligibility,
-  type ItemClassification,
-} from "./eligibility";
+import { checkChildEligibility, type ItemClassification } from "./eligibility";
 
 /**
  * BOM ağacı kurma, doğrulama ve düzleştirme işlemleri.
@@ -452,13 +448,12 @@ export function validateBomTree(tree: BomTree, rootItem: ItemClassification): Bo
       errors.push(`${node.line.childItemCode ?? node.line.childItemId}: ${reason}`);
     }
 
-    if (node.children.length > 0) {
-      const parentResult = checkParentEligibility(childItem);
-
-      for (const reason of parentResult.reasons) {
-        errors.push(`${node.line.childItemCode ?? node.line.childItemId}: ${reason}`);
-      }
-    }
+    /*
+     * Bir satırın altında satır bulunması, ürünün sınıflandırmasına bağlı
+     * değildir: montaj ve gruplar kartı henüz sınıflandırılmamış olabilir.
+     * Yapısal kurallar (döngü, kendini içermeme, kökün tekrarı) ağacın
+     * bütünlüğünü korur; sınıflandırma bilgilendirme amaçlıdır.
+     */
 
     /*
      * Bir item kendi ata zincirinde tekrar edemez: iki seviye içinde aynı

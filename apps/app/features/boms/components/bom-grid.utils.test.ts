@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   addRow,
   type BomGridRow,
-  buildChildrenMap,
+  buildTree,
   canIndentRow,
   collectDescendantKeys,
   indentRow,
@@ -147,39 +147,42 @@ describe("BOM grid satır işlemleri", () => {
   });
 });
 
-describe("BOM grid ağaç haritası", () => {
-  it("kök altındaki satırları kök düğümünün altına koyar", () => {
+describe("BOM grid ağacı", () => {
+  it("üst satırı olmayan satırları kök olarak verir", () => {
     /*
-     * Kök altındaki satırların üst satırı yoktur (`parentKey` null). Ağaçta
-     * bunlar kök ürünün altında görünmelidir.
+     * Üst satırı olmayan satırlar BOM'un kök ürününün altındadır; grid'in verisi
+     * bunlardır.
      */
-    const map = buildChildrenMap(
-      [row({ key: "a", parentKey: null }), row({ key: "b", parentKey: null, sortOrder: 1 })],
-      "root",
-    );
+    const tree = buildTree([
+      row({ key: "a", parentKey: null }),
+      row({ key: "b", parentKey: null, sortOrder: 1 }),
+    ]);
 
-    expect(map.get("root")?.map((candidate) => candidate.key)).toEqual(["a", "b"]);
+    expect(tree.roots.map((candidate) => candidate.key)).toEqual(["a", "b"]);
+    expect(tree.childrenOf.size).toBe(0);
   });
 
   it("alt satırları üst satırına bağlar", () => {
-    const map = buildChildrenMap(
-      [row({ key: "a", parentKey: null }), row({ key: "b", parentKey: "a" })],
-      "root",
-    );
+    const tree = buildTree([
+      row({ key: "a", parentKey: null }),
+      row({ key: "b", parentKey: "a" }),
+      row({ key: "c", parentKey: "b" }),
+    ]);
 
-    expect(map.get("root")?.map((candidate) => candidate.key)).toEqual(["a"]);
-    expect(map.get("a")?.map((candidate) => candidate.key)).toEqual(["b"]);
+    expect(tree.roots.map((candidate) => candidate.key)).toEqual(["a"]);
+    expect(tree.childrenOf.get("a")?.map((candidate) => candidate.key)).toEqual(["b"]);
+    expect(tree.childrenOf.get("b")?.map((candidate) => candidate.key)).toEqual(["c"]);
   });
 
   it("kardeşleri sıra numarasına göre sıralar", () => {
-    const map = buildChildrenMap(
-      [
-        row({ key: "b", parentKey: null, sortOrder: 2 }),
-        row({ key: "a", parentKey: null, sortOrder: 1 }),
-      ],
-      "root",
-    );
+    const tree = buildTree([
+      row({ key: "b", parentKey: null, sortOrder: 2 }),
+      row({ key: "a", parentKey: null, sortOrder: 1 }),
+      row({ key: "c", parentKey: "a", sortOrder: 3 }),
+      row({ key: "d", parentKey: "a", sortOrder: 1 }),
+    ]);
 
-    expect(map.get("root")?.map((candidate) => candidate.key)).toEqual(["a", "b"]);
+    expect(tree.roots.map((candidate) => candidate.key)).toEqual(["a", "b"]);
+    expect(tree.childrenOf.get("a")?.map((candidate) => candidate.key)).toEqual(["d", "c"]);
   });
 });
