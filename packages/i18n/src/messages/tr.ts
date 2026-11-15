@@ -1180,6 +1180,8 @@ export const tr = {
   "imports.fields.itemGroup": "Ürün grubu kodu",
   "imports.fields.itemType": "Ürün tipi",
   "imports.fields.supplyType": "Tedarik şekli",
+  "imports.fields.isSellable": "Satılabilir (Evet/Hayır)",
+  "imports.fields.structureType": "Yapı (ASSEMBLY, GROUP, PART)",
   "imports.fields.unit": "Birim kodu",
   "imports.fields.revision": "Revision",
   "imports.fields.erpReference": "ERP referansı",
