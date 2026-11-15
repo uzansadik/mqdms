@@ -26,6 +26,7 @@ import { saveBomDraftAction } from "../actions";
 import {
   addRow,
   type BomGridRow,
+  buildChildrenMap,
   canHaveChildren,
   canIndentRow,
   canOutdentRow,
@@ -78,6 +79,17 @@ type BomTreeGridProps = {
 
 /** Kök satırın anahtarı. */
 const ROOT_KEY = "root";
+
+/**
+ * Bir satır alt satır taşıyabilir mi?
+ *
+ * Kök ürün (BOM'un sahibi) **her zaman** alt satır taşır: BOM, tanımı
+ * gereği ürünün içindeki parçaları listeler. `PART` kısıtı bileşen
+ * satırları içindir; kök ürün `PART` olsa bile altına satır eklenebilir.
+ */
+function rowCanHaveChildren(row: BomGridRow): boolean {
+  return row.key === ROOT_KEY || canHaveChildren(row);
+}
 
 /**
  * BOM ağacı editörü.
@@ -150,22 +162,7 @@ export function BomTreeGrid({
     [rootItem],
   );
 
-  const childrenMap = useMemo(() => {
-    const map = new Map<string | null, BomGridRow[]>();
-
-    for (const row of rows) {
-      const list = map.get(row.parentKey) ?? [];
-
-      list.push(row);
-      map.set(row.parentKey, list);
-    }
-
-    for (const list of map.values()) {
-      list.sort((a, b) => a.sortOrder - b.sortOrder);
-    }
-
-    return map;
-  }, [rows]);
+  const childrenMap = useMemo(() => buildChildrenMap(rows, ROOT_KEY), [rows]);
 
   const treeData = useMemo(() => [rootRow], [rootRow]);
 
@@ -256,11 +253,15 @@ export function BomTreeGrid({
 
   /** Seçili satırın altına yeni satır ekler. */
   const addChild = useCallback(() => {
-    if (!selectedRow || !canHaveChildren(selectedRow)) {
+    if (!selectedRow || !rowCanHaveChildren(selectedRow)) {
       return;
     }
 
-    addNewRow(selectedRow.key);
+    /*
+     * Kök ürünün altındaki satırların üst satırı yoktur: kök altındaki
+     * satırların üst satırı `null` olur ve ağaçta kök ürünün altında durur.
+     */
+    addNewRow(selectedRow.key === ROOT_KEY ? null : selectedRow.key);
   }, [selectedRow, addNewRow]);
 
   /** Stok kodunu sunucuda çözümler. */
@@ -356,9 +357,30 @@ export function BomTreeGrid({
 
     /*
      * Sunucunun ürettiği satır kimlikleri istemciye geri verilir; geçici
-     * kimlikler gerçek kimliklerle değiştirilir.
+     * kimlikler gerçek kimliklerle değiştirilir. Üst satır bağlantısı da
+     * çevrilir: aksi halde yeni satırın altındaki çocuklar ağaçta kopuk
+     * kalır.
      */
-    setRows((current) => current.map((row) => ({ ...row, key: result.idMap[row.key] ?? row.key })));
+    setRows((current) =>
+      current.map((row) => ({
+        ...row,
+        key: result.idMap[row.key] ?? row.key,
+        parentKey: row.parentKey ? (result.idMap[row.parentKey] ?? row.parentKey) : null,
+      })),
+    );
+
+    setSelectedKey((current) => (current ? (result.idMap[current] ?? current) : current));
+
+    /* Açık satırların durumu da yeni kimliklere taşınır. */
+    setExpanded((current) => {
+      const next: Record<string, boolean> = {};
+
+      for (const [key, value] of Object.entries(current)) {
+        next[result.idMap[key] ?? key] = value;
+      }
+
+      return next;
+    });
 
     setCurrentLockVersion(result.lockVersion);
     setDirty(false);
@@ -372,7 +394,7 @@ export function BomTreeGrid({
     const next: Record<string, boolean> = { [ROOT_KEY]: true };
 
     for (const row of rows) {
-      if (canHaveChildren(row)) {
+      if (rowCanHaveChildren(row)) {
         next[row.key] = true;
       }
     }
@@ -579,7 +601,7 @@ export function BomTreeGrid({
         </Button>
 
         <Button
-          disabled={!editable || !selectedRow || !canHaveChildren(selectedRow)}
+          disabled={!editable || !selectedRow || !rowCanHaveChildren(selectedRow)}
           onClick={addChild}
           size="sm"
           variant="outline"
@@ -612,7 +634,7 @@ export function BomTreeGrid({
         </div>
       ) : null}
 
-      {selectedRow && !canHaveChildren(selectedRow) ? (
+      {selectedRow && !rowCanHaveChildren(selectedRow) ? (
         <p className="text-muted-foreground text-xs">{t("boms.grid.errors.parentIsLeaf")}</p>
       ) : null}
 
