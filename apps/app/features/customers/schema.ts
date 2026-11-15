@@ -51,6 +51,9 @@ export const customerFormSchema = z.object({
   countryCode: optionalText(2),
   preferredLanguage: optionalText(10),
 
+  /** Logonun depolamadaki nesne anahtarı; boşsa logo yoktur. */
+  logoKey: z.string().max(512).nullable(),
+
   status: customerStatusSchema,
 });
 

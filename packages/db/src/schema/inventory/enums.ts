@@ -47,6 +47,18 @@ export const supplyType = pgEnum("supply_type", [
 ]);
 
 /**
+ * Ürünün yapısal niteliği.
+ *
+ * `item_type` ile karıştırılmaz: tip ürünün **ne olduğunu**, yapı türü ise
+ * ürün ağacında **nerede durabileceğini** belirtir.
+ *
+ * - `ASSEMBLY`: alt satır taşıyabilen montaj (ör. elektrikli bisiklet).
+ * - `GROUP`: alt satır taşıyabilen ara grup (ör. gövde grubu).
+ * - `PART`: yalnızca yaprak; altında başka satır bulunamaz.
+ */
+export const itemStructureType = pgEnum("item_structure_type", ["ASSEMBLY", "GROUP", "PART"]);
+
+/**
  * Revision yaşam döngüsü.
  *
  * Yayınlanmış (RELEASED) revision teknik içerik olarak değiştirilemez; yeni

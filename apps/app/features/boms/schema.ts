@@ -17,9 +17,20 @@ export const bomRevisionStatusSchema = z.enum(["DRAFT", "IN_REVIEW", "RELEASED",
 /** Bileşenlerin birleştirilme yöntemi. */
 export const joiningMethodSchema = z.enum(["BONDING", "BOLTING", "WELDING", "RIVETING", "OTHER"]);
 
-/** BOM oluşturma formu. */
+/** Ürünün yapısal niteliği. */
+export const itemStructureTypeSchema = z.enum(["ASSEMBLY", "GROUP", "PART"]);
+
+/** UUID ya da istemcide üretilmiş geçici satır kimliği. */
+const lineIdSchema = z
+  .string()
+  .regex(
+    /^([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|new:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i,
+    "Geçersiz satır kimliği.",
+  );
+
+/** BOM oluşturma / düzenleme formu. */
 export const bomFormSchema = z.object({
-  /** BOM'un sahibi olan ürün. */
+  /** BOM'un sahibi olan ürün. Oluşturma sonrası değiştirilemez. */
   itemId: z.string().uuid("Geçersiz ürün."),
 
   code: z
@@ -36,81 +47,73 @@ export const bomFormSchema = z.object({
     .max(200, "BOM adı en fazla 200 karakter olabilir."),
 
   description: z.string().trim().max(2000).optional().or(z.literal("")),
-
-  bomType: bomTypeSchema,
-
-  status: z.enum(["ACTIVE", "INACTIVE"]),
 });
 
 export type BomFormValues = z.infer<typeof bomFormSchema>;
 
-/** BOM revision formu. */
-export const bomRevisionFormSchema = z.object({
+/** Yeni revision talebi. */
+export const bomNextRevisionSchema = z.object({
   bomId: z.string().uuid("Geçersiz BOM."),
 
-  revision: z
-    .string()
-    .trim()
-    .min(1, "Revision değeri zorunludur.")
-    .max(64, "Revision değeri en fazla 64 karakter olabilir."),
-
-  /** BOM'un sahibi ürünün teknik revision'ı; opsiyoneldir. */
-  parentItemRevisionId: z.string().uuid("Geçersiz revision.").optional().or(z.literal("")),
-
-  description: z.string().trim().max(2000).optional().or(z.literal("")),
-
   changeReason: z.string().trim().max(1000).optional().or(z.literal("")),
-
-  status: bomRevisionStatusSchema,
-
-  effectiveFrom: z
-    .string()
-    .trim()
-    .regex(/^\d{4}-\d{2}-\d{2}$/, "Geçersiz tarih.")
-    .optional()
-    .or(z.literal("")),
-
-  sourceSystem: z.string().trim().max(64).optional().or(z.literal("")),
-
-  sourceRevision: z.string().trim().max(64).optional().or(z.literal("")),
 });
 
-export type BomRevisionFormValues = z.infer<typeof bomRevisionFormSchema>;
+export type BomNextRevisionValues = z.infer<typeof bomNextRevisionSchema>;
 
-/** BOM satırı formu. */
-export const bomLineFormSchema = z.object({
-  bomRevisionId: z.string().uuid("Geçersiz BOM revision."),
+/**
+ * Taslak satır.
+ *
+ * `id` mevcut satırın kimliği ya da `new:` ile başlayan istemci tarafından
+ * üretilmiş geçici kimliktir. Geçici kimlikler sunucuda gerçek satır
+ * kimlikleriyle eşleştirilir.
+ */
+export const bomDraftLineSchema = z.object({
+  id: lineIdSchema,
+
+  /** Üst satır; null ise satır kökün altındadır. */
+  parentLineId: lineIdSchema.nullable(),
 
   /** Bileşen ürün. */
   childItemId: z.string().uuid("Geçersiz ürün."),
 
   /** Bileşenin belirli bir teknik revision'ı; opsiyoneldir. */
-  childItemRevisionId: z.string().uuid("Geçersiz revision.").optional().or(z.literal("")),
-
-  /**
-   * Bileşenin kendi BOM revision'ı.
-   *
-   * Boş seçilirse alt BOM'un revision'ı belirlenmemiş demektir ve ilgili dal
-   * çözümlenmemiş olarak gösterilir.
-   */
-  childBomRevisionId: z.string().uuid("Geçersiz BOM revision.").optional().or(z.literal("")),
-
-  lineNumber: z.number().int().min(1, "Satır numarası pozitif olmalıdır."),
+  childItemRevisionId: z.string().uuid("Geçersiz revision.").nullable().optional(),
 
   /** Miktar; sıfırdan büyük olmalıdır. */
   quantity: z.number().positive("Miktar sıfırdan büyük olmalıdır."),
 
-  unitOfMeasureId: z.string().uuid("Geçersiz birim.").optional().or(z.literal("")),
+  /** Miktar birimi; boş bırakılırsa ürünün varsayılan birimi kullanılır. */
+  unitOfMeasureId: z.string().uuid("Geçersiz birim.").nullable().optional(),
 
-  description: z.string().trim().max(1000).optional().or(z.literal("")),
+  /** Ebeveyn içindeki sıra. */
+  sortOrder: z.number().int().min(0).max(9999),
 
-  referenceDesignation: z.string().trim().max(120).optional().or(z.literal("")),
+  description: z.string().trim().max(1000).nullable().optional(),
 
-  joiningMethod: joiningMethodSchema.optional(),
+  referenceDesignation: z.string().trim().max(120).nullable().optional(),
 
-  notes: z.string().trim().max(2000).optional().or(z.literal("")),
+  joiningMethod: joiningMethodSchema.nullable().optional(),
 
-  positionReference: z.string().trim().max(120).optional().or(z.literal("")),
+  notes: z.string().trim().max(2000).nullable().optional(),
+
+  positionReference: z.string().trim().max(120).nullable().optional(),
 });
 
-export type BomLineFormValues = z.infer<typeof bomLineFormSchema>;
+export type BomDraftLineValues = z.infer<typeof bomDraftLineSchema>;
+
+/**
+ * Taslak kaydetme isteği.
+ *
+ * İstemci, düzenlediği ağacın tamamını gönderir; sunucu farkı hesaplayıp
+ * ekleme, güncelleme, taşıma ve silme işlemlerini tek transaction'da yapar.
+ */
+export const bomDraftSaveSchema = z.object({
+  revisionId: z.string().uuid("Geçersiz BOM revision."),
+
+  /** İstemcinin gördüğü sürüm; eşleşmezse çakışma bildirilir. */
+  expectedLockVersion: z.number().int().min(1),
+
+  lines: z.array(bomDraftLineSchema).max(5000, "Bir taslakta en fazla 5000 satır olabilir."),
+});
+
+export type BomDraftSaveValues = z.infer<typeof bomDraftSaveSchema>;

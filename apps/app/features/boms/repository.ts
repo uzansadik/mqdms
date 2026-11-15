@@ -1,11 +1,13 @@
 import { db } from "@mqdms/db";
+import type { BomItemSnapshot } from "@mqdms/db/schema";
 import { bom, bomLine, bomRevision, item, itemRevision, itemUnit } from "@mqdms/db/schema";
 import { and, asc, count, eq, ilike, isNull, or, type SQL, sql } from "drizzle-orm";
 
 /**
  * BOM okuma katmanı.
  *
- * Bütün sorgular `organizationId` ile kısıtlanır.
+ * Bütün sorgular `organizationId` ile kısıtlanır. Ağaç tek bir revision'ın
+ * satırlarından kurulur; alt BOM sorgusu yapılmaz.
  */
 
 export type BomListQuery = {
@@ -56,6 +58,7 @@ export type BomRecord = {
 export type BomRevisionRecord = {
   id: string;
   bomId: string;
+  revisionNumber: number;
   revision: string;
   description: string | null;
   changeReason: string | null;
@@ -64,6 +67,9 @@ export type BomRevisionRecord = {
   sourceSystem: string | null;
   sourceRevision: string | null;
   parentItemRevisionId: string | null;
+  lockVersion: number;
+  rootItemSnapshot: BomItemSnapshot | null;
+  supersedesRevisionId: string | null;
   createdAt: Date;
   updatedAt: Date;
   releasedAt: Date | null;
@@ -72,16 +78,15 @@ export type BomRevisionRecord = {
 export type BomLineRecord = {
   id: string;
   bomRevisionId: string;
-  childItemId: string;
-  childItemCode: string | null;
-  childItemName: string | null;
-  childItemRevisionId: string | null;
-  childItemRevision: string | null;
-  childBomRevisionId: string | null;
+  parentLineId: string | null;
+  lineageId: string;
   lineNumber: number;
+  sortOrder: number;
   quantity: number;
   unitOfMeasureId: string | null;
-  unitOfMeasureCode: string | null;
+  childItemId: string;
+  childItemRevisionId: string | null;
+  childItemRevision: string | null;
   description: string | null;
   referenceDesignation: string | null;
   joiningMethod: "BONDING" | "BOLTING" | "WELDING" | "RIVETING" | "OTHER" | null;
@@ -89,7 +94,34 @@ export type BomLineRecord = {
   positionReference: string | null;
   createdAt: Date;
   updatedAt: Date;
+
+  /** Bileşen ürün bilgileri. */
+  childItemCode: string | null;
+  childItemName: string | null;
+  childItemType: ItemTypeValue;
+  childItemStructureType: ItemStructureTypeValue;
+  childItemSupplyType: SupplyTypeValue | null;
+  childItemIsSellable: boolean;
+  childItemUnitOfMeasureId: string;
+  childItemStatus: "ACTIVE" | "INACTIVE";
+  childItemArchivedAt: Date | null;
+  unitOfMeasureCode: string | null;
 };
+
+/** Ürün tipi değerleri. */
+export type ItemTypeValue =
+  | "FINISHED_GOOD"
+  | "SEMI_FINISHED"
+  | "RAW_MATERIAL"
+  | "COMPONENT"
+  | "CONSUMABLE"
+  | "OTHER";
+
+/** Ürün yapı türü değerleri. */
+export type ItemStructureTypeValue = "ASSEMBLY" | "GROUP" | "PART";
+
+/** Ürün tedarik şekli değerleri. */
+export type SupplyTypeValue = "MANUFACTURED" | "PURCHASED" | "OUTSOURCED" | "MIXED" | "UNKNOWN";
 
 /** BOM filtresini SQL koşullarına çevirir. */
 function bomFilters(query: BomListQuery): SQL[] {
@@ -140,7 +172,7 @@ export async function listBoms(query: BomListQuery): Promise<BomListItem[]> {
       currentRevision: sql<string | null>`(
         select ${bomRevision.revision} from ${bomRevision}
         where ${bomRevision.bomId} = ${bom.id}
-        order by ${bomRevision.createdAt} desc
+        order by ${bomRevision.revisionNumber} desc
         limit 1
       )`,
     })
@@ -220,6 +252,43 @@ export async function findBomByCode(
   return rows[0] ?? null;
 }
 
+/**
+ * Bir ürünün aktif BOM'u.
+ *
+ * Bir organizasyonda aynı ürün için **en fazla bir** aktif BOM bulunabilir.
+ */
+export async function findActiveBomByItem(
+  organizationId: string,
+  itemId: string,
+): Promise<BomRecord | null> {
+  const rows = await db
+    .select({
+      id: bom.id,
+      organizationId: bom.organizationId,
+      itemId: bom.itemId,
+      code: bom.code,
+      name: bom.name,
+      description: bom.description,
+      bomType: bom.bomType,
+      status: bom.status,
+      createdAt: bom.createdAt,
+      updatedAt: bom.updatedAt,
+      archivedAt: bom.archivedAt,
+    })
+    .from(bom)
+    .where(
+      and(
+        eq(bom.organizationId, organizationId),
+        eq(bom.itemId, itemId),
+        eq(bom.status, "ACTIVE"),
+        isNull(bom.archivedAt),
+      ),
+    )
+    .limit(1);
+
+  return rows[0] ?? null;
+}
+
 /** Bir ürünün BOM'ları. */
 export async function listBomsByItem(
   organizationId: string,
@@ -234,7 +303,41 @@ export async function listBomsByItem(
     .orderBy(asc(bom.name));
 }
 
-/** BOM revision'ları (en yeni önce). */
+/**
+ * BOM kökü olabilecek ürünler.
+ *
+ * Kök ürün satılabilir bir mamul olmalıdır ve aktif bir BOM'u bulunmamalıdır:
+ * bir ürün için en fazla bir aktif BOM bulunabilir.
+ */
+export async function listBomRootCandidates(
+  organizationId: string,
+): Promise<{ id: string; code: string; name: string }[]> {
+  return db
+    .select({ id: item.id, code: item.code, name: item.name })
+    .from(item)
+    .leftJoin(
+      bom,
+      and(
+        eq(bom.organizationId, organizationId),
+        eq(bom.itemId, item.id),
+        eq(bom.status, "ACTIVE"),
+        isNull(bom.archivedAt),
+      ),
+    )
+    .where(
+      and(
+        eq(item.organizationId, organizationId),
+        eq(item.itemType, "FINISHED_GOOD"),
+        eq(item.isSellable, true),
+        eq(item.status, "ACTIVE"),
+        isNull(item.archivedAt),
+        isNull(bom.id),
+      ),
+    )
+    .orderBy(asc(item.name));
+}
+
+/** BOM revision'ları (yeni numara önce). */
 export async function listBomRevisions(
   organizationId: string,
   bomId: string,
@@ -243,6 +346,7 @@ export async function listBomRevisions(
     .select({
       id: bomRevision.id,
       bomId: bomRevision.bomId,
+      revisionNumber: bomRevision.revisionNumber,
       revision: bomRevision.revision,
       description: bomRevision.description,
       changeReason: bomRevision.changeReason,
@@ -251,13 +355,16 @@ export async function listBomRevisions(
       sourceSystem: bomRevision.sourceSystem,
       sourceRevision: bomRevision.sourceRevision,
       parentItemRevisionId: bomRevision.parentItemRevisionId,
+      lockVersion: bomRevision.lockVersion,
+      rootItemSnapshot: bomRevision.rootItemSnapshot,
+      supersedesRevisionId: bomRevision.supersedesRevisionId,
       createdAt: bomRevision.createdAt,
       updatedAt: bomRevision.updatedAt,
       releasedAt: bomRevision.releasedAt,
     })
     .from(bomRevision)
     .where(and(eq(bomRevision.organizationId, organizationId), eq(bomRevision.bomId, bomId)))
-    .orderBy(sql`${bomRevision.createdAt} desc`);
+    .orderBy(sql`${bomRevision.revisionNumber} desc`);
 }
 
 /** Tek BOM revision kaydı. */
@@ -269,6 +376,7 @@ export async function getBomRevision(
     .select({
       id: bomRevision.id,
       bomId: bomRevision.bomId,
+      revisionNumber: bomRevision.revisionNumber,
       revision: bomRevision.revision,
       description: bomRevision.description,
       changeReason: bomRevision.changeReason,
@@ -277,6 +385,9 @@ export async function getBomRevision(
       sourceSystem: bomRevision.sourceSystem,
       sourceRevision: bomRevision.sourceRevision,
       parentItemRevisionId: bomRevision.parentItemRevisionId,
+      lockVersion: bomRevision.lockVersion,
+      rootItemSnapshot: bomRevision.rootItemSnapshot,
+      supersedesRevisionId: bomRevision.supersedesRevisionId,
       createdAt: bomRevision.createdAt,
       updatedAt: bomRevision.updatedAt,
       releasedAt: bomRevision.releasedAt,
@@ -299,6 +410,7 @@ export async function findBomRevisionByValue(
     .select({
       id: bomRevision.id,
       bomId: bomRevision.bomId,
+      revisionNumber: bomRevision.revisionNumber,
       revision: bomRevision.revision,
       description: bomRevision.description,
       changeReason: bomRevision.changeReason,
@@ -307,6 +419,9 @@ export async function findBomRevisionByValue(
       sourceSystem: bomRevision.sourceSystem,
       sourceRevision: bomRevision.sourceRevision,
       parentItemRevisionId: bomRevision.parentItemRevisionId,
+      lockVersion: bomRevision.lockVersion,
+      rootItemSnapshot: bomRevision.rootItemSnapshot,
+      supersedesRevisionId: bomRevision.supersedesRevisionId,
       createdAt: bomRevision.createdAt,
       updatedAt: bomRevision.updatedAt,
       releasedAt: bomRevision.releasedAt,
@@ -325,6 +440,75 @@ export async function findBomRevisionByValue(
   return rows[0] ?? null;
 }
 
+/** Revision numarasıyla BOM revision'ı bulur. */
+export async function findBomRevisionByNumber(
+  organizationId: string,
+  bomId: string,
+  revisionNumber: number,
+): Promise<BomRevisionRecord | null> {
+  const rows = await db
+    .select({
+      id: bomRevision.id,
+      bomId: bomRevision.bomId,
+      revisionNumber: bomRevision.revisionNumber,
+      revision: bomRevision.revision,
+      description: bomRevision.description,
+      changeReason: bomRevision.changeReason,
+      status: bomRevision.status,
+      effectiveFrom: bomRevision.effectiveFrom,
+      sourceSystem: bomRevision.sourceSystem,
+      sourceRevision: bomRevision.sourceRevision,
+      parentItemRevisionId: bomRevision.parentItemRevisionId,
+      lockVersion: bomRevision.lockVersion,
+      rootItemSnapshot: bomRevision.rootItemSnapshot,
+      supersedesRevisionId: bomRevision.supersedesRevisionId,
+      createdAt: bomRevision.createdAt,
+      updatedAt: bomRevision.updatedAt,
+      releasedAt: bomRevision.releasedAt,
+    })
+    .from(bomRevision)
+    .where(
+      and(
+        eq(bomRevision.organizationId, organizationId),
+        eq(bomRevision.bomId, bomId),
+        eq(bomRevision.revisionNumber, revisionNumber),
+      ),
+    )
+    .limit(1);
+
+  return rows[0] ?? null;
+}
+
+/** Bir BOM'un revision'ları arasında en yüksek numara. */
+export async function getMaxRevisionNumber(organizationId: string, bomId: string): Promise<number> {
+  const rows = await db
+    .select({ value: sql<number>`coalesce(max(${bomRevision.revisionNumber}), 0)::int` })
+    .from(bomRevision)
+    .where(and(eq(bomRevision.organizationId, organizationId), eq(bomRevision.bomId, bomId)));
+
+  return rows[0]?.value ?? 0;
+}
+
+/**
+ * BOM header satırını kilitler.
+ *
+ * Revision numarası atanırken iki eşzamanlı istek aynı numarayı üretmesin diye
+ * header satırı `FOR UPDATE` ile kilitlenir.
+ */
+export async function lockBomForUpdate(
+  tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
+  organizationId: string,
+  bomId: string,
+): Promise<{ id: string } | null> {
+  const rows = await tx
+    .select({ id: bom.id })
+    .from(bom)
+    .where(and(eq(bom.organizationId, organizationId), eq(bom.id, bomId)))
+    .for("update");
+
+  return rows[0] ?? null;
+}
+
 /** Bir BOM revision'ının satırları. */
 export async function listBomLines(
   organizationId: string,
@@ -334,16 +518,15 @@ export async function listBomLines(
     .select({
       id: bomLine.id,
       bomRevisionId: bomLine.bomRevisionId,
-      childItemId: bomLine.childItemId,
-      childItemCode: item.code,
-      childItemName: item.name,
-      childItemRevisionId: bomLine.childItemRevisionId,
-      childItemRevision: itemRevision.revision,
-      childBomRevisionId: bomLine.childBomRevisionId,
+      parentLineId: bomLine.parentLineId,
+      lineageId: bomLine.lineageId,
       lineNumber: bomLine.lineNumber,
+      sortOrder: bomLine.sortOrder,
       quantity: bomLine.quantity,
       unitOfMeasureId: bomLine.unitOfMeasureId,
-      unitOfMeasureCode: itemUnit.code,
+      childItemId: bomLine.childItemId,
+      childItemRevisionId: bomLine.childItemRevisionId,
+      childItemRevision: itemRevision.revision,
       description: bomLine.description,
       referenceDesignation: bomLine.referenceDesignation,
       joiningMethod: bomLine.joiningMethod,
@@ -351,15 +534,26 @@ export async function listBomLines(
       positionReference: bomLine.positionReference,
       createdAt: bomLine.createdAt,
       updatedAt: bomLine.updatedAt,
+
+      childItemCode: item.code,
+      childItemName: item.name,
+      childItemType: item.itemType,
+      childItemStructureType: item.structureType,
+      childItemSupplyType: item.supplyType,
+      childItemIsSellable: item.isSellable,
+      childItemUnitOfMeasureId: item.unitOfMeasureId,
+      childItemStatus: item.status,
+      childItemArchivedAt: item.archivedAt,
+      unitOfMeasureCode: itemUnit.code,
     })
     .from(bomLine)
-    .leftJoin(item, eq(item.id, bomLine.childItemId))
+    .innerJoin(item, eq(item.id, bomLine.childItemId))
     .leftJoin(itemRevision, eq(itemRevision.id, bomLine.childItemRevisionId))
     .leftJoin(itemUnit, eq(itemUnit.id, bomLine.unitOfMeasureId))
     .where(
       and(eq(bomLine.organizationId, organizationId), eq(bomLine.bomRevisionId, bomRevisionId)),
     )
-    .orderBy(asc(bomLine.lineNumber));
+    .orderBy(asc(bomLine.sortOrder), asc(bomLine.lineNumber));
 }
 
 /** Tek BOM satırı. */
@@ -371,16 +565,15 @@ export async function getBomLine(
     .select({
       id: bomLine.id,
       bomRevisionId: bomLine.bomRevisionId,
-      childItemId: bomLine.childItemId,
-      childItemCode: item.code,
-      childItemName: item.name,
-      childItemRevisionId: bomLine.childItemRevisionId,
-      childItemRevision: itemRevision.revision,
-      childBomRevisionId: bomLine.childBomRevisionId,
+      parentLineId: bomLine.parentLineId,
+      lineageId: bomLine.lineageId,
       lineNumber: bomLine.lineNumber,
+      sortOrder: bomLine.sortOrder,
       quantity: bomLine.quantity,
       unitOfMeasureId: bomLine.unitOfMeasureId,
-      unitOfMeasureCode: itemUnit.code,
+      childItemId: bomLine.childItemId,
+      childItemRevisionId: bomLine.childItemRevisionId,
+      childItemRevision: itemRevision.revision,
       description: bomLine.description,
       referenceDesignation: bomLine.referenceDesignation,
       joiningMethod: bomLine.joiningMethod,
@@ -388,9 +581,20 @@ export async function getBomLine(
       positionReference: bomLine.positionReference,
       createdAt: bomLine.createdAt,
       updatedAt: bomLine.updatedAt,
+
+      childItemCode: item.code,
+      childItemName: item.name,
+      childItemType: item.itemType,
+      childItemStructureType: item.structureType,
+      childItemSupplyType: item.supplyType,
+      childItemIsSellable: item.isSellable,
+      childItemUnitOfMeasureId: item.unitOfMeasureId,
+      childItemStatus: item.status,
+      childItemArchivedAt: item.archivedAt,
+      unitOfMeasureCode: itemUnit.code,
     })
     .from(bomLine)
-    .leftJoin(item, eq(item.id, bomLine.childItemId))
+    .innerJoin(item, eq(item.id, bomLine.childItemId))
     .leftJoin(itemRevision, eq(itemRevision.id, bomLine.childItemRevisionId))
     .leftJoin(itemUnit, eq(itemUnit.id, bomLine.unitOfMeasureId))
     .where(and(eq(bomLine.organizationId, organizationId), eq(bomLine.id, lineId)))
@@ -400,35 +604,16 @@ export async function getBomLine(
 }
 
 /**
- * Bir ürünün içerdiği ürünler.
- *
- * Döngüsel BOM ilişkilerini denetlemek için kullanılır: bir ürün başka bir
- * ürünü dolaylı olarak içeriyorsa BOM ağacı sonsuza kadar açılır.
- */
-export async function listContainedItemIds(
-  organizationId: string,
-  itemId: string,
-): Promise<string[]> {
-  const rows = await db
-    .selectDistinct({ childItemId: bomLine.childItemId })
-    .from(bomLine)
-    .innerJoin(bomRevision, eq(bomRevision.id, bomLine.bomRevisionId))
-    .innerJoin(bom, eq(bom.id, bomRevision.bomId))
-    .where(and(eq(bom.organizationId, organizationId), eq(bom.itemId, itemId)));
-
-  return rows.map((row) => row.childItemId);
-}
-
-/**
  * Tüm BOM revision'ları (seçim listesi için).
  *
- * Satır formunda alt BOM revision'ı seçilirken hangi ürüne ait oldukları
- * görünmelidir; filtre istemcide yapılır.
+ * Proje item'ı bir revision'a bağlanırken hangi revision'ların uygun olduğu
+ * görünmelidir.
  */
 export async function listBomRevisionOptions(organizationId: string): Promise<
   {
     id: string;
     revision: string;
+    revisionNumber: number;
     bomId: string;
     itemId: string;
     itemCode: string | null;
@@ -440,6 +625,7 @@ export async function listBomRevisionOptions(organizationId: string): Promise<
     .select({
       id: bomRevision.id,
       revision: bomRevision.revision,
+      revisionNumber: bomRevision.revisionNumber,
       bomId: bomRevision.bomId,
       itemId: bom.itemId,
       itemCode: item.code,
@@ -450,7 +636,7 @@ export async function listBomRevisionOptions(organizationId: string): Promise<
     .innerJoin(bom, eq(bom.id, bomRevision.bomId))
     .leftJoin(item, eq(item.id, bom.itemId))
     .where(eq(bomRevision.organizationId, organizationId))
-    .orderBy(asc(item.name), asc(bomRevision.revision));
+    .orderBy(asc(item.name), asc(bomRevision.revisionNumber));
 }
 
 /** BOM satırı satır numarasıyla bulunur. */

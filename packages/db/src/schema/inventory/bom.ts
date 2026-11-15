@@ -5,6 +5,7 @@ import {
   foreignKey,
   index,
   integer,
+  jsonb,
   numeric,
   pgTable,
   text,
@@ -15,17 +16,42 @@ import {
 } from "drizzle-orm/pg-core";
 
 import { organization, user } from "../initial/auth";
-import { bomRevisionStatus, bomType, joiningMethod, recordStatus } from "./enums";
+import {
+  bomRevisionStatus,
+  bomType,
+  type itemStructureType,
+  type itemType,
+  joiningMethod,
+  recordStatus,
+  type supplyType,
+} from "./enums";
 import { item } from "./item";
 import { itemRevision } from "./item-revision";
 import { itemUnit } from "./unit";
 
 /**
+ * Yayın anında saklanan ürün görünümü.
+ *
+ * Ürün kartı sonradan değişse bile yayınlanmış revision'ın içeriği
+ * değişmez: revision kendi snapshot'ını taşır.
+ */
+export type BomItemSnapshot = {
+  code: string;
+  name: string;
+  itemType: (typeof itemType.enumValues)[number];
+  structureType: (typeof itemStructureType.enumValues)[number];
+  supplyType: (typeof supplyType.enumValues)[number] | null;
+  isSellable: boolean;
+  unitOfMeasureId: string;
+  unitOfMeasureCode: string | null;
+};
+
+/**
  * Ürünün bileşen yapısı (BOM başlığı).
  *
- * Bir BOM'un sahibi bir **Item**'dır. Bir item birden fazla BOM tanımına
- * sahip olabilir; hangisinin kullanılacağı tahmin edilmez, kullanım yerinde
- * açıkça seçilir (bkz. `project_item.bom_revision_id`).
+ * Bir BOM'un sahibi bir **Item**'dır. Bir organizasyonda aynı item için
+ * **en fazla bir aktif** BOM bulunabilir; geçmiş header'lar arşivlenerek
+ * korunur.
  */
 export const bom = pgTable(
   "bom",
@@ -73,6 +99,15 @@ export const bom = pgTable(
 
     uniqueIndex("bom_organization_id_code_uidx").on(table.organizationId, table.code),
 
+    /*
+     * Bir item için en fazla bir aktif BOM bulunabilir. Kural veritabanında
+     * uygulanır: iki paralel header oluşturma isteği yalnızca biriyle
+     * sonuçlanır.
+     */
+    uniqueIndex("bom_active_item_uidx")
+      .on(table.organizationId, table.itemId)
+      .where(sql`${table.status} = 'ACTIVE' AND ${table.archivedAt} IS NULL`),
+
     foreignKey({
       columns: [table.organizationId, table.itemId],
       foreignColumns: [item.organizationId, item.id],
@@ -109,7 +144,14 @@ export const bomRevision = pgTable(
     /** BOM'un sahibi item'ın teknik revision'ı; opsiyoneldir. */
     parentItemRevisionId: uuid("parent_item_revision_id"),
 
-    /** Revision değeri (ör. `05`). */
+    /**
+     * Revision sıra numarası; BOM içinde 1'den başlar ve artar.
+     *
+     * Kullanıcı tarafından verilmez: numara header kilidi altında atanır.
+     */
+    revisionNumber: integer("revision_number").notNull(),
+
+    /** Ekranda gösterilen revision etiketi (ör. `REV.01`). */
     revision: text("revision").notNull(),
 
     description: text("description"),
@@ -125,6 +167,17 @@ export const bomRevision = pgTable(
 
     /** Kaynak sistemdeki revision değeri. */
     sourceRevision: text("source_revision"),
+
+    /**
+     * Optimistic concurrency sürümü.
+     *
+     * Taslak kaydedilirken istemcinin gördüğü sürüm ile sunucudaki sürüm
+     * karşılaştırılır; çakışmada kullanıcının değişiklikleri korunur.
+     */
+    lockVersion: integer("lock_version").notNull().default(1),
+
+    /** Yayınlanan kök ürünün tarihsel görünümü. */
+    rootItemSnapshot: jsonb("root_item_snapshot").$type<BomItemSnapshot>(),
 
     createdById: text("created_by_id").references(() => user.id, { onDelete: "set null" }),
 
@@ -152,8 +205,23 @@ export const bomRevision = pgTable(
     // Composite foreign key hedefi.
     unique("bom_revision_organization_id_id_unique").on(table.organizationId, table.id),
 
-    // Revision değeri aynı BOM altında unique'tir.
-    uniqueIndex("bom_revision_bom_id_revision_uidx").on(table.bomId, table.revision),
+    // Revision numarası aynı BOM altında unique'tir.
+    uniqueIndex("bom_revision_bom_id_revision_number_uidx").on(table.bomId, table.revisionNumber),
+
+    /*
+     * Bir BOM'un aynı anda tek yayınlanmış revision'ı olabilir. Yeni bir
+     * revision yayınlandığında önceki RELEASED olan SUPERSEDED olur.
+     */
+    uniqueIndex("bom_revision_bom_id_released_uidx")
+      .on(table.bomId)
+      .where(sql`${table.status} = 'RELEASED'`),
+
+    /*
+     * Bir BOM'un aynı anda tek açık taslağı olabilir: DRAFT ya da IN_REVIEW.
+     */
+    uniqueIndex("bom_revision_bom_id_open_uidx")
+      .on(table.bomId)
+      .where(sql`${table.status} IN ('DRAFT', 'IN_REVIEW')`),
 
     foreignKey({
       columns: [table.organizationId, table.bomId],
@@ -182,13 +250,12 @@ export const bomRevision = pgTable(
 /**
  * BOM satırı.
  *
+ * Satırlar **adjacency list** ile hiyerarşi taşır: `parentLineId` aynı
+ * revision içindeki üst satırı gösterir. Bir alt montaj için ayrı BOM
+ * oluşturulmaz; gruplar aynı revision içinde alt satır taşır.
+ *
  * Aynı item bir BOM içinde **farklı pozisyonlarda birden fazla kez**
  * bulunabilir; bu yüzden `child_item_id` üzerinde unique constraint yoktur.
- * Satırlar `line_number` ile ayırt edilir.
- *
- * `child_bom_revision_id` opsiyoneldir: alt BOM'u olmayan bir bileşen de
- * geçerlidir. Yayınlanmış bir BOM'da alt BOM referansı her zaman belirli bir
- * revision'a bağlıdır — "en son revision" otomatik kullanılmaz.
  */
 export const bomLine = pgTable(
   "bom_line",
@@ -201,16 +268,27 @@ export const bomLine = pgTable(
 
     bomRevisionId: uuid("bom_revision_id").notNull(),
 
+    /** Üst satır; null ise satır doğrudan BOM kökünün altındadır. */
+    parentLineId: uuid("parent_line_id"),
+
     /** Bileşen ürün. */
     childItemId: uuid("child_item_id").notNull(),
 
     /** Bileşenin belirli bir teknik revision'ı; opsiyoneldir. */
     childItemRevisionId: uuid("child_item_revision_id"),
 
-    /** Bileşenin kendi BOM revision'ı; opsiyoneldir. */
-    childBomRevisionId: uuid("child_bom_revision_id"),
+    /**
+     * Satırın kimliği revision'lar arasında korunur.
+     *
+     * Yeni bir revision oluşturulurken satırlar kopyalanır; `lineageId`
+     * aynı occurrence'ın izlenmesini sağlar.
+     */
+    lineageId: uuid("lineage_id").notNull().defaultRandom(),
 
-    /** BOM içindeki sıra numarası. */
+    /** Yayın anındaki ürün görünümü. */
+    itemSnapshot: jsonb("item_snapshot").$type<BomItemSnapshot>(),
+
+    /** Revision içinde global sıra numarası; ağaç kimliği değildir. */
     lineNumber: integer("line_number").notNull(),
 
     /** Miktar. `numeric` kullanılır, floating point değil. */
@@ -252,6 +330,17 @@ export const bomLine = pgTable(
     unique("bom_line_organization_id_id_unique").on(table.organizationId, table.id),
 
     /*
+     * Üst satır ilişkisinin FK hedefi. `parent_line_id`, aynı revision'daki
+     * bir satırı gösterir: başka revision ya da organizasyondaki satıra
+     * bağlanamaz.
+     */
+    unique("bom_line_organization_id_bom_revision_id_id_unique").on(
+      table.organizationId,
+      table.bomRevisionId,
+      table.id,
+    ),
+
+    /*
      * Satırlar line number ile ayırt edilir. `child_item_id` üzerinde unique
      * **yoktur**: aynı bileşen farklı pozisyonlarda birden fazla kez
      * bulunabilir.
@@ -261,14 +350,43 @@ export const bomLine = pgTable(
       table.lineNumber,
     ),
 
+    /*
+     * Kardeş satırlar arasında sıra tekrarlanamaz. Kök satırlar ve alt
+     * satırlar ayrı kısmi index'lerle korunur; `parent_line_id` null
+     * olduğu için tek bir index `NULLS NOT DISTINCT` gerektirirdi.
+     */
+    uniqueIndex("bom_line_root_sort_uidx")
+      .on(table.organizationId, table.bomRevisionId, table.sortOrder)
+      .where(sql`${table.parentLineId} IS NULL`),
+
+    uniqueIndex("bom_line_child_sort_uidx")
+      .on(table.organizationId, table.bomRevisionId, table.parentLineId, table.sortOrder)
+      .where(sql`${table.parentLineId} IS NOT NULL`),
+
     // Miktar sıfırdan büyük olmalıdır.
     check("bom_line_quantity_check", sql`${table.quantity} > 0`),
+
+    // Satır kendi üst satırı olamaz.
+    check(
+      "bom_line_parent_not_self_check",
+      sql`${table.parentLineId} IS NULL OR ${table.parentLineId} <> ${table.id}`,
+    ),
 
     foreignKey({
       columns: [table.organizationId, table.bomRevisionId],
       foreignColumns: [bomRevision.organizationId, bomRevision.id],
       name: "bom_line_bom_revision_org_fk",
     }).onDelete("cascade"),
+
+    /*
+     * Üst satır aynı revision içinde olmak zorundadır. Silme sessizce
+     * cascade edilmez: alt dal silinmeden önce açıkça onaylanır.
+     */
+    foreignKey({
+      columns: [table.organizationId, table.bomRevisionId, table.parentLineId],
+      foreignColumns: [table.organizationId, table.bomRevisionId, table.id],
+      name: "bom_line_parent_line_org_fk",
+    }).onDelete("no action"),
 
     foreignKey({
       columns: [table.organizationId, table.childItemId],
@@ -283,12 +401,6 @@ export const bomLine = pgTable(
     }).onDelete("no action"),
 
     foreignKey({
-      columns: [table.organizationId, table.childBomRevisionId],
-      foreignColumns: [bomRevision.organizationId, bomRevision.id],
-      name: "bom_line_child_bom_revision_org_fk",
-    }).onDelete("no action"),
-
-    foreignKey({
       columns: [table.organizationId, table.unitOfMeasureId],
       foreignColumns: [itemUnit.organizationId, itemUnit.id],
       name: "bom_line_unit_org_fk",
@@ -296,6 +408,7 @@ export const bomLine = pgTable(
 
     index("bom_line_organization_id_idx").on(table.organizationId),
     index("bom_line_bom_revision_id_idx").on(table.bomRevisionId),
+    index("bom_line_parent_line_id_idx").on(table.parentLineId),
     index("bom_line_child_item_id_idx").on(table.childItemId),
   ],
 );

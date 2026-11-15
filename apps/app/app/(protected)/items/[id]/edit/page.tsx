@@ -47,6 +47,8 @@ export default async function EditItemPage({ params }: PageProps) {
             itemGroupId: record.itemGroupId,
             itemType: record.itemType,
             supplyType: record.supplyType ?? undefined,
+            isSellable: record.isSellable,
+            structureType: record.structureType,
             unitOfMeasureId: record.unitOfMeasureId,
             status: record.status,
           }}

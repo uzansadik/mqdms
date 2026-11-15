@@ -27,6 +27,13 @@ export const supplyTypeSchema = z.enum([
 
 export const itemStatusSchema = z.enum(["ACTIVE", "INACTIVE"]);
 
+/**
+ * Ürünün yapısal niteliği.
+ *
+ * `ASSEMBLY` ve `GROUP` alt satır taşıyabilir; `PART` yalnızca yaprak olabilir.
+ */
+export const itemStructureTypeSchema = z.enum(["ASSEMBLY", "GROUP", "PART"]);
+
 /** Ürün oluşturma ve güncelleme formu. */
 export const itemFormSchema = z.object({
   code: z
@@ -54,6 +61,16 @@ export const itemFormSchema = z.object({
    * Boş seçim ("" ) "belirtilmemiş" anlamına gelir.
    */
   supplyType: z.union([supplyTypeSchema, z.literal("")]).optional(),
+
+  /**
+   * Ürün satılabilir mi?
+   *
+   * BOM açılabilmesi için kök ürünün satılabilir olması gerekir.
+   */
+  isSellable: z.boolean(),
+
+  /** Ürünün yapısal niteliği; ağaçtaki yerini belirler. */
+  structureType: itemStructureTypeSchema,
 
   unitOfMeasureId: z.string().uuid("Geçersiz birim."),
 

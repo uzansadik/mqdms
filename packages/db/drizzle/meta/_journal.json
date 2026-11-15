@@ -43,6 +43,34 @@
       "when": 1794667221593,
       "tag": "0005_aromatic_hydra",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1794683243546,
+      "tag": "0006_lucky_abomination",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1794737793223,
+      "tag": "0007_foamy_wolfsbane",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1794737816095,
+      "tag": "0008_slimy_lethal_legion",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1794737826202,
+      "tag": "0009_noisy_la_nuit",
+      "breakpoints": true
     }
   ]
 }

@@ -1,3 +1,4 @@
+import { hasPermission } from "@mqdms/auth/permissions/server";
 import { getTranslations } from "@mqdms/i18n/server";
 import { Badge } from "@mqdms/ui/components/badge";
 import { Button } from "@mqdms/ui/components/button";
@@ -18,22 +19,24 @@ import { notFound } from "next/navigation";
 import { requireAuthContext } from "@/features/auth/session";
 import { compareBomRevisions } from "@/features/boms/compare";
 import { BomComparison } from "@/features/boms/components/bom-comparison";
-import { BomFlattenedTable, BomTree } from "@/features/boms/components/bom-explosion";
-import { BomLineForm } from "@/features/boms/components/bom-line-form";
-import { BomRevisionForm } from "@/features/boms/components/bom-revision-form";
-import { getBomDetailData, getBomEditorOptions, requireBomsAccess } from "@/features/boms/server";
+import { BomFlattenedTable } from "@/features/boms/components/bom-flattened-table";
+import { BomRevisionActions } from "@/features/boms/components/bom-revision-actions";
+import { BomTreeGrid } from "@/features/boms/components/bom-tree-grid";
+import { getBomDetailData, requireBomsAccess } from "@/features/boms/server";
 import { StatusBadge } from "@/features/shared/status-badge";
+import { listUnitOptions } from "@/features/units/repository";
 
 type PageProps = {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ compareFrom?: string; compareTo?: string }>;
+  searchParams: Promise<{ compareFrom?: string; compareTo?: string; revision?: string }>;
 };
 
 /**
  * BOM detayı.
  *
- * Sekmeler: revision geçmişi, hiyerarşik ağaç ve düzleştirilmiş malzeme
- * listesi. Satır düzenleme ilgili revision modülüyle birlikte eklenir.
+ * Ürün ağacı tek bir TreeGrid içinde gösterilir: alt gruplar ayrı BOM
+ * değildir, aynı revision'ın satırlarıdır. Revision geçmişi ve karşılaştırma
+ * ayrı sekmelerde durur.
  */
 export default async function BomDetailPage({ params, searchParams }: PageProps) {
   const context = await requireAuthContext();
@@ -42,9 +45,9 @@ export default async function BomDetailPage({ params, searchParams }: PageProps)
 
   const { id } = await params;
 
-  const comparisonParams = await searchParams;
+  const query = await searchParams;
 
-  const data = await getBomDetailData(context.organizationId, id);
+  const data = await getBomDetailData(context.organizationId, id, query.revision ?? null);
 
   if (!data) {
     notFound();
@@ -52,29 +55,34 @@ export default async function BomDetailPage({ params, searchParams }: PageProps)
 
   const t = await getTranslations();
 
-  const options = await getBomEditorOptions(context.organizationId);
+  const revision = data.currentRevision;
 
   /*
-   * Yayınlanmış bir revision'ın içeriği doğrudan değiştirilemez; satır
-   * eylemleri yalnızca düzenlenebilir revision'larda görünür.
+   * Yayınlanmış ya da incelemede olan revision'lar salt okunurdur; yalnızca
+   * taslak üzerinde düzenleme yapılabilir.
    */
-  const isEditable = data.currentRevision?.status !== "RELEASED";
+  const isEditable = revision?.status === "DRAFT";
 
-  const parentItemRevisions = options.itemRevisions.filter(
-    (revision) => revision.itemId === data.bom.itemId,
+  const hasOpenDraft = data.revisions.some(
+    (candidate) => candidate.status === "DRAFT" || candidate.status === "IN_REVIEW",
   );
 
-  /*
-   * Karşılaştırma iki revision seçildiğinde çalışır. Seçim yoksa sonuç
-   * `null`'dur: karşılaştırma tahmin edilmez.
-   */
-  const compareFrom = comparisonParams.compareFrom ?? null;
-  const compareTo = comparisonParams.compareTo ?? null;
+  const compareFrom = query.compareFrom ?? null;
+  const compareTo = query.compareTo ?? null;
 
   const changes =
     compareFrom && compareTo
       ? await compareBomRevisions(context.organizationId, compareFrom, compareTo)
       : null;
+
+  const [units, canSubmit, canRelease] = await Promise.all([
+    listUnitOptions(context.organizationId),
+    hasPermission(context, "boms", "submit"),
+    hasPermission(context, "boms", "release"),
+  ]);
+
+  const rootUnitCode =
+    units.find((unit) => unit.id === data.rootItem?.unitOfMeasureId)?.code ?? null;
 
   return (
     <div className="space-y-6">
@@ -85,15 +93,37 @@ export default async function BomDetailPage({ params, searchParams }: PageProps)
 
             <StatusBadge label={t(`items.status.${data.bom.status}`)} status={data.bom.status} />
 
+            {revision ? (
+              <Badge variant="outline">
+                {revision.revision} · {t(`boms.revisions.status.${revision.status}`)}
+              </Badge>
+            ) : null}
+
             {data.bom.archivedAt && <Badge variant="outline">{t("boms.archived.badge")}</Badge>}
           </div>
 
-          <p className="mt-1 text-sm text-muted-foreground">{data.bom.code}</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {data.bom.code}
+            {data.rootItem ? ` · ${data.rootItem.code} ${data.rootItem.name}` : ""}
+          </p>
         </div>
 
-        <Button asChild variant="outline">
-          <Link href={`/boms/${data.bom.id}/edit`}>{t("boms.actions.edit")}</Link>
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          {revision ? (
+            <BomRevisionActions
+              bomId={data.bom.id}
+              canRelease={canRelease}
+              canSubmit={canSubmit}
+              hasOpenDraft={hasOpenDraft}
+              revisionId={revision.id}
+              status={revision.status}
+            />
+          ) : null}
+
+          <Button asChild variant="outline">
+            <Link href={`/boms/${data.bom.id}/edit`}>{t("boms.actions.edit")}</Link>
+          </Button>
+        </div>
       </div>
 
       <Tabs defaultValue="tree">
@@ -112,24 +142,55 @@ export default async function BomDetailPage({ params, searchParams }: PageProps)
             <CardHeader>
               <CardTitle>
                 {t("boms.explosion.tree")}
-                {data.currentRevision ? ` · ${data.currentRevision.revision}` : ""}
+                {revision ? ` · ${revision.revision}` : ""}
               </CardTitle>
             </CardHeader>
 
             <CardContent>
-              <BomTree editable={isEditable} nodes={data.tree} />
+              {revision && data.rootItem ? (
+                <BomTreeGrid
+                  editable={isEditable}
+                  initialLines={data.lines.map((line) => ({
+                    id: line.id,
+                    parentLineId: line.parentLineId,
+                    childItemId: line.childItemId,
+                    childItemCode: line.childItemCode ?? "",
+                    childItemName: line.childItemName ?? "",
+                    childItemType: line.childItemType,
+                    childItemStructureType: line.childItemStructureType,
+                    childItemSupplyType: line.childItemSupplyType,
+                    childItemIsSellable: line.childItemIsSellable,
+                    quantity: line.quantity,
+                    unitOfMeasureId: line.unitOfMeasureId,
+                    sortOrder: line.sortOrder,
+                    childItemRevisionId: line.childItemRevisionId,
+                  }))}
+                  lockVersion={revision.lockVersion}
+                  revisionId={revision.id}
+                  rootItem={{
+                    id: data.rootItem.id,
+                    code: data.rootItem.code,
+                    name: data.rootItem.name,
+                    itemType: data.rootItem.itemType,
+                    structureType: data.rootItem.structureType,
+                    supplyType: data.rootItem.supplyType,
+                    isSellable: data.rootItem.isSellable,
+                    unitOfMeasureId: data.rootItem.unitOfMeasureId,
+                    unitOfMeasureCode: rootUnitCode,
+                  }}
+                  units={units}
+                />
+              ) : (
+                <Empty>
+                  <EmptyHeader>
+                    <EmptyTitle>{t("boms.detail.tree.empty.title")}</EmptyTitle>
+
+                    <EmptyDescription>{t("boms.detail.tree.empty.description")}</EmptyDescription>
+                  </EmptyHeader>
+                </Empty>
+              )}
             </CardContent>
           </Card>
-
-          {data.currentRevision && isEditable && (
-            <BomLineForm
-              bomRevisionId={data.currentRevision.id}
-              bomRevisions={options.bomRevisions}
-              itemRevisions={options.itemRevisions}
-              items={options.items}
-              units={options.units}
-            />
-          )}
         </TabsContent>
 
         <TabsContent className="mt-4 space-y-4" value="flattened">
@@ -174,18 +235,25 @@ export default async function BomDetailPage({ params, searchParams }: PageProps)
                   </TableHeader>
 
                   <TableBody>
-                    {data.revisions.map((revision) => (
-                      <TableRow key={revision.id}>
-                        <TableCell className="font-medium">{revision.revision}</TableCell>
+                    {data.revisions.map((candidate) => (
+                      <TableRow key={candidate.id}>
+                        <TableCell className="font-medium">
+                          <Link
+                            className="hover:underline"
+                            href={`/boms/${data.bom.id}?revision=${candidate.id}`}
+                          >
+                            {candidate.revision}
+                          </Link>
+                        </TableCell>
 
-                        <TableCell>{t(`boms.revisions.status.${revision.status}`)}</TableCell>
+                        <TableCell>{t(`boms.revisions.status.${candidate.status}`)}</TableCell>
 
-                        <TableCell>{revision.changeReason ?? "-"}</TableCell>
+                        <TableCell>{candidate.changeReason ?? "-"}</TableCell>
 
                         <TableCell>
-                          {revision.sourceSystem
-                            ? `${revision.sourceSystem}${
-                                revision.sourceRevision ? ` · ${revision.sourceRevision}` : ""
+                          {candidate.sourceSystem
+                            ? `${candidate.sourceSystem}${
+                                candidate.sourceRevision ? ` · ${candidate.sourceRevision}` : ""
                               }`
                             : "-"}
                         </TableCell>
@@ -196,8 +264,6 @@ export default async function BomDetailPage({ params, searchParams }: PageProps)
               )}
             </CardContent>
           </Card>
-
-          <BomRevisionForm bomId={data.bom.id} parentItemRevisions={parentItemRevisions} />
         </TabsContent>
 
         <TabsContent className="mt-4 space-y-4" value="comparison">

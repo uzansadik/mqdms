@@ -16,7 +16,7 @@ export default async function ActivityPage() {
       <div>
         <h1 className="text-2xl font-semibold">Activity</h1>
 
-        <p className="text-sm text-muted-foreground">Recent activity in your organization.</p>
+        <p className="text-sm text-muted-foreground">Recent 100 activities in your organization.</p>
       </div>
 
       <div className="divide-y rounded-lg border">

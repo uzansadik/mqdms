@@ -5,8 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@mqdms/ui/components/c
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@mqdms/ui/components/empty";
 import Link from "next/link";
 
-import { BomTree } from "@/features/boms/components/bom-explosion";
-import type { BomExplosionNode } from "@/features/boms/explosion";
+import { BomTreeView } from "@/features/boms/components/bom-tree-view";
+import type { BomTreeNode } from "@/features/boms/tree";
 import { StatusBadge } from "@/features/shared/status-badge";
 
 import type { ProjectBomRevisionRecord } from "../repository";
@@ -16,7 +16,7 @@ type ProjectBomListProps = {
   revisions: ProjectBomRevisionRecord[];
 
   /** Her revision için çözümlenen bileşen ağacı; `revisions` ile sıra eşleşir. */
-  trees: BomExplosionNode[][];
+  trees: BomTreeNode[][];
 };
 
 /**
@@ -73,7 +73,7 @@ export async function ProjectBomList({ revisions, trees }: ProjectBomListProps) 
           </CardHeader>
 
           <CardContent>
-            <BomTree nodes={trees[index] ?? []} />
+            <BomTreeView nodes={trees[index] ?? []} />
           </CardContent>
         </Card>
       ))}

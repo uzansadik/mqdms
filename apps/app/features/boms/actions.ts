@@ -5,23 +5,28 @@ import type { z } from "zod";
 
 import { requireAuthContext } from "@/features/auth/session";
 
-import { flattenBom } from "./explosion";
-import { bomFormSchema, bomLineFormSchema, bomRevisionFormSchema } from "./schema";
+import { listBomComponentOptions } from "./explosion";
+import { bomDraftSaveSchema, bomFormSchema, bomNextRevisionSchema } from "./schema";
 import {
-  addBomLine,
   archiveBom,
   BomRuleError,
   createBom,
-  createBomRevision,
+  createNextBomRevision,
   releaseBomRevision,
-  removeBomLine,
+  restoreBom,
+  returnBomToDraft,
+  saveBomDraft,
+  submitBomForReview,
   updateBom,
-  updateBomLine,
-  updateBomRevision,
 } from "./service";
 
 /** Aksiyon sonucu. */
 export type BomActionResult = { success: true } | { success: false; error: string };
+
+/** Taslak kaydetme sonucu. */
+export type BomDraftSaveResult =
+  | { success: true; idMap: Record<string, string>; lockVersion: number }
+  | { success: false; error: string; conflict?: boolean };
 
 /** Doğrulama hatasını tek satırlık bir mesaja çevirir. */
 function firstIssueMessage(error: z.ZodError): string {
@@ -84,28 +89,22 @@ export async function archiveBomAction(bomId: string): Promise<BomActionResult> 
   }
 }
 
-export async function createBomRevisionAction(input: unknown): Promise<BomActionResult> {
-  const parsed = bomRevisionFormSchema.safeParse(input);
-
-  if (!parsed.success) {
-    return { success: false, error: firstIssueMessage(parsed.error) };
-  }
-
+export async function restoreBomAction(bomId: string): Promise<BomActionResult> {
   const context = await requireAuthContext();
 
   try {
-    await createBomRevision(context, parsed.data);
+    await restoreBom(context, bomId);
     return { success: true };
   } catch (error) {
     return { success: false, error: toActionError(error) };
   }
 }
 
-export async function updateBomRevisionAction(
-  revisionId: string,
+/** Yeni revision taslağı oluşturur. */
+export async function createNextBomRevisionAction(
   input: unknown,
-): Promise<BomActionResult> {
-  const parsed = bomRevisionFormSchema.safeParse(input);
+): Promise<BomActionResult & { revisionId?: string }> {
+  const parsed = bomNextRevisionSchema.safeParse(input);
 
   if (!parsed.success) {
     return { success: false, error: firstIssueMessage(parsed.error) };
@@ -114,66 +113,77 @@ export async function updateBomRevisionAction(
   const context = await requireAuthContext();
 
   try {
-    await updateBomRevision(context, revisionId, parsed.data);
+    const revisionId = await createNextBomRevision(
+      context,
+      parsed.data.bomId,
+      parsed.data.changeReason,
+    );
+
+    return { success: true, revisionId };
+  } catch (error) {
+    return { success: false, error: toActionError(error) };
+  }
+}
+
+/**
+ * Taslak ağacı kaydeder.
+ *
+ * İstemci ağacın tamamını gönderir; sunucu farkı hesaplayıp tek
+ * transaction'da uygular. Sürüm çakışması ayrıca bildirilir: kullanıcının
+ * değişiklikleri kaybolmaz.
+ */
+export async function saveBomDraftAction(input: unknown): Promise<BomDraftSaveResult> {
+  const parsed = bomDraftSaveSchema.safeParse(input);
+
+  if (!parsed.success) {
+    return { success: false, error: firstIssueMessage(parsed.error) };
+  }
+
+  const context = await requireAuthContext();
+
+  try {
+    const result = await saveBomDraft(context, parsed.data);
+
+    return { success: true, idMap: result.idMap, lockVersion: result.lockVersion };
+  } catch (error) {
+    if (error instanceof BomRuleError && error.code === "CONFLICT") {
+      return { success: false, error: error.message, conflict: true };
+    }
+
+    return { success: false, error: toActionError(error) };
+  }
+}
+
+/** Revision'ı incelemeye gönderir. */
+export async function submitBomForReviewAction(revisionId: string): Promise<BomActionResult> {
+  const context = await requireAuthContext();
+
+  try {
+    await submitBomForReview(context, revisionId);
     return { success: true };
   } catch (error) {
     return { success: false, error: toActionError(error) };
   }
 }
 
+/** İncelemede olan revision'ı taslağa döndürür. */
+export async function returnBomToDraftAction(revisionId: string): Promise<BomActionResult> {
+  const context = await requireAuthContext();
+
+  try {
+    await returnBomToDraft(context, revisionId);
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: toActionError(error) };
+  }
+}
+
+/** Revision'ı yayınlar. */
 export async function releaseBomRevisionAction(revisionId: string): Promise<BomActionResult> {
   const context = await requireAuthContext();
 
   try {
     await releaseBomRevision(context, revisionId);
-    return { success: true };
-  } catch (error) {
-    return { success: false, error: toActionError(error) };
-  }
-}
-
-export async function addBomLineAction(input: unknown): Promise<BomActionResult> {
-  const parsed = bomLineFormSchema.safeParse(input);
-
-  if (!parsed.success) {
-    return { success: false, error: firstIssueMessage(parsed.error) };
-  }
-
-  const context = await requireAuthContext();
-
-  try {
-    await addBomLine(context, parsed.data);
-    return { success: true };
-  } catch (error) {
-    return { success: false, error: toActionError(error) };
-  }
-}
-
-export async function updateBomLineAction(
-  lineId: string,
-  input: unknown,
-): Promise<BomActionResult> {
-  const parsed = bomLineFormSchema.safeParse(input);
-
-  if (!parsed.success) {
-    return { success: false, error: firstIssueMessage(parsed.error) };
-  }
-
-  const context = await requireAuthContext();
-
-  try {
-    await updateBomLine(context, lineId, parsed.data);
-    return { success: true };
-  } catch (error) {
-    return { success: false, error: toActionError(error) };
-  }
-}
-
-export async function removeBomLineAction(lineId: string): Promise<BomActionResult> {
-  const context = await requireAuthContext();
-
-  try {
-    await removeBomLine(context, lineId);
     return { success: true };
   } catch (error) {
     return { success: false, error: toActionError(error) };
@@ -188,7 +198,7 @@ export type BomComponentOptionsResult =
 /**
  * Bir BOM revision'ının bileşenlerini döndürür.
  *
- * Çözümlenen alt BOM'lar da dahil edilir: kalite çalışması için gerekli
+ * Çözümlenen alt bileşenler de dahil edilir: kalite çalışması için gerekli
  * bütün alt bileşenler (FRP, metal vb.) tek listede toplanır. Aynı item
  * birden çok yerde geçiyorsa listede bir kez görünür.
  */
@@ -201,29 +211,7 @@ export async function listBomComponentOptionsAction(
     return { success: false, error: "Bu işlem için yetkiniz yok." };
   }
 
-  try {
-    const lines = await flattenBom(context.organizationId, bomRevisionId, {
-      includeIntermediate: true,
-    });
+  const items = await listBomComponentOptions(context.organizationId, bomRevisionId);
 
-    const items = new Map<string, { id: string; code: string; name: string }>();
-
-    for (const line of lines) {
-      if (items.has(line.childItemId)) {
-        continue;
-      }
-
-      items.set(line.childItemId, {
-        id: line.childItemId,
-        code: line.childItemCode ?? "",
-        name: line.childItemName ?? "",
-      });
-    }
-
-    return { success: true, items: [...items.values()] };
-  } catch (error) {
-    console.error("BOM bileşenleri okunamadı:", error);
-
-    return { success: false, error: "BOM bileşenleri okunamadı. Lütfen tekrar deneyin." };
-  }
+  return { success: true, items };
 }

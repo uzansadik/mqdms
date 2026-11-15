@@ -5,17 +5,20 @@ import { type BomLineSummary, diffBomLines } from "./comparison";
 /** Karşılaştırma için satır özeti üretir. */
 function line(overrides: Partial<BomLineSummary> = {}): BomLineSummary {
   return {
-    lineNumber: 1,
+    id: "line-1",
+    lineageId: "lineage-1",
+    parentLineageId: null,
     childItemId: "item-1",
     childItemCode: "30.0001234",
     childItemName: "Reçine A",
     childItemRevisionId: null,
     childItemRevision: null,
-    childBomRevisionId: null,
     quantity: 5,
     unitOfMeasureId: "unit-kg",
     unitOfMeasureCode: "KG",
     referenceDesignation: null,
+    sortOrder: 0,
+    path: "1",
     ...overrides,
   };
 }
@@ -28,19 +31,19 @@ describe("BOM revision karşılaştırması", () => {
   });
 
   it("eklenen bileşeni ITEM_ADDED olarak bildirir", () => {
-    const changes = diffBomLines([], [line({ lineNumber: 3 })]);
+    const changes = diffBomLines([], [line({ path: "3" })]);
 
     expect(changes).toHaveLength(1);
     expect(changes[0]?.type).toBe("ITEM_ADDED");
-    expect(changes[0]?.lineNumber).toBe(3);
+    expect(changes[0]?.path).toBe("3");
   });
 
   it("kaldırılan bileşeni ITEM_REMOVED olarak bildirir", () => {
-    const changes = diffBomLines([line({ lineNumber: 2 })], []);
+    const changes = diffBomLines([line({ path: "2" })], []);
 
     expect(changes).toHaveLength(1);
     expect(changes[0]?.type).toBe("ITEM_REMOVED");
-    expect(changes[0]?.previousLineNumber).toBe(2);
+    expect(changes[0]?.path).toBe("2");
   });
 
   it("miktar değişimini QUANTITY_CHANGED olarak bildirir", () => {
@@ -72,54 +75,56 @@ describe("BOM revision karşılaştırması", () => {
     expect(changes[0]?.type).toBe("ITEM_REVISION_CHANGED");
   });
 
-  it("alt BOM revision değişimini CHILD_BOM_REVISION_CHANGED olarak bildirir", () => {
+  it("üst satır değişimini PARENT_CHANGED olarak bildirir", () => {
     const changes = diffBomLines(
-      [line({ childBomRevisionId: "bom-rev-a" })],
-      [line({ childBomRevisionId: "bom-rev-b" })],
+      [line({ parentLineageId: "lineage-grup" })],
+      [line({ parentLineageId: "lineage-baska" })],
     );
 
     expect(changes).toHaveLength(1);
-    expect(changes[0]?.type).toBe("CHILD_BOM_REVISION_CHANGED");
+    expect(changes[0]?.type).toBe("PARENT_CHANGED");
   });
 
-  it("pozisyon değişimini POSITION_CHANGED olarak bildirir", () => {
-    const changes = diffBomLines(
-      [line({ lineNumber: 4, referenceDesignation: "A3" })],
-      [line({ lineNumber: 7, referenceDesignation: "A3" })],
-    );
+  it("sıra değişimini REORDERED olarak bildirir", () => {
+    const changes = diffBomLines([line({ sortOrder: 0 })], [line({ sortOrder: 2 })]);
 
     expect(changes).toHaveLength(1);
-    expect(changes[0]?.type).toBe("POSITION_CHANGED");
+    expect(changes[0]?.type).toBe("REORDERED");
   });
 
   it("aynı bileşeni iki pozisyonda karıştırmaz", () => {
     /*
-     * Aynı bileşen bir BOM içinde farklı pozisyonlarda birden fazla kez
-     * bulunabilir. Referans tanımı olmadan satırlar bileşen + satır numarası
-     * çiftiyle eşleştirilir; iki satır birbiriyle eşleşmemelidir.
+     * Aynı bileşen bir BOM içinde farklı dallarda birden fazla kez
+     * bulunabilir. Satırlar lineage ile eşleştirilir; iki occurrence birbiriyle
+     * eşleşmemelidir.
      */
     const changes = diffBomLines(
-      [line({ lineNumber: 1, quantity: 5 }), line({ lineNumber: 2, quantity: 7 })],
-      [line({ lineNumber: 1, quantity: 5 }), line({ lineNumber: 2, quantity: 9 })],
+      [
+        line({ id: "a", lineageId: "lineage-a", quantity: 5 }),
+        line({ id: "b", lineageId: "lineage-b", quantity: 7 }),
+      ],
+      [
+        line({ id: "c", lineageId: "lineage-a", quantity: 5 }),
+        line({ id: "d", lineageId: "lineage-b", quantity: 9 }),
+      ],
     );
 
     expect(changes).toHaveLength(1);
     expect(changes[0]?.type).toBe("QUANTITY_CHANGED");
-    expect(changes[0]?.lineNumber).toBe(2);
+    expect(changes[0]?.after?.quantity).toBe(9);
   });
 
-  it("referans tanımı satır numarası değişse de eşleşmeyi korur", () => {
+  it("satır kimliği değişse de lineage üzerinden eşleştirir", () => {
     /*
-     * Tasarım referansı revision'lar arasında değişmez; satır numarası
-     * değişse bile aynı bileşen eşleşir ve yalnızca pozisyon değişimi
-     * bildirilir.
+     * Yeni revision oluşturulduğunda satır kimlikleri değişir; lineage
+     * kimlikleri korunur. Eşleşme lineage üzerinden yapılır.
      */
     const changes = diffBomLines(
-      [line({ lineNumber: 1, referenceDesignation: "A3" })],
-      [line({ lineNumber: 9, referenceDesignation: "A3" })],
+      [line({ id: "eski", lineageId: "lineage-1", quantity: 5 })],
+      [line({ id: "yeni", lineageId: "lineage-1", quantity: 8 })],
     );
 
     expect(changes).toHaveLength(1);
-    expect(changes[0]?.type).toBe("POSITION_CHANGED");
+    expect(changes[0]?.type).toBe("QUANTITY_CHANGED");
   });
 });

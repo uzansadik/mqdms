@@ -5,6 +5,7 @@ import { requireAuthContext } from "@/features/auth/session";
 import { BomForm } from "@/features/boms/components/bom-form";
 import { getBom } from "@/features/boms/repository";
 import { getBomFormOptions, requireBomsAccess } from "@/features/boms/server";
+import { getItem } from "@/features/items/repository";
 
 type PageProps = {
   params: Promise<{ id: string }>;
@@ -28,6 +29,19 @@ export default async function EditBomPage({ params }: PageProps) {
 
   const options = await getBomFormOptions(context.organizationId);
 
+  /*
+   * Sahibi ürün değiştirilemez; mevcut ürün listede görünmeyebilir (aktif
+   * BOM'u olduğu için aday listesinde yer almaz).
+   */
+  const rootItem = await getItem(context.organizationId, record.itemId);
+
+  const items = rootItem
+    ? [
+        { id: rootItem.id, code: rootItem.code, name: rootItem.name },
+        ...options.items.filter((candidate) => candidate.id !== rootItem.id),
+      ]
+    : options.items;
+
   return (
     <div className="space-y-6">
       <div>
@@ -44,10 +58,8 @@ export default async function EditBomPage({ params }: PageProps) {
             code: record.code,
             name: record.name,
             description: record.description,
-            bomType: record.bomType,
-            status: record.status,
           }}
-          items={options.items}
+          items={items}
         />
       </div>
     </div>
