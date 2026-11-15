@@ -227,6 +227,13 @@ export function removeSubtree(rows: BomGridRow[], key: string): BomGridRow[] {
 export function addRow(rows: BomGridRow[], parentKey: string | null, key: string): BomGridRow[] {
   const siblings = getSiblings(rows, parentKey);
 
+  /*
+   * Yeni satır kardeşlerin sonuna eklenir. Sıra numarası kardeş sayısı değil,
+   * mevcut en büyük sıranın bir üstüdür: kardeş sıraları boşluksuz değilse
+   * (taşıma sonrası) çakışma oluşmaz.
+   */
+  const sortOrder = siblings.reduce((max, sibling) => Math.max(max, sibling.sortOrder), -1) + 1;
+
   const row: BomGridRow = {
     key,
     parentKey,
@@ -239,11 +246,37 @@ export function addRow(rows: BomGridRow[], parentKey: string | null, key: string
     isSellable: null,
     quantity: 1,
     unitOfMeasureId: null,
-    sortOrder: siblings.length,
+    sortOrder,
     error: null,
   };
 
   return [...rows, row];
+}
+
+/**
+ * Ağaçtaki çocukları üst satıra göre gruplar.
+ *
+ * Kök altındaki satırların üst satırı yoktur (`parentKey` null). Ağaçta bu
+ * satırlar BOM'un kök ürününün altında durur; kök düğümün anahtarı
+ * `rootKey` olduğu için üst satır null yerine kök anahtarı kullanılır.
+ */
+export function buildChildrenMap(rows: BomGridRow[], rootKey: string): Map<string, BomGridRow[]> {
+  const map = new Map<string, BomGridRow[]>();
+
+  for (const row of rows) {
+    const parentKey = row.parentKey ?? rootKey;
+
+    const list = map.get(parentKey) ?? [];
+
+    list.push(row);
+    map.set(parentKey, list);
+  }
+
+  for (const list of map.values()) {
+    list.sort((a, b) => a.sortOrder - b.sortOrder);
+  }
+
+  return map;
 }
 
 /** Ağaçtaki satırları sıralı düz listeye çevirir (kaydetme sırası). */

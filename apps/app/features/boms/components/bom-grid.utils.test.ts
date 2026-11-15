@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   addRow,
   type BomGridRow,
+  buildChildrenMap,
   canIndentRow,
   collectDescendantKeys,
   indentRow,
@@ -41,6 +42,16 @@ describe("BOM grid satır işlemleri", () => {
     expect(rows[1]?.key).toBe("new-1");
     expect(rows[1]?.sortOrder).toBe(1);
     expect(rows[1]?.quantity).toBe(1);
+  });
+
+  it("yeni satıra boşluksuz olmayan kardeş sırasından sonra bir sıra verir", () => {
+    const rows = addRow(
+      [row({ key: "a", sortOrder: 3 }), row({ key: "b", sortOrder: 7 })],
+      null,
+      "new-1",
+    );
+
+    expect(rows[2]?.sortOrder).toBe(8);
   });
 
   it("satırı aynı seviyede bir üste taşır", () => {
@@ -133,5 +144,42 @@ describe("BOM grid satır işlemleri", () => {
     ]);
 
     expect(ordered.map((candidate) => candidate.key)).toEqual(["a", "b", "c"]);
+  });
+});
+
+describe("BOM grid ağaç haritası", () => {
+  it("kök altındaki satırları kök düğümünün altına koyar", () => {
+    /*
+     * Kök altındaki satırların üst satırı yoktur (`parentKey` null). Ağaçta
+     * bunlar kök ürünün altında görünmelidir.
+     */
+    const map = buildChildrenMap(
+      [row({ key: "a", parentKey: null }), row({ key: "b", parentKey: null, sortOrder: 1 })],
+      "root",
+    );
+
+    expect(map.get("root")?.map((candidate) => candidate.key)).toEqual(["a", "b"]);
+  });
+
+  it("alt satırları üst satırına bağlar", () => {
+    const map = buildChildrenMap(
+      [row({ key: "a", parentKey: null }), row({ key: "b", parentKey: "a" })],
+      "root",
+    );
+
+    expect(map.get("root")?.map((candidate) => candidate.key)).toEqual(["a"]);
+    expect(map.get("a")?.map((candidate) => candidate.key)).toEqual(["b"]);
+  });
+
+  it("kardeşleri sıra numarasına göre sıralar", () => {
+    const map = buildChildrenMap(
+      [
+        row({ key: "b", parentKey: null, sortOrder: 2 }),
+        row({ key: "a", parentKey: null, sortOrder: 1 }),
+      ],
+      "root",
+    );
+
+    expect(map.get("root")?.map((candidate) => candidate.key)).toEqual(["a", "b"]);
   });
 });
