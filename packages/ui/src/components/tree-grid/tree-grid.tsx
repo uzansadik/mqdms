@@ -102,11 +102,44 @@ export function TreeGrid<TData>({
 
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  const listRef = useRef<HTMLDivElement>(null);
+
+  /*
+   * Yapışkan başlık, sanallaştırılmış listenin **üstünde** durur. Liste
+   * kapsayıcının içinde kaydığı için sanallaştırıcıya listenin başlangıç
+   * kaydırması bildirilir; aksi halde satırlar başlık yüksekliği kadar
+   * kayar.
+   */
+  const [scrollMargin, setScrollMargin] = useState(0);
+
+  useEffect(() => {
+    const update = () => {
+      setScrollMargin(listRef.current?.offsetTop ?? 0);
+    };
+
+    update();
+
+    const element = scrollRef.current;
+
+    if (!element || typeof ResizeObserver === "undefined") {
+      return;
+    }
+
+    const observer = new ResizeObserver(update);
+
+    observer.observe(element);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
+
   const virtualizer = useVirtualizer({
     count: rows.length,
     getScrollElement: () => scrollRef.current,
     estimateSize: () => estimateRowHeight,
     overscan: 12,
+    scrollMargin,
   });
 
   const [focusedRowId, setFocusedRowId] = useState<string | null>(null);
@@ -245,47 +278,47 @@ export function TreeGrid<TData>({
 
   return (
     <div className={cn("flex min-h-0 flex-col", className)}>
-      {headerGroups.map((headerGroup) => (
-        <div
-          className="grid border-b bg-muted/40 text-sm font-medium"
-          key={headerGroup.id}
-          role="row"
-          style={{ gridTemplateColumns }}
-          tabIndex={-1}
-        >
-          {headerGroup.headers.map((header) => (
-            <div
-              className="flex items-center px-3 py-2"
-              key={header.id}
-              role="columnheader"
-              style={
-                columnWidths?.[header.column.id]
-                  ? {
-                      width: columnWidths[header.column.id],
-                      minWidth: columnWidths[header.column.id],
-                    }
-                  : undefined
-              }
-              tabIndex={-1}
-            >
-              {header.isPlaceholder
-                ? null
-                : flexRender(header.column.columnDef.header, header.getContext())}
-            </div>
-          ))}
-        </div>
-      ))}
-
       <div
         aria-rowcount={rows.length}
         className="relative min-h-0 flex-1 overflow-auto"
         ref={scrollRef}
         role="treegrid"
       >
+        {/*
+         * Başlık kaydırma alanının **içinde** ve yapışkan olmalı: aksi halde
+         * yatay kaydırmada başlık satırlarla hizalanmaz.
+         */}
+        {headerGroups.map((headerGroup) => (
+          <div
+            className="bg-muted/40 sticky top-0 z-10 grid border-b text-sm font-medium"
+            key={headerGroup.id}
+            role="row"
+            style={{ gridTemplateColumns }}
+            tabIndex={-1}
+          >
+            {headerGroup.headers.map((header) => (
+              <div
+                className="flex items-center px-3 py-2"
+                key={header.id}
+                role="columnheader"
+                tabIndex={-1}
+              >
+                {header.isPlaceholder
+                  ? null
+                  : flexRender(header.column.columnDef.header, header.getContext())}
+              </div>
+            ))}
+          </div>
+        ))}
+
         {rows.length === 0 ? (
           <div className="text-muted-foreground p-6 text-center text-sm">{emptyMessage}</div>
         ) : (
-          <div className="relative w-full" style={{ height: `${virtualizer.getTotalSize()}px` }}>
+          <div
+            className="relative w-full"
+            ref={listRef}
+            style={{ height: `${virtualizer.getTotalSize()}px` }}
+          >
             {virtualizer.getVirtualItems().map((virtualRow) => {
               const entry = rows[virtualRow.index];
 
@@ -310,7 +343,8 @@ export function TreeGrid<TData>({
                   aria-selected={isFocused}
                   aria-setsize={siblingCount}
                   className={cn(
-                    "absolute top-0 left-0 grid w-full items-center border-b text-sm",
+                    "bg-background absolute top-0 left-0 grid w-full items-center border-b text-sm",
+                    "hover:bg-muted/40",
                     isFocused && "bg-muted/60",
                   )}
                   key={row.id}
@@ -328,6 +362,7 @@ export function TreeGrid<TData>({
                   style={{
                     height: `${virtualRow.size}px`,
                     transform: `translateY(${virtualRow.start}px)`,
+                    gridTemplateColumns,
                   }}
                   tabIndex={isFocused ? 0 : -1}
                 >
@@ -336,14 +371,6 @@ export function TreeGrid<TData>({
                       className={cn("flex min-w-0 items-center px-3", columnIndex === 0 && "gap-1")}
                       key={cell.id}
                       role="gridcell"
-                      style={
-                        columnWidths?.[cell.column.id]
-                          ? {
-                              width: columnWidths[cell.column.id],
-                              minWidth: columnWidths[cell.column.id],
-                            }
-                          : undefined
-                      }
                       tabIndex={-1}
                     >
                       {columnIndex === 0 ? (
