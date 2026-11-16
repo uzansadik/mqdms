@@ -9,7 +9,6 @@ import {
   flexRender,
   getCoreRowModel,
   getExpandedRowModel,
-  type Row,
   useReactTable,
 } from "@tanstack/react-table";
 import { useVirtualizer } from "@tanstack/react-virtual";
@@ -84,26 +83,18 @@ export function TreeGrid<TData>({
   }, [leafColumns, columnWidths]);
 
   /*
-   * Görünür satırlar: köklerden başlanır, açık satırların altı açılır.
-   * Düz liste sanallaştırma için kullanılır.
+   * Görünür satırlar.
+   *
+   * TanStack'in expanded row model'i `rows` listesini **düz** verir: açık bir
+   * satırın altındaki çocuklar hem bu listede hem de `parent.subRows`
+   * içinde bulunur. Liste ayrıca yürütülürse aynı satır iki kez basılır ve
+   * React "aynı key" uyarısı verir. Bu yüzden düz liste doğrudan kullanılır;
+   * derinlik satırın kendi `depth` alanından gelir.
    */
-  const rows = useMemo(() => {
-    const visible: { row: Row<TData>; depth: number }[] = [];
-
-    const walk = (tableRows: Row<TData>[], depth: number) => {
-      for (const row of tableRows) {
-        visible.push({ row, depth });
-
-        if (row.getCanExpand() && expandedState[row.id]) {
-          walk(row.subRows, depth + 1);
-        }
-      }
-    };
-
-    walk(table.getRowModel().rows, 0);
-
-    return visible;
-  }, [table, expandedState]);
+  const rows = useMemo(
+    () => table.getRowModel().rows.map((row) => ({ row, depth: row.depth })),
+    [table],
+  );
 
   const scrollRef = useRef<HTMLDivElement>(null);
 
