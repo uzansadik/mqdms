@@ -19,7 +19,8 @@
     "db:reset": "dotenv -e .env -- node ./packages/db/scripts/reset.mjs && pnpm db:migrate",
     "db:reset:hard": "dotenv -e .env -- node ./packages/db/scripts/reset.mjs && dotenv -e .env -- node ./packages/db/scripts/reset-migrations.mjs && pnpm db:generate && pnpm db:migrate",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "dev:deneme": "pnpm --filter bom dev"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.9",
