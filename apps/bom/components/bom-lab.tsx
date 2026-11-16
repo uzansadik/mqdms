@@ -75,7 +75,19 @@ export function BomLab({ bom, revision, rootItem, items, units, initialLines }: 
     })),
   );
 
-  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  /*
+   * Laboratuvarda ağaç baştan açıktır: tüm dallar görünür ve düzenlenebilir
+   * olmalıdır.
+   */
+  const [expanded, setExpanded] = useState<Record<string, boolean>>(() => {
+    const next: Record<string, boolean> = {};
+
+    for (const line of initialLines) {
+      next[line.id] = true;
+    }
+
+    return next;
+  });
 
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
 
