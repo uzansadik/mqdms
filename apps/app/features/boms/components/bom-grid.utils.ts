@@ -30,6 +30,14 @@ export type BomGridRow = {
   /** Miktar; üst grubun bir birimi başınadır. */
   quantity: number;
 
+  /**
+   * Kullanıcının yazdığı miktar metni.
+   *
+   * Ondalık girilebilmesi için ham metin saklanır: yazarken değer
+   * reddedilirse alan sıfırlanır ve kesirli miktar yazılamaz.
+   */
+  quantityText?: string;
+
   /** Birim; boş bırakılırsa ürünün varsayılan birimi kullanılır. */
   unitOfMeasureId: string | null;
 
@@ -40,8 +48,9 @@ export type BomGridRow = {
   error: string | null;
 };
 
-/** Bir satırın altında satır taşıyıp taşıyamayacağı. */
-export function canHaveChildren(row: BomGridRow): boolean {
+/** Bir satırın altında satır taşıyıp taşıyamayacağı. */ export function canHaveChildren(
+  row: BomGridRow,
+): boolean {
   return row.structureType === "ASSEMBLY" || row.structureType === "GROUP";
 }
 
@@ -327,4 +336,27 @@ export function toSubmissionOrder(rows: BomGridRow[]): BomGridRow[] {
   }
 
   return result;
+}
+
+/**
+ * Miktar metnini sayıya çevirir.
+ *
+ * Hem nokta hem virgül ondalık ayracı kabul edilir: veritabanı
+ * `numeric(18, 6)` alanıdır, kullanıcı yerelde "0,5" yazabilmelidir.
+ */
+export function parseQuantity(raw: string): number | null {
+  const normalized = raw.trim().replace(",", ".");
+
+  if (normalized === "") {
+    return null;
+  }
+
+  const value = Number(normalized);
+
+  return Number.isFinite(value) ? value : null;
+}
+
+/** Miktarı gösterim metnine çevirir (ondalıklar korunur). */
+export function formatQuantity(value: number): string {
+  return String(value);
 }

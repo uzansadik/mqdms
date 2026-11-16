@@ -12,10 +12,12 @@ import { useCallback, useMemo, useRef, useState } from "react";
 import {
   addRow,
   buildTree,
+  formatQuantity,
   indentRow,
   type LabRow,
   moveRow,
   outdentRow,
+  parseQuantity,
   removeSubtree,
 } from "../lib/bom-grid";
 import {
@@ -226,18 +228,22 @@ export function BomLab({ bom, revision, rootItem, items, units, initialLines }: 
             <Input
               aria-label="Miktar"
               className="h-8"
-              min={0}
+              inputMode="decimal"
+              onBlur={() => {
+                updateRow(row.key, { quantityText: undefined });
+              }}
               onChange={(event) => {
-                const value = Number(event.target.value);
+                const raw = event.target.value;
+                const parsed = parseQuantity(raw);
 
                 updateRow(row.key, {
-                  quantity: Number.isFinite(value) && value > 0 ? value : row.quantity,
+                  quantityText: raw,
+                  quantity: parsed !== null && parsed > 0 ? parsed : row.quantity,
                 });
               }}
               onFocus={() => setSelectedKey(row.key)}
-              step="any"
-              type="number"
-              value={row.quantity}
+              placeholder="0"
+              value={row.quantityText ?? formatQuantity(row.quantity)}
             />
           );
 
