@@ -73,6 +73,17 @@ export const MOCK_UNITS = [
 /** Ürün kataloğu. */
 export const MOCK_ITEMS: MockItem[] = [
   {
+    id: "item-300",
+    code: "300",
+    name: "Koltuk Grubu",
+    itemType: "COMPONENT",
+    structureType: "GROUP",
+    supplyType: "MANUFACTURED",
+    isSellable: true,
+    unitOfMeasureId: "unit-adet",
+    unitOfMeasureCode: "AD",
+  },
+  {
     id: "item-001",
     code: "001",
     name: "Elektrikli Bisiklet",

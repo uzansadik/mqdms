@@ -17,10 +17,37 @@ export type LabRow = {
   supplyType: string | null;
   isSellable: boolean | null;
   quantity: number;
+
+  /** Kullanıcının yazdığı miktar metni; ondalık girilebilmesi için saklanır. */
+  quantityText?: string;
+
   unitOfMeasureId: string | null;
   sortOrder: number;
   error: string | null;
 };
+
+/**
+ * Miktar metnini sayıya çevirir.
+ *
+ * Hem nokta hem virgül ondalık ayracı kabul edilir: veritabanı
+ * `numeric(18, 6)` alanıdır, kullanıcı yerelde "0,5" yazabilmelidir.
+ */
+export function parseQuantity(raw: string): number | null {
+  const normalized = raw.trim().replace(",", ".");
+
+  if (normalized === "") {
+    return null;
+  }
+
+  const value = Number(normalized);
+
+  return Number.isFinite(value) ? value : null;
+}
+
+/** Miktarı gösterim metnine çevirir (ondalıklar korunur). */
+export function formatQuantity(value: number): string {
+  return Number.isInteger(value) ? String(value) : String(value);
+}
 
 /** Kurulan ağaç. */
 export type LabTree = {
