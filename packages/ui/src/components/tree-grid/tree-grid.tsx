@@ -90,11 +90,12 @@ export function TreeGrid<TData>({
    * içinde bulunur. Liste ayrıca yürütülürse aynı satır iki kez basılır ve
    * React "aynı key" uyarısı verir. Bu yüzden düz liste doğrudan kullanılır;
    * derinlik satırın kendi `depth` alanından gelir.
+   *
+   * Liste her render'da yeniden hesaplanır: tablo nesnesi sabit olduğu için
+   * memo'ya bağlanırsa, satır modeli (açma/kapatma, veri değişimi) bayat
+   * kalır ve hücreler eski değerleri gösterir.
    */
-  const rows = useMemo(
-    () => table.getRowModel().rows.map((row) => ({ row, depth: row.depth })),
-    [table],
-  );
+  const rows = table.getRowModel().rows.map((row) => ({ row, depth: row.depth }));
 
   const scrollRef = useRef<HTMLDivElement>(null);
 
