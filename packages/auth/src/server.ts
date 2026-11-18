@@ -8,7 +8,7 @@ import { addJob } from "@mqdms/queue";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { APIError } from "better-auth/api";
-import { organization } from "better-auth/plugins";
+import { bearer, organization } from "better-auth/plugins";
 import { and, eq } from "drizzle-orm";
 import { getTrustedOrigins } from "./origins";
 import { ac, roles } from "./permissions/statements";
@@ -127,6 +127,7 @@ export const auth = betterAuth({
   },
 
   plugins: [
+    bearer(),
     organization({
       ac,
       roles,
