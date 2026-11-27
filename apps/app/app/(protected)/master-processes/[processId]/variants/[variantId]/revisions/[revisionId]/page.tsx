@@ -270,9 +270,7 @@ export default async function ProcessVariantRevisionPage({ params }: PageProps) 
                   ? t("fmea.documents.createHintRevision")
                   : undefined
             }
-            detailHref={(documentId) =>
-              `/master-processes/${data.variant.processId}/variants/${data.variant.id}/revisions/${data.revision.id}/fmea/${documentId}`
-            }
+            detailHrefBase={`/master-processes/${data.variant.processId}/variants/${data.variant.id}/revisions/${data.revision.id}/fmea`}
             documents={fmeaDocuments.documents}
             revisionId={data.revision.id}
           />
