@@ -218,6 +218,10 @@ export const tr = {
   "fmea.documents.empty.title": "Henüz FMEA belgesi yok",
   "fmea.documents.empty.description": "Bu revision için PFMEA, DFMEA veya SFMEA belgesi oluşturun.",
   "fmea.documents.create": "Yeni belge",
+  "fmea.documents.createHint":
+    "FMEA belgesi oluşturma yetkiniz yok. FMEA:create iznini organizasyon owner'ından isteyin.",
+  "fmea.documents.createHintRevision":
+    "Bu revision taslak değil; teknik içeriği değiştirilemez. FMEA başlatmak için yeni bir taslak revision oluşturun.",
   "fmea.documents.columns.code": "Kod",
   "fmea.documents.columns.name": "Ad",
   "fmea.documents.columns.type": "Tip",
