@@ -29,7 +29,7 @@ export default async function ProcessVariantRevisionFmeaPage({ params }: PagePro
   return (
     <FmeaDocumentPanel
       canCreate={canCreate}
-      detailHref={(documentId) => `${baseHref}/${documentId}`}
+      detailHrefBase={baseHref}
       documents={data.documents}
       revisionId={revisionId}
     />

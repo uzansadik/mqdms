@@ -54,8 +54,14 @@ export type FmeaDocumentListItem = {
 type FmeaDocumentPanelProps = {
   revisionId: string;
   documents: FmeaDocumentListItem[];
-  /** Belge detayının bulunduğu yol. */
-  detailHref: (documentId: string) => string;
+  /**
+   * Belge detayının taban adresi.
+   *
+   * Belge id'si sona eklenir. **Fonksiyon prop'u kullanılamaz**: bu bileşen
+   * bir client bileşendir ve server sayfalarından gelen fonksiyonlar
+   * server → client sınırında geçirilemez.
+   */
+  detailHrefBase: string;
   /** Belge oluşturma yetkisi. */
   canCreate: boolean;
 
@@ -77,7 +83,7 @@ type FmeaDocumentPanelProps = {
 export function FmeaDocumentPanel({
   revisionId,
   documents,
-  detailHref,
+  detailHrefBase,
   canCreate,
   createHint,
 }: FmeaDocumentPanelProps) {
@@ -179,13 +185,13 @@ export function FmeaDocumentPanel({
               {documents.map((document) => (
                 <TableRow key={document.id}>
                   <TableCell className="font-medium">
-                    <Link className="hover:underline" href={detailHref(document.id)}>
+                    <Link className="hover:underline" href={`${detailHrefBase}/${document.id}`}>
                       {document.code}
                     </Link>
                   </TableCell>
 
                   <TableCell>
-                    <Link className="hover:underline" href={detailHref(document.id)}>
+                    <Link className="hover:underline" href={`${detailHrefBase}/${document.id}`}>
                       {document.name}
                     </Link>
                   </TableCell>
