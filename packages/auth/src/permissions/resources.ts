@@ -15,7 +15,17 @@
 export const resources = {
   fmea: {
     label: "FMEA",
-    actions: ["create", "read", "update", "save", "submit", "approve", "reject", "delete"],
+    actions: [
+      "create",
+      "read",
+      "update",
+      "save",
+      "submit",
+      "approve",
+      "reject",
+      "delete",
+      "export",
+    ],
   },
   synoptic: {
     label: "Sinoptik",

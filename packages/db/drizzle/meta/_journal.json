@@ -78,6 +78,13 @@
       "when": 1794743811128,
       "tag": "0010_reset_legacy_items",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1795788918538,
+      "tag": "0011_chubby_madripoor",
+      "breakpoints": true
     }
   ]
 }

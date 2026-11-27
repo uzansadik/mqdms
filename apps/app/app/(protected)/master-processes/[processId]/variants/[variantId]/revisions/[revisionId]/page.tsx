@@ -7,6 +7,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { canAccess, requireAuthContext } from "@/features/auth/session";
+import { FmeaDocumentPanel } from "@/features/fmea/components/fmea-document-panel";
+import { getFmeaDocumentListData } from "@/features/fmea/server";
 import { ApplicabilityPanel } from "@/features/process-io/components/applicability-panel";
 import { IoPanel } from "@/features/process-io/components/io-panel";
 import { FunctionPanel } from "@/features/process-requirements/components/function-panel";
@@ -42,13 +44,16 @@ export default async function ProcessVariantRevisionPage({ params }: PageProps) 
     notFound();
   }
 
-  const [canSubmit, canApprove, canRelease, canReject, content] = await Promise.all([
-    canAccess(context, "processVariants", "submit"),
-    canAccess(context, "processVariants", "approve"),
-    canAccess(context, "processVariants", "release"),
-    canAccess(context, "processVariants", "reject"),
-    getProcessVariantRevisionContentData(context.organizationId, revisionId),
-  ]);
+  const [canSubmit, canApprove, canRelease, canReject, canCreateFmea, content, fmeaDocuments] =
+    await Promise.all([
+      canAccess(context, "processVariants", "submit"),
+      canAccess(context, "processVariants", "approve"),
+      canAccess(context, "processVariants", "release"),
+      canAccess(context, "processVariants", "reject"),
+      canAccess(context, "fmea", "create"),
+      getProcessVariantRevisionContentData(context.organizationId, revisionId),
+      getFmeaDocumentListData(context.organizationId, revisionId),
+    ]);
 
   const isEditable = data.revision.status === "DRAFT";
 
@@ -135,6 +140,8 @@ export default async function ProcessVariantRevisionPage({ params }: PageProps) 
           <TabsTrigger value="applicability">
             {t("processVariants.detail.revision.tabs.applicability")}
           </TabsTrigger>
+
+          <TabsTrigger value="fmea">{t("fmea.tabs.overview")}</TabsTrigger>
         </TabsList>
 
         <TabsContent className="mt-4 space-y-4" value="overview">
@@ -249,6 +256,17 @@ export default async function ProcessVariantRevisionPage({ params }: PageProps) 
             applicabilities={content.applicabilities}
             editable={isEditable}
             itemGroups={content.itemGroups}
+            revisionId={data.revision.id}
+          />
+        </TabsContent>
+
+        <TabsContent className="mt-4 space-y-4" value="fmea">
+          <FmeaDocumentPanel
+            canCreate={canCreateFmea}
+            detailHref={(documentId) =>
+              `/master-processes/${data.variant.processId}/variants/${data.variant.id}/revisions/${data.revision.id}/fmea/${documentId}`
+            }
+            documents={fmeaDocuments.documents}
             revisionId={data.revision.id}
           />
         </TabsContent>

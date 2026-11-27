@@ -1,5 +1,5 @@
-import { getTranslations } from "@mqdms/i18n/server";
 import { LanguageSelect } from "@mqdms/i18n/language-select";
+import { getTranslations } from "@mqdms/i18n/server";
 import {
   Card,
   CardContent,

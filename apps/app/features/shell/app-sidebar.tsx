@@ -17,6 +17,7 @@ import {
 import {
   Boxes,
   Building2,
+  ClipboardCheck,
   Factory,
   FolderKanban,
   FolderTree,
@@ -49,9 +50,8 @@ export function AppSidebar({ organization, user, visibleModules }: AppSidebarPro
   const { t } = useI18n();
 
   /*
-   * FMEA ve sinoptik menüleri kaldırıldı: modüller henüz yer tutucu durumunda
-   * ve kütüphaneye girmezler. Rotalar ve izinler korunur; yalnızca menü
-   * girişleri kaldırılmıştır.
+   * Menü görünürlüğü yalnızca UX'tir; gerçek kontrol sayfa ve servis
+   * katmanındaki yetki denetimlerinde yapılır.
    */
   const navigation = [
     {
@@ -122,6 +122,12 @@ export function AppSidebar({ organization, user, visibleModules }: AppSidebarPro
       href: "/master-processes",
       icon: Workflow,
       module: "masterProcesses",
+    },
+    {
+      title: t("app.nav.fmea"),
+      href: "/fmea",
+      icon: ClipboardCheck,
+      module: "fmea",
     },
   ].filter((item) => visibleModules.includes(item.module));
 
