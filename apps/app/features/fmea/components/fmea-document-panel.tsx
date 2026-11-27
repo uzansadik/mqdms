@@ -39,7 +39,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-import { FmeaDocumentForm } from "./fmea-document-form";
+import { FMEA_DOCUMENT_FORM_ID, FmeaDocumentForm } from "./fmea-document-form";
 
 /** Revision'daki FMEA belgesi. */
 export type FmeaDocumentListItem = {
@@ -58,6 +58,14 @@ type FmeaDocumentPanelProps = {
   detailHref: (documentId: string) => string;
   /** Belge oluşturma yetkisi. */
   canCreate: boolean;
+
+  /**
+   * Oluşturma düğmesi neden yok?
+   *
+   * Yetki eksikliği veya revision'ın taslak olmaması nedeniyle oluşturma
+   * kapalıysa kullanıcıya nedeni söylenir.
+   */
+  createHint?: string;
 };
 
 /**
@@ -71,6 +79,7 @@ export function FmeaDocumentPanel({
   documents,
   detailHref,
   canCreate,
+  createHint,
 }: FmeaDocumentPanelProps) {
   const { t } = useI18n();
   const router = useRouter();
@@ -115,10 +124,18 @@ export function FmeaDocumentPanel({
                 <Button onClick={() => setIsCreateOpen(false)} variant="outline">
                   {t("common.cancel")}
                 </Button>
+
+                <Button form={FMEA_DOCUMENT_FORM_ID} type="submit">
+                  {t("fmea.form.submit.create")}
+                </Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
-        ) : null}
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            {createHint ?? t("fmea.documents.createHint")}
+          </p>
+        )}
       </div>
 
       {documents.length === 0 ? (

@@ -217,6 +217,10 @@ export const en = {
   "fmea.documents.empty.title": "No FMEA document yet",
   "fmea.documents.empty.description": "Create a PFMEA, DFMEA or SFMEA document for this revision.",
   "fmea.documents.create": "New document",
+  "fmea.documents.createHint":
+    "You do not have the permission to create an FMEA document. Ask the organization owner for the FMEA:create permission.",
+  "fmea.documents.createHintRevision":
+    "This revision is not a draft, so its technical content cannot be changed. Create a new draft revision to start an FMEA.",
   "fmea.documents.columns.code": "Code",
   "fmea.documents.columns.name": "Name",
   "fmea.documents.columns.type": "Type",

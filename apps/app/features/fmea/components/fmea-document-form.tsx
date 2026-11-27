@@ -2,14 +2,24 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useI18n } from "@mqdms/i18n";
+import { Button } from "@mqdms/ui/components/button";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@mqdms/ui/components/field";
 import { Input } from "@mqdms/ui/components/input";
 import { NativeSelect, NativeSelectOption } from "@mqdms/ui/components/native-select";
 import { Textarea } from "@mqdms/ui/components/textarea";
+import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 
 import { createFmeaDocumentAction, updateFmeaDocumentAction } from "../actions";
 import { type FmeaDocumentFormValues, fmeaDocumentFormSchema } from "../schema";
+
+/**
+ * Formun `id` değeri.
+ *
+ * Diyalog alt bilgisindeki gönder düğmesi bu forma bağlanır; form kendi
+ * içinde de gönder düğmesi barındırır.
+ */
+export const FMEA_DOCUMENT_FORM_ID = "fmea-document-form";
 
 type FmeaDocumentFormProps = {
   /** Ait olduğu Process Variant Revision. */
@@ -40,6 +50,8 @@ type FmeaDocumentFormProps = {
 export function FmeaDocumentForm({ revisionId, document, onCreated }: FmeaDocumentFormProps) {
   const { t } = useI18n();
 
+  const [isPending, setIsPending] = useState(false);
+
   const form = useForm<FmeaDocumentFormValues>({
     resolver: zodResolver(fmeaDocumentFormSchema),
     defaultValues: {
@@ -57,9 +69,13 @@ export function FmeaDocumentForm({ revisionId, document, onCreated }: FmeaDocume
   async function onSubmit(values: FmeaDocumentFormValues) {
     form.clearErrors("root");
 
+    setIsPending(true);
+
     const result = document
       ? await updateFmeaDocumentAction(document.id, values)
       : await createFmeaDocumentAction(revisionId, values);
+
+    setIsPending(false);
 
     if (!result.success) {
       form.setError("root", { message: result.error });
@@ -75,6 +91,7 @@ export function FmeaDocumentForm({ revisionId, document, onCreated }: FmeaDocume
   return (
     <form
       className="space-y-4"
+      id={FMEA_DOCUMENT_FORM_ID}
       onSubmit={(event) => {
         event.preventDefault();
 
@@ -212,6 +229,14 @@ export function FmeaDocumentForm({ revisionId, document, onCreated }: FmeaDocume
           <p className="text-sm text-destructive">{form.formState.errors.root.message}</p>
         ) : null}
       </FieldGroup>
+
+      {/*
+       * Formun kendi gönder düğmesi. Diyalog alt bilgisindeki düğme de aynı
+       * forma bağlanır (`form` niteliği); iki düğme aynı işi yapar.
+       */}
+      <Button disabled={isPending} type="submit">
+        {document ? t("fmea.form.submit.update") : t("fmea.form.submit.create")}
+      </Button>
     </form>
   );
 }

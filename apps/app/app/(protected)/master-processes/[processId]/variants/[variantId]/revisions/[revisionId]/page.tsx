@@ -141,7 +141,7 @@ export default async function ProcessVariantRevisionPage({ params }: PageProps) 
             {t("processVariants.detail.revision.tabs.applicability")}
           </TabsTrigger>
 
-          <TabsTrigger value="fmea">{t("fmea.tabs.overview")}</TabsTrigger>
+          <TabsTrigger value="fmea">{t("fmea.title")}</TabsTrigger>
         </TabsList>
 
         <TabsContent className="mt-4 space-y-4" value="overview">
@@ -262,7 +262,14 @@ export default async function ProcessVariantRevisionPage({ params }: PageProps) 
 
         <TabsContent className="mt-4 space-y-4" value="fmea">
           <FmeaDocumentPanel
-            canCreate={canCreateFmea}
+            canCreate={canCreateFmea && isEditable}
+            createHint={
+              !canCreateFmea
+                ? t("fmea.documents.createHint")
+                : !isEditable
+                  ? t("fmea.documents.createHintRevision")
+                  : undefined
+            }
             detailHref={(documentId) =>
               `/master-processes/${data.variant.processId}/variants/${data.variant.id}/revisions/${data.revision.id}/fmea/${documentId}`
             }
