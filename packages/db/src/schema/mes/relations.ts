@@ -1,5 +1,6 @@
 import { relations } from "drizzle-orm";
 
+import { fmeaDocument } from "../quality/fmea-document";
 import { flow, processVariantRevisionFlow } from "./flow";
 import { flowEdge } from "./flow-edge";
 import { flowNode } from "./flow-node";
@@ -65,6 +66,8 @@ export const processVariantRevisionRelations = relations(
     ioDefinitions: many(processIoDefinition),
 
     applicabilities: many(processVariantApplicability),
+
+    fmeaDocuments: many(fmeaDocument),
   }),
 );
 

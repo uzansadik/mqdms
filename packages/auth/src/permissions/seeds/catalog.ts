@@ -77,7 +77,7 @@ export const factoryRoleTemplates: readonly FactoryRoleTemplate[] = [
       "Tüm iş kaynaklarını okur, rapor dışa aktarır, FMEA/proses/kontrol planı onaylar ve NCR kapatır.",
     permissions: {
       ...allRead(),
-      fmea: ["read", "approve", "reject"],
+      fmea: ["read", "approve", "reject", "export"],
       synoptic: ["read", "update"],
       processFlow: ["read", "approve", "reject"],
       controlPlan: ["read", "approve", "reject"],
@@ -119,6 +119,10 @@ export const factoryRoleTemplates: readonly FactoryRoleTemplate[] = [
       "4": {
         masterProcesses: ["read"],
         processVariants: ["read", "approve", "release"],
+      },
+
+      "5": {
+        fmea: ["export"],
       },
     },
   },
@@ -163,6 +167,8 @@ export const factoryRoleTemplates: readonly FactoryRoleTemplate[] = [
         masterProcesses: ["read"],
         processVariants: ["read"],
       },
+
+      "5": {},
     },
   },
   {
@@ -203,6 +209,8 @@ export const factoryRoleTemplates: readonly FactoryRoleTemplate[] = [
         masterProcesses: ["read"],
         processVariants: ["read"],
       },
+
+      "5": {},
     },
   },
   {
@@ -211,7 +219,7 @@ export const factoryRoleTemplates: readonly FactoryRoleTemplate[] = [
     description:
       "FMEA/proses/kontrol planı kayıtlarını onaylar ve reddeder; NCR yönetir ve rapor üretir.",
     permissions: {
-      fmea: ["read", "approve", "reject"],
+      fmea: ["read", "approve", "reject", "export"],
       synoptic: ["read"],
       processFlow: ["read", "approve", "reject"],
       controlPlan: ["read", "approve", "reject"],
@@ -244,6 +252,10 @@ export const factoryRoleTemplates: readonly FactoryRoleTemplate[] = [
         masterProcesses: ["read"],
         processVariants: ["read", "approve", "reject"],
       },
+
+      "5": {
+        fmea: ["export"],
+      },
     },
   },
   {
@@ -251,7 +263,7 @@ export const factoryRoleTemplates: readonly FactoryRoleTemplate[] = [
     name: "Kalite Mühendisi",
     description: "FMEA kaydı hazırlar ve gönderir; kontrol planı oluşturur; NCR açar ve günceller.",
     permissions: {
-      fmea: ["read", "create", "update", "save", "submit"],
+      fmea: ["read", "create", "update", "save", "submit", "export"],
       synoptic: ["read"],
       processFlow: ["read"],
       controlPlan: ["read", "create", "update", "submit"],
@@ -299,6 +311,10 @@ export const factoryRoleTemplates: readonly FactoryRoleTemplate[] = [
         ],
         processVariants: ["read", "create", "update", "submit", "compare"],
       },
+
+      "5": {
+        fmea: ["export"],
+      },
     },
   },
   {
@@ -336,6 +352,8 @@ export const factoryRoleTemplates: readonly FactoryRoleTemplate[] = [
         masterProcesses: ["read"],
         processVariants: ["read"],
       },
+
+      "5": {},
     },
   },
   {
@@ -356,6 +374,8 @@ export const factoryRoleTemplates: readonly FactoryRoleTemplate[] = [
 
       // Bu rol proses kütüphanesine erişmez.
       "4": {},
+
+      "5": {},
     },
   },
   {
@@ -392,6 +412,8 @@ export const factoryRoleTemplates: readonly FactoryRoleTemplate[] = [
         masterProcesses: ["read"],
         processVariants: ["read"],
       },
+
+      "5": {},
     },
   },
   {
@@ -428,6 +450,8 @@ export const factoryRoleTemplates: readonly FactoryRoleTemplate[] = [
         masterProcesses: ["read"],
         processVariants: ["read"],
       },
+
+      "5": {},
     },
   },
   {
@@ -464,6 +488,8 @@ export const factoryRoleTemplates: readonly FactoryRoleTemplate[] = [
         masterProcesses: ["read"],
         processVariants: ["read"],
       },
+
+      "5": {},
     },
   },
   {
@@ -472,6 +498,7 @@ export const factoryRoleTemplates: readonly FactoryRoleTemplate[] = [
     description: "Tüm iş kaynaklarını okur ve rapor dışa aktarır; hiçbir kaydı değiştirmez.",
     permissions: {
       ...allRead(),
+      fmea: ["read", "export"],
       reports: ["read", "export"],
     },
     versionPermissions: {
@@ -489,12 +516,16 @@ export const factoryRoleTemplates: readonly FactoryRoleTemplate[] = [
         masterProcesses: ["read"],
         processVariants: ["read"],
       },
+
+      "5": {
+        fmea: ["export"],
+      },
     },
   },
 ];
 
 /** Seed katalogunun sürümü. */
-export const FACTORY_SEED_VERSION = "4";
+export const FACTORY_SEED_VERSION = "5";
 
 /**
  * Seed rolünün izin çiftleri.
